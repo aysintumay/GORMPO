@@ -72,7 +72,6 @@ class TransitionModel:
             log_weight = self.classifier_thr - log_probs #high means more likely to be OOD
             q1, q3 = np.percentile(log_weight, [25, 75])
             upper_bound = q3 + 1.5 * (q3 - q1)
-            lower_bound = q1 - 1.5 * (q3 - q1)
             weight = np.clip(log_weight, a_min=0, a_max=upper_bound).numpy()
         elif type == "inverse":
             weight = np.where(

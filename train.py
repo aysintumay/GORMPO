@@ -1,24 +1,16 @@
-import argparse
 import datetime
 import os
 import random
 import importlib
-import wandb 
 import sys
 import pickle
 
-# import gym
-import dsrl
-# import d4rl
-# import trash.abiomed_env as abiomed_env
+import gym
 import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
 from transition_model import TransitionModel
 from realnvp import RealNVP
-# Add parent directory to path for imports
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from models.policy_models import MLP, ActorProb, Critic, DiagGaussian
 from algo.sac import SACPolicy
 from algo.mopo import MOPO
@@ -27,14 +19,7 @@ from common.logger import Logger
 from trainer import Trainer
 from common.util import set_device_and_logger
 from common import util
-import config
-
-# Add path for SVR (assuming it's in parent of parent directory)
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-from SVR.SVR_kde.kde_nn import PercentileThresholdKDE 
-
-
-# from noisy_mujoco.abiomed_env import AbiomedEnv
+from realnvp.realnvp import RealNVP 
 
 
 
@@ -140,29 +125,17 @@ def train(env, run, logger, seed, args):
                                      reward_penalty_coef = args.reward_penalty_coef,
                                      **config["transition_params"]
                                      )    
-    
-    if args.task == "abiomed":
+  
 
-        # create buffer
-        offline_buffer = ReplayBuffer(
-            buffer_size = buffer_len,
-            obs_shape=args.obs_shape,
-            obs_dtype=np.float32,
-            action_dim=args.action_dim,
-            action_dtype=np.float32
-        )
-        #since dataset is not in RL format, it handles the transfer and defines buffer_size
-        offline_buffer.load_dataset(dataset, env) 
-    else:
-        offline_buffer = ReplayBuffer(
-        buffer_size=len(dataset["observations"]),
-        obs_shape=args.obs_shape,
-        obs_dtype=np.float32,
-        action_dim=args.action_dim,
-        action_dtype=np.float32
-        )
+    offline_buffer = ReplayBuffer(
+    buffer_size=len(dataset["observations"]),
+    obs_shape=args.obs_shape,
+    obs_dtype=np.float32,
+    action_dim=args.action_dim,
+    action_dtype=np.float32
+    )
 
-        offline_buffer.load_dataset(dataset)    
+    offline_buffer.load_dataset(dataset)    
 
     model_buffer = ReplayBuffer(
         buffer_size=args.rollout_batch_size * args.rollout_length * args.model_retain_epochs,
@@ -218,30 +191,3 @@ def train(env, run, logger, seed, args):
 
    
     return sac_policy, trainer
-
-if __name__ == "__main__":
-    args = get_args()
-    
-
-    # seed
-    random.seed(args.seed)
-    np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
-    if args.device != "cpu":
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
-
-    # log
-    t0 = datetime.datetime.now().strftime("%m%d_%H%M%S")
-    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}_{args.algo_name}'
-    log_path = os.path.join(args.logdir, args.task, args.algo_name, log_file)
-    writer = SummaryWriter(log_path)
-    writer.add_text("args", str(args))
-    logger = Logger(writer=writer,log_path=log_path)
-
-    Devid = args.devid if args.device == 'cuda' else -1
-    set_device_and_logger(Devid,logger)
-
-    run = None # no wandb for baselines
-
-    train(run, logger, args)

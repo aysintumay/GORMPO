@@ -11,13 +11,11 @@ import os
 import sys
 import pickle
 import seaborn as sns
+import gym
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from common.buffer import ReplayBuffer
 from common.util import load_dataset_with_validation_split
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-
-from noisy_mujoco.abiomed_env.rl_env import AbiomedRLEnvFactory
 
 
 class MLP(nn.Module):
@@ -555,72 +553,36 @@ def load_rl_data_for_kde(args, env=None, val_split_ratio=0.2):
 
     # Initialize ReplayBuffer
    
-
-    # Load the training data into buffer
-    if dataset_result['data_info']['source'] == 'abiomed_env':
-        # Handle Abiomed data format (list of datasets)
-        offline_buffer = ReplayBuffer(
-        buffer_size=len(train_dataset.data),
-        obs_shape=args.obs_shape,
-        obs_dtype=np.float32,
-        action_dim=args.action_dim,
-        action_dtype=np.float32
-        )
-        offline_buffer.load_dataset(train_dataset, env=env)
-
-        # Extract concatenated next_observations + actions for KDE
-        train_next_obs = torch.FloatTensor(offline_buffer.next_observations[:offline_buffer.size])
-        train_actions = torch.FloatTensor(offline_buffer.actions[:offline_buffer.size])
-
-    else:
-        # Handle standard D4RL format (dictionary)
-        # Populate buffer manually for standard datasets
-        for i in range(len(train_dataset['observations'])):
-            offline_buffer.add(
-                obs=train_dataset['observations'][i],
-                next_obs=train_dataset['next_observations'][i],
-                action=train_dataset['actions'][i],
-                reward=train_dataset['rewards'][i],
-                terminal=train_dataset['terminals'][i]
+    offline_buffer = ReplayBuffer(
+            buffer_size=len(train_dataset["observations"]),
+            obs_shape=args.obs_shape,
+            obs_dtype=np.float32,
+            action_dim=args.action_dim,
+            action_dtype=np.float32
             )
+    for i in range(len(train_dataset['observations'])):
+        offline_buffer.add(
+            obs=train_dataset['observations'][i],
+            next_obs=train_dataset['next_observations'][i],
+            action=train_dataset['actions'][i],
+            reward=train_dataset['rewards'][i],
+            terminal=train_dataset['terminals'][i]
+        )
 
-        # Extract concatenated next_observations + actions for KDE
-        train_next_obs = torch.FloatTensor(train_dataset['next_observations'])
-        train_actions = torch.FloatTensor(train_dataset['actions'])
+    # Extract concatenated next_observations + actions for KDE
+    train_next_obs = torch.FloatTensor(train_dataset['next_observations'])
+    train_actions = torch.FloatTensor(train_dataset['actions'])
 
     # Concatenate next_observations and actions for training data
     train_kde_input = torch.cat([train_next_obs, train_actions], dim=1)
 
-    # Handle validation data similarly
-    if dataset_result['data_info']['source'] == 'abiomed_env':
-        offline_buffer = ReplayBuffer(
-        buffer_size=len(val_dataset.data),
-        obs_shape=args.obs_shape,
-        obs_dtype=np.float32,
-        action_dim=args.action_dim,
-        action_dtype=np.float32
-        )
-        offline_buffer.load_dataset(val_dataset, env=env)
-        val_next_obs = torch.FloatTensor(offline_buffer.next_observations) # Adjust based on actual structure
-        val_actions = torch.FloatTensor(offline_buffer.actions)     # Adjust based on actual structure
-    else:
-        val_next_obs = torch.FloatTensor(val_dataset['next_observations'])
-        val_actions = torch.FloatTensor(val_dataset['actions'])
+   
+    val_next_obs = torch.FloatTensor(val_dataset['next_observations'])
+    val_actions = torch.FloatTensor(val_dataset['actions'])
 
-    if dataset_result['data_info']['source'] == 'abiomed_env':
-        offline_buffer = ReplayBuffer(
-        buffer_size=len(test_dataset.data),
-        obs_shape=args.obs_shape,
-        obs_dtype=np.float32,
-        action_dim=args.action_dim,
-        action_dtype=np.float32
-        )
-        offline_buffer.load_dataset(test_dataset, env=env)
-        test_next_obs = torch.FloatTensor(offline_buffer.next_observations) # Adjust based on actual structure
-        test_actions = torch.FloatTensor(offline_buffer.actions)     # Adjust based on actual structure
-    else:
-        test_next_obs = torch.FloatTensor(test_dataset['next_observations'])
-        test_actions = torch.FloatTensor(test_dataset['actions'])
+ 
+    test_next_obs = torch.FloatTensor(test_dataset['next_observations'])
+    test_actions = torch.FloatTensor(test_dataset['actions'])
     # Concatenate next_observations and actions for validation data
     val_kde_input = torch.cat([val_next_obs, val_actions], dim=1)
     test_kde_input = torch.cat([test_next_obs, test_actions], dim=1)
@@ -661,28 +623,13 @@ def parse_args():
     # RL dataset specific arguments
     parser.add_argument('--data-path', type=str, default=None,
                         help='Path to RL dataset file (pickle or npz)')
-    parser.add_argument('--task', type=str, default='abiomed',
+    parser.add_argument('--task', type=str, default='hopper-medium-v2',
                         help='Task name (e.g., abiomed, halfcheetah-medium-v2)')
-    parser.add_argument('--obs-shape', type=int, nargs='+', default=[17],
+    parser.add_argument('--obs-shape', type=int, nargs='+', default=[11],
                         help='Observation shape (default: [17] for HalfCheetah)')
-    parser.add_argument('--action-dim', type=int, default=6,
+    parser.add_argument('--action-dim', type=int, default=3,
                         help='Action dimension (default: 6 for HalfCheetah)')
-    parser.add_argument("--model_name", type=str, default="10min_1hr_all_data")
-    parser.add_argument("--model_path_wm", type=str, default=None)
-    parser.add_argument("--data_path_wm", type=str, default=None)
-    parser.add_argument("--max_steps", type=int, default=6)
-    parser.add_argument("--gamma1", type=float , default=0.0)
-    parser.add_argument("--gamma2", type=float, default=0.0)
-    parser.add_argument("--gamma3", type=float, default=0.0)
-    parser.add_argument(
-        "--noise_rate",
-        type=float,
-        help="Portion of data to be noisy with probability",
-        default=0.0,
-    )
-    parser.add_argument(
-        "--noise_scale", type=float, help="magnitude of noise", default=0.0
-    )
+   
     return parser.parse_args()
 
 def plot_likelihood_distributions(
@@ -800,29 +747,23 @@ if __name__ == "__main__":
 
     # Choose data loading mode
     use_rl_data = config.get('use_rl_data', args.task != 'synthetic')
-    env = AbiomedRLEnvFactory.create_env(
-                                        model_name=args.model_name,
-                                        model_path=args.model_path_wm,
-                                        data_path=args.data_path_wm,
-                                        max_steps=args.max_steps,
-                                        gamma1=args.gamma1,
-                                        gamma2=args.gamma2,
-                                        gamma3=args.gamma3,
-                                        action_space_type='continuous',
-                                        reward_type="smooth",
-                                        normalize_rewards=True,
-                                        noise_rate=args.noise_rate,
-                                        noise_scale=args.noise_scale,
-                                        seed=42,
-                                        device= device if torch.cuda.is_available() else "cpu"
-                                        )
+
+    # Only create environment if needed (when data_path is not provided)
+    env = None
+    if use_rl_data and args.data_path is None:
+        try:
+            env = gym.make(args.task)
+        except Exception as e:
+            print(f"Warning: Could not create environment {args.task}: {e}")
+            print("Will use data_path instead if provided")
+
     if use_rl_data:
         print("Loading RL dataset for KDE training...")
 
         # Load RL data (next_observations + actions)
         train_data, val_data, test_data, kde_input_dim = load_rl_data_for_kde(
             args=args,
-            env=env,  # Can be passed if needed for Abiomed
+            env=env,  
             val_split_ratio=config.get('val_ratio', 0.2)
         )
 
@@ -929,10 +870,6 @@ if __name__ == "__main__":
     print(f"Normal data log prob: {results['normal_log_prob_mean']:.3f} ± {results['normal_log_prob_std']:.3f}")
     print(f"Anomaly data log prob: {results['anomaly_log_prob_mean']:.3f} ± {results['anomaly_log_prob_std']:.3f}")
 
-    # Generate samples
-    # print("\nGenerating samples...")
-    # samples = model.sample(100)
-    # print(f"Generated samples shape: {samples.shape}")
 
     # Save model if requested
     if config.get('save_model', False):

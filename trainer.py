@@ -4,7 +4,6 @@ import wandb
 import numpy as np
 import torch
 from matplotlib import pyplot as plt
-# import d4rl
 import copy 
 
 from tqdm import tqdm
@@ -60,7 +59,6 @@ class Trainer:
     def __init__(
         self,
         algo,
-        # world_model,
         eval_env,
         epoch,
         step_per_epoch,
@@ -85,7 +83,6 @@ class Trainer:
         self.run_id = run_id
 
         self.env_name = env_name
-        # self.world_model = world_model 
 
         self._eval_episodes = eval_episodes
         self.terminal_counter = terminal_counter
@@ -100,9 +97,6 @@ class Trainer:
     def train_dynamics(self):
         start_time = time.time()
         self.algo.learn_dynamics()
-        #self.algo.save_dynamics_model(
-            #save_path=os.path.join(self.logger.writer.get_logdir(), "dynamics_model")
-        #)
         self.algo.save_dynamics_model(f"dynamics_model")
         self.logger.print("total time: {:.3f}s".format(time.time() - start_time))
 
@@ -120,8 +114,7 @@ class Trainer:
                 while t.n < t.total:
                     if num_timesteps % self._rollout_freq == 0:
                         self.algo.rollout_transitions()
-                        # print(f'rollout done')
-                    # update policy by sac
+                       
                     loss,q_values = self.algo.learn_policy()
                     q1_l.append(q_values['q1'])
                     q2_l.append(q_values['q2'])
@@ -140,37 +133,17 @@ class Trainer:
                     t.update(1)
             # evaluate current policy
             if e % 10 == 0:
-                # if self.env_name == 'Abiomed-v0':
-                #     eval_info, _ = self.evaluate()
-                # else:
+               
                 eval_info = self._evaluate()
                 ep_reward_mean, ep_reward_std = np.mean(eval_info["eval/episode_reward"]), np.std(eval_info["eval/episode_reward"])
                 ep_length_mean, ep_length_std = np.mean(eval_info["eval/episode_length"]), np.std(eval_info["eval/episode_length"])
-                
-                # if self.env_name == 'Abiomed-v0':
-                #     ep_accuracy_mean, ep_accuracy_std = np.mean(eval_info["eval/episode_accuracy"]), np.std(eval_info["eval/episode_accuracy"])
-                #     ep_1_off_accuracy_mean, ep_1_off_accuracy_std = np.mean(eval_info["eval/episode_1_off_accuracy"]), np.std(eval_info["eval/episode_1_off_accuracy"])
-            
-                
+               
                 reward_l.append(ep_reward_mean)
                 reward_std_l.append(ep_reward_std)
-                # if self.env_name == 'Abiomed-v0':
-                #     acc_l.append(ep_accuracy_mean)
-                #     off_acc.append(ep_1_off_accuracy_mean)
-                #     acc_std_l.append(ep_accuracy_std)
-                #     off_acc_std.append(ep_1_off_accuracy_std)
-                
+               
                 self.logger.record("eval/episode_reward", ep_reward_mean, num_timesteps, printed=False)
                 self.logger.record("eval/episode_length", ep_length_mean, num_timesteps, printed=False)
-                # if self.env_name == 'Abiomed-v0':
-                    
-                    # self.logger.record("eval/episode_accuracy", ep_accuracy_mean, num_timesteps, printed=False)
-                    # self.logger.record("eval/episode_1_off_accuracy", ep_1_off_accuracy_mean, num_timesteps, printed=False)
-                    # self.logger.print(f"Epoch #{e}: episode_reward: {ep_reward_mean:.3f} ± {ep_reward_std:.3f},\
-                    #                 episode_length: {ep_length_mean:.3f} ± {ep_length_std:.3f},\
-                    #                 episode_accuracy: {ep_accuracy_mean:.3f} ± {ep_accuracy_std:.3f},\
-                    #                 episode_1_off_accuracy: {ep_1_off_accuracy_mean:.3f} ± {ep_1_off_accuracy_std:.3f}"
-                    #                 )
+              
                 self.logger.print(f"Epoch #{e}: episode_reward: {ep_reward_mean:.3f} ± {ep_reward_std:.3f},\
                                 episode_length: {ep_length_mean:.3f} ± {ep_length_std:.3f}"
                                 )
@@ -195,14 +168,8 @@ class Trainer:
             plot_p_loss(np.array(alpha_loss).reshape(-1,1), 'Alpha')
 
             plot_accuracy(np.array(reward_l), np.array(reward_std_l)/self._eval_episodes, 'Average Return')
-            # if self.env_name == 'Abiomed-v0':
-            #     plot_accuracy(np.array(acc_l), np.array(acc_std_l)/self._eval_episodes, 'Accuracy')
-            #     plot_accuracy(np.array(off_acc), np.array(off_acc_std)/self._eval_episodes, '1-off Accuracy')
-
-
+            
         self.logger.print("total time: {:.3f}s".format(time.time() - start_time))
-
-
 
 
     def _evaluate(self):
@@ -225,10 +192,6 @@ class Trainer:
                     {"episode_reward": episode_reward, "episode_length": episode_length}
                 )
 
-                #d4rl don't have REF_MIN_SCORE and REF_MAX_SCORE for v2 environments
-                # dset_name = self.eval_env.unwrapped.spec.name+'-v0'
-                # self.logger.print( f"normalized score: {d4rl.get_normalized_score(dset_name, np.array(episode_reward))*100}")
-
                 num_episodes +=1
                 episode_reward, episode_length = 0, 0
                 obs, _ = self.eval_env.reset()
@@ -237,144 +200,3 @@ class Trainer:
             "eval/episode_reward": [ep_info["episode_reward"] for ep_info in eval_ep_info_buffer],
             "eval/episode_length": [ep_info["episode_length"] for ep_info in eval_ep_info_buffer]
         }
-    
-
-    def evaluate(self):  
-        self.algo.policy.eval()
-        obs = self.eval_env.reset()
-        
-        eval_ep_info_buffer = []
-        num_episodes = 0
-        episode_reward, episode_length = 0, 0
-        obs_ = []
-        next_obs_ = []
-        action_ = []
-        full_action_ = []
-        reward_ = []
-        terminal_ = []
-        terminal_counter = 0
-        print(' # of eval episodes:', self._eval_episodes) 
-        while num_episodes < self._eval_episodes:
-            start_time = time.time()
-       
-            act = self.eval_env.get_pl()
-           
-            next_state_gt = self.eval_env.get_next_obs() #get next state ground truth for plotting
-            action = self.algo.policy.sample_action(obs, deterministic=True)
-            action = action.repeat(90) #repeat the action for 90 steps
-
-            full_pl = self.eval_env.get_full_pl() #for plotting
-
-            #use next_obs only for evaluation
-            next_obs, reward, terminal, _ = self.eval_env.step(action) #next state predictions            
-            
-            episode_reward += reward
-            episode_length += 1
-
-            terminal_counter += 1
-            acc, acc_1_off = self.eval_bcq(action, full_pl)
-           
-            if num_episodes == self._eval_episodes-1:
-                self.plot_predictions_rl(obs.reshape(1,90,12), next_state_gt.reshape(1,90,12), next_obs.reshape(1,90,12), action.reshape(1,90), full_pl.reshape(1,90), num_episodes)
-            
-            
-            #obs: (0,90) next_state_gt:(90,180) next_obs: (90,180), action: (90,180) act: (90,180)
-            if terminal_counter == self.terminal_counter:
-                #plot the last round
-                
-                eval_ep_info_buffer.append(
-                    {"episode_reward": episode_reward,
-                        "episode_length": episode_length,
-                        "episode_accurcy": acc, 
-                        "episode_1_off_accuracy": acc_1_off}
-                )
-                terminal_counter = 0
-                episode_reward, episode_length = 0, 0
-                # obs = self.eval_env.reset()
-                num_episodes +=1
-
-                # print("episode_reward", episode_reward, 
-                #     "episode_length", episode_length,
-                #     "episode_accuracy", acc, 
-                #     "episode_1_off_accuracy", acc_1_off)
-                
-                obs_.append(obs)
-                next_obs_.append(next_obs)
-                action_.append(action)
-                full_action_.append(full_pl)
-                reward_.append(reward)
-                terminal_.append(terminal)
-
-                # self.logger.print("EVAL TIME: {:.3f}s".format(time.time() - start_time))
-            obs = self.eval_env.get_obs().reshape(1,-1)
-                
-        action_ = self.eval_env.unnormalize(np.array(action_), idx=12)
-        full_action_ = self.eval_env.unnormalize(np.array(full_action_), idx=12).reshape(-1,90)
-        dataset = {
-                'observations': np.array(obs_),
-                'actions': np.array(action_).reshape(-1, 1),  # Reshape to ensure it's 2D
-                'rewards': np.array(reward_),
-                'terminals': np.array(terminal),
-                'next_observations': np.array(next_obs_),
-                'full_actions': np.array(full_action_).reshape(-1, 1),  # Reshape to ensure it's 2D
-            }
-        return {
-                "eval/episode_reward": [ep_info["episode_reward"] for ep_info in eval_ep_info_buffer],
-                "eval/episode_length": [ep_info["episode_length"] for ep_info in eval_ep_info_buffer],
-                "eval/episode_accuracy": [ep_info["episode_accurcy"] for ep_info in eval_ep_info_buffer],
-                "eval/episode_1_off_accuracy": [ep_info["episode_1_off_accuracy"] for ep_info in eval_ep_info_buffer],
-            }, dataset
-
-
-
-    def plot_predictions_rl(self, src, tgt_full, pred, pl, pred_pl,iter):
-
-    
-        input_color = 'tab:blue'
-        pred_color = 'tab:orange' #label="input",
-        gt_color = 'tab:green'
-        rl_color = 'tab:red'
-
-        fig, ax1 = plt.subplots(figsize = (8,5.8), dpi=300)
-                                        
-        default_x_ticks = range(0, 181, 18)
-        x_ticks = np.array(list(range(0, 31, 3)))
-        plt.xticks(default_x_ticks, x_ticks)
-
-        ax1.axvline(x=90, linestyle='--', c='black', alpha =0.7)
-
-        plt.plot(range(90), self.eval_env.unnormalize(src.reshape(90,12)[:,0], idx = 0), color=input_color)
-        plt.plot(range(90,180), self.eval_env.unnormalize(tgt_full.reshape(90,12)[:,0], idx = 0), label ="ground truth MAP", color=input_color)
-        plt.plot(range(90,180), self.eval_env.unnormalize(pred.reshape(90,12)[:,0], idx = 0),  label ='prediction MAP', color=pred_color)
-        ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
-        ax2.plot(range(90,180), np.round(self.eval_env.unnormalize(pl.reshape(-1,1), idx = 12))*1000,'--',label ='ground truth PL', color=gt_color)
-        ax2.plot(range(90,180), np.round(self.eval_env.unnormalize(pred_pl.reshape(-1,1), idx = 12))*1000,'--',label ='BCQ PL', color=rl_color)
-        ax2.set_ylim((500,10000))
-        ax1.legend(loc=3)
-        ax2.legend(loc=1)
-
-        ax1.set_ylabel('MAP (mmHg)',  fontsize=20)
-        ax2.set_ylabel('Pump Speed',  fontsize=20)
-        ax1.set_xlabel('Time (min)', fontsize=20)
-        ax1.set_title(f"MAP Prediction and P-level")
-        # wandb.log({f"plot_batch_{iter}": wandb.Image(fig)})
-
-        plt.show()
-
-        
-    def eval_bcq(self, y_pred_test, y_test):
-
-
-        pred_unreg =  self.eval_env.unnormalize(np.array(y_pred_test), idx=12)
-        real_unreg = self.eval_env.unnormalize(y_test, idx=12) 
-
-
-        pl_pred_fl = np.round(pred_unreg.flatten())
-        pl_true_fl = np.round(real_unreg.flatten())
-        n = len(pl_pred_fl)
-
-
-        accuracy = sum(pl_pred_fl == pl_true_fl)/n
-        accuracy_1_off = (sum(pl_pred_fl == pl_true_fl) + sum(pl_pred_fl+1 == pl_true_fl)+sum(pl_pred_fl-1 == pl_true_fl))/n
-
-        return accuracy, accuracy_1_off

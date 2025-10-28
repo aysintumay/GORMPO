@@ -194,69 +194,11 @@ def load_dataset_with_validation_split(
         dataset_info['original_size'] = len(dataset['observations']) if 'observations' in dataset else len(list(dataset.values())[0])
 
         # Create train/val split since file datasets typically don't have predefined splits
-        train_data, val_data = _create_train_val_split(dataset, val_split_ratio)
+        train_data, val_data = _create_train_val_split_dict(dataset, val_split_ratio)
         dataset_info['created_val_split'] = True
 
         buffer_len = dataset_info['original_size']
-
-    # Case 2: Abiomed environment with predefined splits
-    elif args.task == "abiomed" and env is not None:
-
-        dataset_info['source'] = 'abiomed_env'
-        dataset_info['has_predefined_splits'] = True
-
-        try:
-            train_data = env.world_model.data_train
-            val_data = env.world_model.data_val
-            test_data = env.world_model.data_test
-
-            # Calculate total buffer length
-            buffer_len = len(train_data.data) + len(val_data.data) + len(test_data.data)
-            dataset_info['original_size'] = buffer_len
-
-            print(f'Loaded Abiomed dataset: train={len(train_data.data)}, '
-                  f'val={len(val_data.data)}, test={len(test_data.data)}')
-            dataset = train_data
-            print('concatenate and shuffle the data splits, and create new train/val/test splits')
-            dataset.data = np.concatenate([train_data.data, val_data.data, test_data.data], axis=0)
-            dataset.pl = np.concatenate([train_data.pl, val_data.pl, test_data.pl], axis=0)
-            dataset.labels = np.concatenate([train_data.labels, val_data.labels, test_data.labels], axis=0)
-            train_data, val_data, test_data = _create_train_val_split(dataset, 0.2, 0.05)
-
-
-        except AttributeError as e:
-            raise ValueError(f"Abiomed environment missing expected data splits: {e}")
-
-    # Case 3: Standard RL environment dataset
-    elif env is not None and args.task != "abiomed":
-        dataset_info['source'] = 'env_dataset'
-
-        try:
-            dataset = env.get_dataset()
-            print(f'Loaded dataset from environment: {type(env).__name__}')
-
-            # Validate required keys
-            missing_keys = [key for key in required_keys if key not in dataset]
-            if missing_keys:
-                available_keys = list(dataset.keys())
-                print(f"Warning: Missing required keys {missing_keys}. Available keys: {available_keys}")
-
-            # Apply max_samples limit if specified
-            if max_samples is not None:
-                dataset = {k: v[:max_samples] for k, v in dataset.items()}
-                print(f'Limited dataset to {max_samples} samples')
-
-            dataset_info['original_size'] = len(dataset['observations']) if 'observations' in dataset else len(list(dataset.values())[0])
-
-            # Create train/val split
-            train_data, val_data = _create_train_val_split(dataset, val_split_ratio)
-            dataset_info['created_val_split'] = True
-
-            buffer_len = dataset_info['original_size']
-
-        except AttributeError:
-            raise ValueError("Environment does not have get_dataset() method")
-
+    
     else:
         raise ValueError("Must provide either args.data_path or env parameter")
 
@@ -281,65 +223,14 @@ def load_dataset_with_validation_split(
 
     return result
 
-def _create_train_val_split(
-    dataset: Dict[str, np.ndarray],
-    val_split_ratio: float = 0.2,
-    test_split_ratio: float = 0.05,
-) -> Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray]]:
-    """
-    Split dataset into training and validation sets.
 
-    Args:
-        dataset: Dictionary containing dataset arrays
-        val_split_ratio: Fraction of data to use for validation
-
-    Returns:
-        Tuple of (train_dataset, val_dataset)
-    """
-    if dataset is None:
-        raise ValueError("Dataset is empty")
-    
-    # Get dataset size from first key
-    total_size = len(dataset.data)
-    val_dataset = copy.deepcopy(dataset)
-    train_dataset = copy.deepcopy(dataset)
-    test_dataset = copy.deepcopy(dataset)
-
-    # Calculate split indices
-    val_size = int(total_size * val_split_ratio)
-    test_size = int(total_size * test_split_ratio)
-    train_size = total_size - val_size -test_size
-    rng = np.random.default_rng(seed=42)
-    # Create random indices for splitting
-    indices = np.random.permutation(total_size)
-    train_indices = indices[:train_size]
-    val_indices = indices[train_size: train_size + val_size]
-    test_indices = indices[train_size + val_size: ]
-
-    # Split each array in the dataset
-    train_dataset.data = torch.FloatTensor(dataset.data[train_indices])
-    val_dataset.data = torch.FloatTensor(dataset.data[val_indices])
-    test_dataset.data = torch.FloatTensor(dataset.data[test_indices])
-
-    train_dataset.pl = torch.FloatTensor(dataset.pl[train_indices])
-    val_dataset.pl =torch.FloatTensor( dataset.pl[val_indices])
-    test_dataset.pl = torch.FloatTensor(dataset.pl[test_indices])
-
-    train_dataset.labels = torch.FloatTensor(dataset.labels[train_indices])
-    val_dataset.labels = torch.FloatTensor(dataset.labels[val_indices])
-    test_dataset.labels = torch.FloatTensor(dataset.labels[test_indices])
-
-
-    print(f"Split dataset: {train_size} train samples, {val_size} validation samples")
-
-    return train_dataset, val_dataset, test_dataset
 
 def _create_train_val_split_dict(
     dataset: Dict[str, np.ndarray],
     val_split_ratio: float
 ) -> Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray]]:
     """
-    Split dataset into training and validation sets.
+    Split dataset into training and validation sets using temporal (sequential) split.
 
     Args:
         dataset: Dictionary containing dataset arrays
@@ -355,14 +246,14 @@ def _create_train_val_split_dict(
     first_key = list(dataset.keys())[0]
     total_size = len(dataset[first_key])
 
-    # Calculate split indices
+    # Calculate split indices for temporal split
+    # Train on earlier data, validate on later data
     val_size = int(total_size * val_split_ratio)
     train_size = total_size - val_size
 
-    # Create random indices for splitting
-    indices = np.random.permutation(total_size)
-    train_indices = indices[:train_size]
-    val_indices = indices[train_size:]
+    # Temporal split: no randomization, preserve temporal ordering
+    train_indices = np.arange(train_size)
+    val_indices = np.arange(train_size, total_size)
 
     # Split each array in the dataset
     train_dataset = {}
@@ -378,7 +269,7 @@ def _create_train_val_split_dict(
             train_dataset[key] = values_array[train_indices]
             val_dataset[key] = values_array[val_indices]
 
-    print(f"Split dataset: {train_size} train samples, {val_size} validation samples")
+    print(f"Temporal split dataset: {train_size} train samples, {val_size} validation samples")
 
     return train_dataset, val_dataset
 
