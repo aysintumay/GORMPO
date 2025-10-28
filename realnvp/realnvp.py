@@ -610,9 +610,18 @@ def load_config(config_path: str) -> dict:
 
 def parse_args():
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description='RealNVP Normalizing Flow for Density Estimation')
-    parser.add_argument('--config', type=str, default='config/realnvp.yaml',
-                        help='Path to configuration file (default: config/realnvp.yaml)')
+    print("Running", __file__)
+    config_parser = argparse.ArgumentParser(add_help=False)
+    config_parser.add_argument("--config", type=str, default="configs/realnvp/hopper.yaml")
+    config_args, remaining_argv = config_parser.parse_known_args()
+    if config_args.config:
+        with open(config_args.config, "r") as f:
+            config = yaml.safe_load(f)
+            config = {k.replace("-", "_"): v for k, v in config.items()}
+    else:
+        config = {}
+    parser = argparse.ArgumentParser(parents=[config_parser])
+   
     parser.add_argument('--device', type=str, default=None,
                         help='Device to use (cuda/cpu). Overrides config file.')
     parser.add_argument('--epochs', type=int, default=None,
@@ -629,8 +638,10 @@ def parse_args():
                         help='Observation shape (default: [17] for HalfCheetah)')
     parser.add_argument('--action-dim', type=int, default=3,
                         help='Action dimension (default: 6 for HalfCheetah)')
+    parser.set_defaults(**config)
+    args = parser.parse_args(remaining_argv)
    
-    return parser.parse_args()
+    return args
 
 def plot_likelihood_distributions(
     model,
