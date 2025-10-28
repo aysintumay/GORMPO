@@ -126,6 +126,7 @@ def load_dataset_with_validation_split(
     args,
     env=None,
     val_split_ratio: float = 0.2,
+    test_split_ratio: float = 0.2,
     max_samples: Optional[int] = None,
     required_keys: List[str] = ['observations', 'actions', 'rewards', 'terminals']
 ) -> Dict[str, Any]:
@@ -194,7 +195,8 @@ def load_dataset_with_validation_split(
         dataset_info['original_size'] = len(dataset['observations']) if 'observations' in dataset else len(list(dataset.values())[0])
 
         # Create train/val split since file datasets typically don't have predefined splits
-        train_data, val_data = _create_train_val_split_dict(dataset, val_split_ratio)
+        train_data, val_data = _create_train_val_split_dict(dataset, val_split_ratio + test_split_ratio)
+        val_data, test_data = _create_train_val_split_dict(val_data, val_split_ratio / (val_split_ratio + test_split_ratio))
         dataset_info['created_val_split'] = True
 
         buffer_len = dataset_info['original_size']

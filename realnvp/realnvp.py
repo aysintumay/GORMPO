@@ -525,7 +525,7 @@ def create_synthetic_data(n_samples=1000, dim=2, anomaly_type="outlier"):
     return torch.FloatTensor(normal_data), torch.FloatTensor(anomaly_data)
 
 
-def load_rl_data_for_kde(args, env=None, val_split_ratio=0.2):
+def load_rl_data_for_kde(args, env=None, val_split_ratio=0.2, test_split_ratio=0.2):
     """
     Load RL dataset and prepare next_observations + actions for KDE training.
 
@@ -541,7 +541,8 @@ def load_rl_data_for_kde(args, env=None, val_split_ratio=0.2):
     dataset_result = load_dataset_with_validation_split(
         args=args,
         env=env,
-        val_split_ratio=val_split_ratio
+        val_split_ratio=val_split_ratio,
+        test_split_ratio=test_split_ratio
     )
 
     train_dataset = dataset_result['train_data']
@@ -775,7 +776,8 @@ if __name__ == "__main__":
         train_data, val_data, test_data, kde_input_dim = load_rl_data_for_kde(
             args=args,
             env=env,  
-            val_split_ratio=config.get('val_ratio', 0.2)
+            val_split_ratio=config.get('val_ratio', 0.2),
+            test_split_ratio=config.get('test_ratio', 0.2)
         )
 
         # For RL data, we don't have separate anomaly data for evaluation
@@ -831,6 +833,12 @@ if __name__ == "__main__":
         patience=config.get('patience', 15),
         verbose=config.get('verbose', True)
     )
+    # Save model if requested
+    if config.get('model_save_path', False):
+        save_path = config.get('model_save_path', 'saved_models/realnvp')
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        model.save_model(save_path)
+        print(f"Model saved to: {save_path}_model.pth")
     #load pretrained model
     # model_dict = RealNVP.load_model(save_path="/abiomed/models/kde/realnvp")
     # model = model_dict['model']
@@ -882,11 +890,6 @@ if __name__ == "__main__":
     print(f"Anomaly data log prob: {results['anomaly_log_prob_mean']:.3f} ± {results['anomaly_log_prob_std']:.3f}")
 
 
-    # Save model if requested
-    if config.get('save_model', False):
-        save_path = config.get('model_save_path', 'saved_models/realnvp')
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        model.save_model(save_path)
-        print(f"Model saved to: {save_path}_model.pth")
+    
 
     print("\nRealNVP training and evaluation completed!")
