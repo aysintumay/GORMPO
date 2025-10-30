@@ -556,7 +556,7 @@ def load_rl_data_for_kde(args, env=None, val_split_ratio=0.2, test_split_ratio=0
    
     offline_buffer = ReplayBuffer(
             buffer_size=len(train_dataset["observations"]),
-            obs_shape=args.obs_shape,
+            obs_shape=args.obs_dim,
             obs_dtype=np.float32,
             action_dim=args.action_dim,
             action_dtype=np.float32
@@ -631,16 +631,17 @@ def parse_args():
                         help='Enable verbose output. Overrides config file.')
 
     # RL dataset specific arguments
-    parser.add_argument('--data-path', type=str, default=None,
+    parser.add_argument('--data_path', type=str, default=None,
                         help='Path to RL dataset file (pickle or npz)')
     parser.add_argument('--task', type=str, default='hopper-medium-v2',
                         help='Task name (e.g., abiomed, halfcheetah-medium-v2)')
-    parser.add_argument('--obs-shape', type=int, nargs='+', default=[11],
+    parser.add_argument('--obs_dim', type=int, nargs='+', default=[11],
                         help='Observation shape (default: [17] for HalfCheetah)')
-    parser.add_argument('--action-dim', type=int, default=3,
+    parser.add_argument('--action_dim', type=int, default=3,
                         help='Action dimension (default: 6 for HalfCheetah)')
     parser.set_defaults(**config)
     args = parser.parse_args(remaining_argv)
+    args.config = config
    
     return args
 
@@ -720,10 +721,11 @@ def plot_tsne(tsne_data1, preds, title):
 if __name__ == "__main__":
     # Parse command line arguments
     args = parse_args()
+    args.obs_dim = (args.obs_dim,)
 
     # Load configuration
     print(f"Loading configuration from: {args.config}")
-    config = load_config(args.config)
+    config = args.config
 
     # Override config with command line arguments if provided
     if args.device is not None:
@@ -738,7 +740,7 @@ if __name__ == "__main__":
         args.data_path = args.data_path  # Keep as args attribute for compatibility
     if args.task != 'synthetic':
         args.task = args.task
-    args.obs_shape = tuple(args.obs_shape)
+    args.obs_shape = tuple(args.obs_dim)
     args.action_dim = args.action_dim
 
     # Set random seed for reproducibility
@@ -840,9 +842,9 @@ if __name__ == "__main__":
         model.save_model(save_path)
         print(f"Model saved to: {save_path}_model.pth")
     #load pretrained model
-    # model_dict = RealNVP.load_model(save_path="/abiomed/models/kde/realnvp")
+    # model_dict = RealNVP.load_model(save_path="/public/gormpo/models")
     # model = model_dict['model']
-    model.to('cuda:0')
+    # model.to('cuda:0')
     # model.threshold = model_dict['thr']
     # Evaluate anomaly detection
     print("\nEvaluating anomaly detection performance...")
@@ -854,11 +856,13 @@ if __name__ == "__main__":
     print(type(train_data))
     train_data = train_data.to(model.device)
     val_data = val_data.to(model.device)
+    test_data = test_data.to(model.device)
     print(train_data.device)
     print(model.device)
 
     predictions_tr = model.predict(train_data)
     scores_tr = model.score_samples(train_data)
+    scores_test_in_dist = model.score_samples(test_data)
 
     small_train = train_data[predictions_tr == 1][: int(0.1 * len(train_data))].cpu().numpy()
     noisy_train = small_train + np.random.normal(0, 0.1, small_train.shape)
@@ -867,23 +871,25 @@ if __name__ == "__main__":
     predictions_test = model.predict(normal_data)
    
     scores_test = model.score_samples(normal_data)
-    print("Number of data with likelihood>0",(scores_test>0).sum())
+    # print("Number of data with likelihood>0",(scores_test>0).sum())
+    print("Scores test OOD", scores_test.mean().item())
+    print("Scores test ID", scores_test_in_dist.mean().item())
     anomaly_count = (np.array(predictions_test) == -1).sum()
     print("Max density score", scores_test.max().item()) 
     print("Min density score", scores_test.min().item())
 
     print(f"Test data anomalies detected: {anomaly_count}/{len(normal_data)} ({(anomaly_count/len(normal_data)):.1%})")
 
-    plot_likelihood_distributions(
-                        model,
-                        train_data,
-                        val_data,
-                        ood_data=normal_data,
-                        thr= model.threshold,
-                        title="Likelihood Distribution",
-                        savepath=None,
-                        bins=50
-                    )
+    # plot_likelihood_distributions(
+    #                     model,
+    #                     train_data,
+    #                     val_data,
+    #                     ood_data=normal_data,
+    #                     thr= model.threshold,
+    #                     title="Likelihood Distribution",
+    #                     savepath=None,
+    #                     bins=50
+    #                 )
     print(f"ROC AUC: {results['roc_auc']:.3f}")
     print(f"Accuracy: {results['accuracy']:.3f}")
     print(f"Normal data log prob: {results['normal_log_prob_mean']:.3f} ± {results['normal_log_prob_std']:.3f}")
