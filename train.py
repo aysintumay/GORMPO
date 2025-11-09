@@ -10,7 +10,6 @@ import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
 from transition_model import TransitionModel
-from realnvp import RealNVP
 from models.policy_models import MLP, ActorProb, Critic, DiagGaussian
 from algo.sac import SACPolicy
 from algo.mopo import MOPO
@@ -19,7 +18,7 @@ from common.logger import Logger
 from trainer import Trainer
 from common.util import set_device_and_logger
 from common import util
-from realnvp.realnvp import RealNVP 
+from realnvp_module.realnvp import RealNVP 
 
 
 

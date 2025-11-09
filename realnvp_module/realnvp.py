@@ -142,6 +142,14 @@ class RealNVP(nn.Module):
         # Threshold for anomaly detection
         self.threshold = None
 
+    def _apply(self, fn):
+        """Override _apply to update self.device when model is moved."""
+        super()._apply(fn)
+        # Update self.device to match the actual device of parameters
+        if len(list(self.parameters())) > 0:
+            self.device = next(self.parameters()).device
+        return self
+
     def forward(self, x: torch.Tensor, reverse: bool = False) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass through the flow.
@@ -153,7 +161,9 @@ class RealNVP(nn.Module):
         Returns:
             Transformed tensor and log determinant of Jacobian
         """
-        log_det_total = torch.zeros(x.shape[0], device=self.device)
+        # Use the actual device of model parameters instead of self.device
+        model_device = next(self.parameters()).device
+        log_det_total = torch.zeros(x.shape[0], device=model_device)
 
         if not reverse:
             # Forward: data -> latent
@@ -187,7 +197,8 @@ class RealNVP(nn.Module):
         """Generate samples from the model."""
         with torch.no_grad():
             # Sample from prior
-            z = torch.randn(num_samples, self.input_dim, device=self.device)
+            model_device = next(self.parameters()).device
+            z = torch.randn(num_samples, self.input_dim, device=model_device)
 
             # Transform to data space
             x, _ = self.forward(z, reverse=True)
@@ -348,26 +359,28 @@ class RealNVP(nn.Module):
         return np.where(scores.cpu() >= self.threshold, 1, -1)
     
     def evaluate_anomaly_detection(
-        self,
-        normal_data: torch.Tensor,
-        anomaly_data: torch.Tensor,
-        plot: bool = True
-    ) -> dict:
+    self,
+    normal_data: torch.Tensor,
+    anomaly_data: torch.Tensor,
+    plot: bool = True) -> dict:
         """
         Evaluate anomaly detection performance.
-
-        Args:
-            normal_data: Normal test data
-            anomaly_data: Anomalous test data
-            plot: Whether to plot ROC curve
-
-        Returns:
-            Dictionary with evaluation metrics
         """
         self.eval()
+
+        # >>> Get the true device of the model <<<
+        model_device = next(self.parameters()).device
+
+        # >>> Move data to the same device as the model <<<
+        normal_data = normal_data.to(model_device)
+        anomaly_data = anomaly_data.to(model_device)
+
+        print("Model device:", model_device)
+        print("Normal data device:", normal_data.device)
+
         with torch.no_grad():
-            normal_log_probs = self.score_samples(normal_data.to(self.device)).cpu().numpy()
-            anomaly_log_probs = self.score_samples(anomaly_data.to(self.device)).cpu().numpy()
+            normal_log_probs = self.score_samples(normal_data).cpu().numpy()
+            anomaly_log_probs = self.score_samples(anomaly_data).cpu().numpy()
 
         # Create labels (0 = normal, 1 = anomaly)
         y_true = np.concatenate([
@@ -473,6 +486,7 @@ class RealNVP(nn.Module):
 
         # Load model state dict
         model.load_state_dict(torch.load(f"{save_path}_model.pth", map_location=metadata['device']))
+        # model.to(cls.device)
 
         # Restore threshold
         model.threshold = metadata['threshold']
@@ -701,6 +715,25 @@ def plot_likelihood_distributions(
     plt.savefig(f"figures/distribution_kde.png", dpi=300, bbox_inches="tight")
     print(f"Saved figure at figures/distribution_kde.png")
 
+def create_ood_test(data, model, percentage=[0.1,0.3,0.5,0.7,0.9]):
+
+   
+    data_dict = {}
+    res_dict = {}
+    predictions_tr = model.predict(data)
+    small_data = data[predictions_tr == 1][np.random.choice(len(data), int(0.2 * len(data)), replace=False)].cpu().numpy()
+
+    for perc in percentage:
+        base_test = small_data[predictions_tr == 1][np.random.choice(len(small_data), int(perc * len(small_data)), replace=False)].cpu().numpy()
+
+        small_train = small_data[predictions_tr == 1][np.random.choice(len(small_data), int((1-perc) * len(small_data)), replace=False)].cpu().numpy()
+        noisy_train = small_train + np.random.normal(0, 0.1, small_train.shape)
+        data_dict[perc] = torch.FloatTensor(np.concatenate([base_test, noisy_train], axis=0)).to(model.device)
+        # predictions_test = model.predict(data_dict[perc])
+        scores_test = model.score_samples(data_dict[perc])
+        res_dict[perc] = scores_test.mean().item()
+        print(f"Percentage: {perc}, Mean Score: {scores_test.mean().item():.4f}")
+    return data_dict,res_dict
 
 def plot_tsne(tsne_data1, preds, title):
 
@@ -748,16 +781,22 @@ if __name__ == "__main__":
         torch.manual_seed(config['seed'])
         np.random.seed(config['seed'])
 
-    # Determine device
-    device = config.get('device', 'cuda')
-    if device == 'cuda' and not torch.cuda.is_available():
-        print("CUDA not available, falling back to CPU")
-        device = 'cpu'
+    # Determine device: CLI overrides config
+    cli_device = args.device
+    cfg_device = config.get('device', None)
 
-    # Update config to reflect actual device used
-    config['device'] = device
+    device = cli_device if cli_device is not None else (cfg_device or 'cpu')
+
+    if isinstance(device, str) and device.startswith("cuda") and not torch.cuda.is_available():
+        print(f"{device} not available, falling back to CPU")
+        device = "cpu"
+
+    # Make sure everyone agrees on the same device
+    args.device = device
+    config["device"] = device
 
     print(f"Using device: {device}")
+
 
     # Choose data loading mode
     use_rl_data = config.get('use_rl_data', args.task != 'synthetic')
@@ -825,32 +864,35 @@ if __name__ == "__main__":
         device=device
     ).to(device)
 
-    print("Training RealNVP model...")
-    history = model.fit(
-        train_data=train_data,
-        val_data=val_data,
-        epochs=config.get('epochs', 100),
-        batch_size=config.get('batch_size', 128),
-        lr=config.get('lr', 1e-3),
-        patience=config.get('patience', 15),
-        verbose=config.get('verbose', True)
-    )
-    # Save model if requested
-    if config.get('model_save_path', False):
-        save_path = config.get('model_save_path', 'saved_models/realnvp')
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        model.save_model(save_path)
-        print(f"Model saved to: {save_path}_model.pth")
+    # print("Training RealNVP model...")
+    # history = model.fit(
+    #     train_data=train_data,
+    #     val_data=val_data,
+    #     epochs=config.get('epochs', 100),
+    #     batch_size=config.get('batch_size', 128),
+    #     lr=config.get('lr', 1e-3),
+    #     patience=config.get('patience', 15),
+    #     verbose=config.get('verbose', True)
+    # )
+    # # Save model if requested
+    # if config.get('model_save_path', False):
+    #     save_path = config.get('model_save_path', 'saved_models/realnvp')
+    #     os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    #     model.save_model(save_path)
+    #     print(f"Model saved to: {save_path}_model.pth")
     #load pretrained model
-    # model_dict = RealNVP.load_model(save_path="/public/gormpo/models")
-    # model = model_dict['model']
-    # model.to('cuda:0')
-    # model.threshold = model_dict['thr']
+    model_dict = RealNVP.load_model(save_path=args.model_save_path)
+    model = model_dict['model']
+    model.to(device)
+
+    # print(args.device)
+    model.threshold = model_dict['thr']
+    # print(model.device)
     # Evaluate anomaly detection
     print("\nEvaluating anomaly detection performance...")
     results = model.evaluate_anomaly_detection(
-        normal_data=test_normal,
-        anomaly_data=anomaly_data,
+        normal_data=test_normal.to(model.device),
+        anomaly_data=anomaly_data.to(model.device),
         plot=config.get('plot_results', True)
     )
     print(type(train_data))
@@ -862,23 +904,33 @@ if __name__ == "__main__":
 
     predictions_tr = model.predict(train_data)
     scores_tr = model.score_samples(train_data)
+    print('TRAINING SCORE', scores_tr.mean().item())
     scores_test_in_dist = model.score_samples(test_data)
+    anomaly_test_res  = model.score_samples(anomaly_data.to(model.device))
 
-    small_train = train_data[predictions_tr == 1][: int(0.1 * len(train_data))].cpu().numpy()
-    noisy_train = small_train + np.random.normal(0, 0.1, small_train.shape)
-    normal_data = torch.FloatTensor(np.concatenate([small_train, noisy_train], axis=0)).to(model.device)
-    
-    predictions_test = model.predict(normal_data)
+    # small_train = train_data[predictions_tr == 1][: int(0.1 * len(train_data))].cpu().numpy()
+    # noisy_train = small_train + np.random.normal(0, 0.1, small_train.shape)
+    # normal_data = torch.FloatTensor(np.concatenate([small_train, noisy_train], axis=0)).to(model.device)
+    test_ood_dict,res_ood_dict = create_ood_test(train_data, model, percentage=[0.1,0.3,0.5,0.7])
+
+    # predictions_test = model.predict(normal_data)
    
-    scores_test = model.score_samples(normal_data)
+    # scores_test = model.score_samples(normal_data)
     # print("Number of data with likelihood>0",(scores_test>0).sum())
-    print("Scores test OOD", scores_test.mean().item())
+    # print("Scores test OOD", scores_test.mean().item())
     print("Scores test ID", scores_test_in_dist.mean().item())
-    anomaly_count = (np.array(predictions_test) == -1).sum()
-    print("Max density score", scores_test.max().item()) 
-    print("Min density score", scores_test.min().item())
+    large_test_dict = {0.0: scores_test_in_dist.mean().item(),
+                       0.1: res_ood_dict[0.1],
+                          0.3: res_ood_dict[0.3],
+                            0.5: res_ood_dict[0.5],
+                                0.7: res_ood_dict[0.7],
+                                1.0: anomaly_test_res.mean().item()
+                       }
+    # anomaly_count = (np.array(predictions_test) == -1).sum()
+    # print("Max density score", scores_test.max().item()) 
+    # print("Min density score", scores_test.min().item())
 
-    print(f"Test data anomalies detected: {anomaly_count}/{len(normal_data)} ({(anomaly_count/len(normal_data)):.1%})")
+    # print(f"Test data anomalies detected: {anomaly_count}/{len(normal_data)} ({(anomaly_count/len(normal_data)):.1%})")
 
     # plot_likelihood_distributions(
     #                     model,

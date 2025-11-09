@@ -1,0 +1,186 @@
+_wandb:
+    value:
+        cli_version: 0.22.2
+        e:
+            tm247ag3pyhjdybeysid28se0jzjfybs:
+                args:
+                    - --config
+                    - configs/halfcheetah_linear.yaml
+                    - --devid
+                    - "3"
+                codePath: mopo.py
+                codePathLocal: mopo.py
+                cpu_count: 32
+                cpu_count_logical: 12
+                cudaVersion: "13.0"
+                disk:
+                    /:
+                        total: "256000000000"
+                        used: "48414720000"
+                email: aysintumay@gmail.com
+                executable: /home/ubuntu/miniconda3/envs/gormpo/bin/python
+                git:
+                    commit: e70f16ad3f609d9894fdf53c8b1cc8eb62f2db7d
+                    remote: git@github.com:aysintumay/GORMPO.git
+                gpu: NVIDIA GeForce RTX 4090
+                gpu_count: 8
+                gpu_nvidia:
+                    - architecture: Ada
+                      cudaCores: 16384
+                      memoryTotal: "25757220864"
+                      name: NVIDIA GeForce RTX 4090
+                      uuid: GPU-f96e020a-9b63-3369-9184-5c8d39e89982
+                    - architecture: Ada
+                      cudaCores: 16384
+                      memoryTotal: "25757220864"
+                      name: NVIDIA GeForce RTX 4090
+                      uuid: GPU-73ba9520-04be-aacf-31ee-48e956dab8f0
+                    - architecture: Ada
+                      cudaCores: 16384
+                      memoryTotal: "25757220864"
+                      name: NVIDIA GeForce RTX 4090
+                      uuid: GPU-21b05445-4ee2-9c46-95a2-9964acb679c4
+                    - architecture: Ada
+                      cudaCores: 16384
+                      memoryTotal: "25757220864"
+                      name: NVIDIA GeForce RTX 4090
+                      uuid: GPU-f71906a4-0f29-792a-e505-34e1a28d8cd9
+                    - architecture: Ada
+                      cudaCores: 16384
+                      memoryTotal: "25757220864"
+                      name: NVIDIA GeForce RTX 4090
+                      uuid: GPU-25be92b6-1e3a-7aa9-8739-7cd0c2c5c61d
+                    - architecture: Ada
+                      cudaCores: 16384
+                      memoryTotal: "25757220864"
+                      name: NVIDIA GeForce RTX 4090
+                      uuid: GPU-d93ef260-961c-d90a-aa43-9e39ca79339e
+                    - architecture: Ada
+                      cudaCores: 16384
+                      memoryTotal: "25757220864"
+                      name: NVIDIA GeForce RTX 4090
+                      uuid: GPU-11bd3a20-c366-3d3f-98fc-57625cdbb25c
+                    - architecture: Ada
+                      cudaCores: 16384
+                      memoryTotal: "25757220864"
+                      name: NVIDIA GeForce RTX 4090
+                      uuid: GPU-4a34e211-077f-aa33-68aa-3305007721e9
+                host: aysin
+                memory:
+                    total: "128000000000"
+                os: Linux-5.15.0-134-generic-x86_64-with-glibc2.17
+                program: mopo.py
+                python: CPython 3.8.20
+                root: /home/ubuntu/GORMPO
+                startedAt: "2025-11-09T08:20:17.868290Z"
+                writerId: tm247ag3pyhjdybeysid28se0jzjfybs
+        m: []
+        python_version: 3.8.20
+        t:
+            "1":
+                - 1
+                - 5
+                - 53
+            "2":
+                - 1
+                - 5
+                - 53
+            "3":
+                - 16
+            "4": 3.8.20
+            "5": 0.22.2
+            "12": 0.22.2
+            "13": linux-x86_64
+action:
+    value: false
+actor_lr:
+    value: 0.0003
+algo_name:
+    value: gormpo
+alpha:
+    value: 0.2
+alpha_lr:
+    value: 0.0003
+auto_alpha:
+    value: true
+batch_size:
+    value: 256
+classifier_model_name:
+    value: /public/gormpo/models/halfcheetah/realnvp
+config:
+    value: configs/halfcheetah_linear.yaml
+critic_lr:
+    value: 0.0003
+data_path:
+    value: public/sparse_d4rl/hopper-medium-v2.pkl
+density_model:
+    value: realnvp
+device:
+    value: cuda
+devid:
+    value: 3
+dynamics_lr:
+    value: 0.001
+dynamics_model_dir:
+    value: null
+epoch:
+    value: 100
+eval_episodes:
+    value: 100
+gamma:
+    value: 0.99
+loc:
+    value: 0
+log_freq:
+    value: 1000
+logdir:
+    value: log
+model_path:
+    value: ""
+model_retain_epochs:
+    value: 5
+n_elites:
+    value: 5
+n_ensembles:
+    value: 7
+noise_rate_action:
+    value: 0.01
+noise_rate_transition:
+    value: 0.01
+penalty_type:
+    value: linear
+policy_path:
+    value: ""
+real_ratio:
+    value: 0.05
+reward_penalty_coef:
+    value: 0.005
+rollout_batch_size:
+    value: 50000
+rollout_freq:
+    value: 1000
+rollout_length:
+    value: 5
+root_dir:
+    value: log
+scale_action:
+    value: 0.001
+scale_transition:
+    value: 0.001
+seed:
+    value: 1
+seeds:
+    value:
+        - 1
+step_per_epoch:
+    value: 1000
+target_entropy:
+    value: -1
+task:
+    value: HalfCheetah
+tau:
+    value: 0.005
+terminal_counter:
+    value: 1
+transition:
+    value: false
