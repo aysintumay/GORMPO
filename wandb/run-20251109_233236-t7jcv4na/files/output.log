@@ -1,0 +1,88 @@
+setting device: cuda:5
+Environment without noise
+opened the pickle file for synthetic dataset
+Model loaded from: /public/gormpo/models/halfcheetah/realnvp_model.pth
+Metadata loaded from: /public/gormpo/models/halfcheetah/realnvp_meta_data.pkl
+Threshold: -31.227603912353516
+training log mean and std of classifier:  5.054104328155518 9.443124771118164
+[34m[1mwandb[0m: wandb.init() called while a run is active and reinit is set to 'default', so returning the previous run.
+[1;32m [info][0m: Start training dynamics
+[1;32m [info][0m: loss/model_eval_mse_loss: 18.095221
+[1;32m [info][0m: loss/model_eval_mse_loss: 18.071178
+[1;32m [info][0m: loss/model_eval_mse_loss: 18.045538
+[1;32m [info][0m: loss/model_eval_mse_loss: 18.015654
+[1;32m [info][0m: loss/model_eval_mse_loss: 17.978895
+[1;32m [info][0m: loss/model_eval_mse_loss: 17.932215
+[1;32m [info][0m: loss/model_eval_mse_loss: 17.872211
+[1;32m [info][0m: loss/model_eval_mse_loss: 17.795912
+[1;32m [info][0m: loss/model_eval_mse_loss: 17.701918
+[1;32m [info][0m: loss/model_eval_mse_loss: 17.593327
+[1;32m [info][0m: loss/model_eval_mse_loss: 17.479704
+[1;32m [info][0m: loss/model_eval_mse_loss: 17.376419
+[1;32m [info][0m: loss/model_eval_mse_loss: 17.297199
+[1;32m [info][0m: loss/model_eval_mse_loss: 17.270611
+[1;32m [info][0m: loss/model_eval_mse_loss: 17.241268
+[1;32m [info][0m: loss/model_eval_mse_loss: 17.192284
+[1;32m [info][0m: loss/model_eval_mse_loss: 17.115747
+[1;32m [info][0m: loss/model_eval_mse_loss: 17.014185
+[1;32m [info][0m: loss/model_eval_mse_loss: 16.894260
+[1;32m [info][0m: loss/model_eval_mse_loss: 16.754452
+[1;32m [info][0m: loss/model_eval_mse_loss: 16.595779
+[1;32m [info][0m: loss/model_eval_mse_loss: 16.427549
+[1;32m [info][0m: loss/model_eval_mse_loss: 16.259531
+[1;32m [info][0m: loss/model_eval_mse_loss: 16.098049
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.946678
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.811612
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.698222
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.604935
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.532254
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.479897
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.447023
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.432825
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.445620
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.461263
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.481795
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.491637
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.504907
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.512329
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.506200
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.487556
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.456484
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.413058
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.371704
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.296279
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.215856
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.130220
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.035294
+[1;32m [info][0m: loss/model_eval_mse_loss: 14.946197
+[1;32m [info][0m: loss/model_eval_mse_loss: 14.866236
+[1;32m [info][0m: loss/model_eval_mse_loss: 14.792335
+[1;32m [info][0m: loss/model_eval_mse_loss: 14.725123
+[1;32m [info][0m: loss/model_eval_mse_loss: 14.669646
+[1;32m [info][0m: loss/model_eval_mse_loss: 14.629112
+[1;32m [info][0m: loss/model_eval_mse_loss: 14.606043
+[1;32m [info][0m: loss/model_eval_mse_loss: 14.600621
+[1;32m [info][0m: loss/model_eval_mse_loss: 14.613702
+[1;32m [info][0m: loss/model_eval_mse_loss: 14.629662
+[1;32m [info][0m: loss/model_eval_mse_loss: 14.662169
+[1;32m [info][0m: loss/model_eval_mse_loss: 14.719441
+[1;32m [info][0m: loss/model_eval_mse_loss: 14.779773
+[1;32m [info][0m: total time: 1.241s
+Epoch #1/1: 100%|███████████████| 1000/1000 [00:11<00:00, 83.84it/s, alpha=0.74, entropy=4.09, loss/actor=-3.21, loss/alpha=-3.03, loss/critic1=30.6, loss/critic2=1.99]
+[1;32m [info][0m: total time: 19.397s
+Traceback (most recent call last):
+  File "mopo.py", line 182, in <module>
+    main(args=get_args())
+  File "mopo.py", line 165, in main
+    eval_res = evaluate_d4rl(policy, env, args.eval_episodes, args=args, plot=True)
+  File "/home/ubuntu/GORMPO/helpers/evaluate_d4rl.py", line 109, in _evaluate
+    (obs, _) = eval_env.reset()
+ValueError: too many values to unpack (expected 2)
+Traceback (most recent call last):
+  File "mopo.py", line 182, in <module>
+    main(args=get_args())
+  File "mopo.py", line 165, in main
+    eval_res = evaluate_d4rl(policy, env, args.eval_episodes, args=args, plot=True)
+  File "/home/ubuntu/GORMPO/helpers/evaluate_d4rl.py", line 109, in _evaluate
+    (obs, _) = eval_env.reset()
+ValueError: too many values to unpack (expected 2)

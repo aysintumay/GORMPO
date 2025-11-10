@@ -19,7 +19,7 @@ from wrapper import (RandomNormalNoisyActions,
                                       RandomNormalNoisyTransitions,
                                         RandomNormalNoisyTransitionsActions
                                     )
-
+from common import util
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -28,7 +28,7 @@ warnings.filterwarnings("ignore")
 def get_args():
     print("Running", __file__)
     config_parser = argparse.ArgumentParser(add_help=False)
-    config_parser.add_argument("--config", type=str, default="config/realnvp/hopper_linear.yaml")
+    config_parser.add_argument("--config", type=str, default="configs/halfcheetah_linear.yaml")
     config_args, remaining_argv = config_parser.parse_known_args()
     if config_args.config:
         with open(config_args.config, "r") as f:
@@ -40,7 +40,7 @@ def get_args():
     parser.add_argument("--algo-name", type=str, default="gormpo")
  
     parser.add_argument("--policy_path" , type=str, default="")
-    parser.add_argument("--model_path" , type=str, default="")
+    parser.add_argument("--model_path" , type=str, default="/public/gormpo/models/rl/")
     parser.add_argument("--data_path", type=str, default=None)
     parser.add_argument(
                     "--devid", 
@@ -73,7 +73,7 @@ def get_args():
     parser.add_argument("--dynamics-model-dir", type=str, default=None)
     parser.add_argument("--penalty_type", type=str, default="linear", choices=["linear", "inverse", "exponential", "softplus"])
 
-    parser.add_argument("--epoch", type=int, default=100) 
+    parser.add_argument("--epoch", type=int, default=1) 
     parser.add_argument("--step-per-epoch", type=int, default=1000) 
     parser.add_argument("--eval_episodes", type=int, default=100)
     parser.add_argument("--batch-size", type=int, default=256)
@@ -119,6 +119,7 @@ def main(args):
                 )
     results = []
     for seed in args.seeds:
+        args.seed = seed
         random.seed(seed)
         np.random.seed(seed)
         torch.manual_seed(seed)
@@ -128,10 +129,10 @@ def main(args):
 
     
         t0 = datetime.datetime.now().strftime("%m%d_%H%M%S")
-        log_file = f'seed_{seed}_{t0}-{args.task.replace("-", "_")}_{args.algo_name}'
+        log_file = f'seed_{seed}_{t0}_{args.task.replace("-", "_")}_{args.algo_name}'
         log_path = os.path.join(args.logdir, args.algo_name, args.density_model,log_file)
 
-        model_path = os.path.join(args.model_path, args.algo_name, args.density_model, log_file)
+        model_path = os.path.join(args.model_path, args.task.lower(), args.density_model, log_file)
         writer = SummaryWriter(log_path)
         writer.add_text("args", str(args))
         logger = Logger(writer=writer,log_path=log_path)
@@ -140,7 +141,8 @@ def main(args):
         Devid = args.devid if args.device == 'cuda' else -1
         set_device_and_logger(Devid, logger, model_logger)
 
-        args.model_path = model_path    
+        args.model_path = model_path
+        args.device = util.device
 
         env = gym.make(args.task)
         
@@ -168,9 +170,9 @@ def main(args):
 
         
     # Save results to CSV
-    os.makedirs(os.path.join('results', args.algo_name, args.density_model,), exist_ok=True)
+    os.makedirs(os.path.join('results',args.task.lower(), args.density_model), exist_ok=True)
     results_df = pd.DataFrame(results)
-    results_path = os.path.join('results', args.algo_name, args.density_model, f"{args.task}_results_{t0}.csv")
+    results_path = os.path.join('results',args.task.lower(), args.density_model, f"results_{t0}.csv")
     results_df.to_csv(results_path, index=False)
     print(f"Results saved to {results_path}")
     wandb.finish()

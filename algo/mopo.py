@@ -26,7 +26,7 @@ class MOPO:
             num_env_steps_per_epoch=1000,
             max_epoch=100000,
             max_model_update_epochs_to_improve=5,
-            max_model_train_iterations="None",
+            max_model_train_iterations='None',
             hold_out_ratio=0.1,
             **kwargs
     ):

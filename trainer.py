@@ -152,8 +152,10 @@ class Trainer:
             model_save_dir = util.logger_model.log_path
             if not os.path.exists(model_save_dir):
                 os.makedirs(model_save_dir)
-            policy_copy = copy.deepcopy(self.algo.policy)
-            torch.save(policy_copy.to('cpu').state_dict(), os.path.join(model_save_dir, f"policy_{self.env_name}.pth")) 
+            # Copy state dict without modifying original
+            policy_copy = {k: v.cpu().clone() for k, v in self.algo.policy.state_dict().items()}
+            # policy_copy = copy.deepcopy(self.algo.policy.to('cpu').state_dict())
+            torch.save(policy_copy, os.path.join(model_save_dir, f"policy_{self.env_name}.pth")) 
         
         if self.run_id != 0:
             #plot q_values for each epoch
@@ -174,27 +176,27 @@ class Trainer:
 
     def _evaluate(self):
         self.algo.policy.eval()
-        obs, _ = self.eval_env.reset()
+        obs = self.eval_env.reset()
         eval_ep_info_buffer = []
         num_episodes = 0
         episode_reward, episode_length = 0, 0
 
         while num_episodes < self._eval_episodes:
             action = self.algo.policy.sample_action(obs, deterministic=True)
-            next_obs, reward, terminal, truncated, _= self.eval_env.step(action) #next_obs = world model forecast
+            next_obs, reward, terminal= self.eval_env.step(action) #next_obs = world model forecast
             episode_reward += reward
             episode_length += 1
 
             obs = next_obs  #next_obs = world model forecast
 
-            if terminal or truncated:
+            if terminal:
                 eval_ep_info_buffer.append(
                     {"episode_reward": episode_reward, "episode_length": episode_length}
                 )
 
                 num_episodes +=1
                 episode_reward, episode_length = 0, 0
-                obs, _ = self.eval_env.reset()
+                obs= self.eval_env.reset()
 
         return {
             "eval/episode_reward": [ep_info["episode_reward"] for ep_info in eval_ep_info_buffer],

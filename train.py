@@ -34,7 +34,7 @@ def train(env, run, logger, seed, args):
             dataset = np.load(args.data_path)
             dataset = {k: dataset[k] for k in dataset.files}
             print('opened the npz file for synthetic dataset')
-        # dataset = {k: v[:5] for k, v in dataset.items()}
+        # dataset = {k: v[:100] for k, v in dataset.items()}
         buffer_len = len(dataset['observations'])
     else:
         if args.task == "abiomed":
@@ -62,9 +62,9 @@ def train(env, run, logger, seed, args):
 
     # import configs
     task = args.task.split('-')[0]
-    import_path = f"static_fns.{task}"
+    import_path = f"static_fns.{task.lower()}"
     static_fns = importlib.import_module(import_path).StaticFns
-    config_path = f"config.{task}"
+    config_path = f"configs.{task.lower()}"
     config = importlib.import_module(config_path).default_config
 
     # create policy model

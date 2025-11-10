@@ -1,0 +1,170 @@
+setting device: cuda:5
+Environment without noise
+opened the pickle file for synthetic dataset
+Model loaded from: /public/gormpo/models/halfcheetah/realnvp_model.pth
+Metadata loaded from: /public/gormpo/models/halfcheetah/realnvp_meta_data.pkl
+Threshold: -31.227603912353516
+training log mean and std of classifier:  5.054104328155518 9.443124771118164
+[34m[1mwandb[0m: wandb.init() called while a run is active and reinit is set to 'default', so returning the previous run.
+[1;32m [info][0m: Start training dynamics
+[1;32m [info][0m: loss/model_eval_mse_loss: 31.141598
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.887186
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.716648
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.660502
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.618747
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.590073
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.547321
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.525811
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.491694
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.479043
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.474934
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.454443
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.438100
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.440352
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.424293
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.416769
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.393974
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.408701
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.608414
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.377632
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.372338
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.371928
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.350587
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.358003
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.345031
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.332674
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.334080
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.330106
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.317262
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.320125
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.315282
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.321660
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.304704
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.290622
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.284787
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.286908
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.266142
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.279202
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.259750
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.311924
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.243693
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.302468
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.241220
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.237512
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.248096
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.235536
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.327156
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.231554
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.247199
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.220534
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.225919
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.221379
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.225923
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.218157
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.231273
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.214620
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.213118
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.211630
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.213383
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.219521
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.238307
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.214522
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.203135
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.266201
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.196652
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.201151
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.276455
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.286813
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.198330
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.198544
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.207427
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.212325
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.209629
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.199002
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.196731
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.187521
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.203988
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.190245
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.276357
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.207482
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.185425
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.235480
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.199387
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.183125
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.195715
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.183049
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.186693
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.201396
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.178089
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.185238
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.193423
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.211813
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.184165
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.188552
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.214541
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.198849
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.179132
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.189105
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.218564
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.182410
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.218738
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.187031
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.177784
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.228074
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.207618
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.181887
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.181524
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.188219
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.175191
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.211612
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.182774
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.176671
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.171035
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.168792
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.172160
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.163665
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.169251
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.181813
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.166832
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.167682
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.163564
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.239572
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.167057
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.169304
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.169974
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.193955
+[1;32m [info][0m: total time: 6704.727s
+Epoch #1/100: 100%|█████████████| 1000/1000 [00:29<00:00, 34.14it/s, alpha=0.74, entropy=4.1, loss/actor=-3.25, loss/alpha=-3.04, loss/critic1=61.7, loss/critic2=0.172]
+Epoch #2/100: 100%|██████████| 1000/1000 [00:29<00:00, 34.26it/s, alpha=0.548, entropy=4.07, loss/actor=-2.44, loss/alpha=-6.06, loss/critic1=52.6, loss/critic2=0.0961]
+Epoch #3/100: 100%|███████████| 1000/1000 [00:28<00:00, 34.57it/s, alpha=0.406, entropy=4.09, loss/actor=-1.87, loss/alpha=-9.1, loss/critic1=44.7, loss/critic2=0.0755]
+Epoch #4/100: 100%|██████████| 1000/1000 [00:28<00:00, 34.81it/s, alpha=0.301, entropy=4.13, loss/actor=-1.46, loss/alpha=-12.2, loss/critic1=39.8, loss/critic2=0.0918]
+Epoch #5/100: 100%|█████████████| 1000/1000 [00:28<00:00, 34.71it/s, alpha=0.223, entropy=4.09, loss/actor=-1.08, loss/alpha=-15.1, loss/critic1=36, loss/critic2=0.059]
+Epoch #6/100: 100%|█████████| 1000/1000 [00:29<00:00, 34.11it/s, alpha=0.165, entropy=4.07, loss/actor=-0.908, loss/alpha=-18.1, loss/critic1=30.8, loss/critic2=0.0539]
+Epoch #7/100: 100%|█████████| 1000/1000 [00:29<00:00, 34.17it/s, alpha=0.122, entropy=4.09, loss/actor=-0.699, loss/alpha=-21.2, loss/critic1=29.6, loss/critic2=0.0668]
+Epoch #8/100: 100%|████████| 1000/1000 [00:29<00:00, 33.59it/s, alpha=0.0906, entropy=4.08, loss/actor=-0.569, loss/alpha=-24.2, loss/critic1=29.6, loss/critic2=0.0415]
+Epoch #9/100: 100%|████████| 1000/1000 [00:29<00:00, 33.95it/s, alpha=0.0671, entropy=4.05, loss/actor=-0.461, loss/alpha=-27.1, loss/critic1=27.6, loss/critic2=0.0569]
+Epoch #10/100: 100%|███████| 1000/1000 [00:29<00:00, 33.52it/s, alpha=0.0498, entropy=4.02, loss/actor=-0.471, loss/alpha=-30.1, loss/critic1=26.9, loss/critic2=0.0582]
+Traceback (most recent call last):
+  File "mopo.py", line 183, in <module>
+    main(args=get_args())
+  File "mopo.py", line 163, in main
+    policy, trainer = train(env, run, logger, seed, args)
+  File "/home/ubuntu/GORMPO/train.py", line 189, in train
+    trainer.train_policy()
+  File "/home/ubuntu/GORMPO/trainer.py", line 137, in train_policy
+    eval_info = self._evaluate()
+  File "/home/ubuntu/GORMPO/trainer.py", line 186, in _evaluate
+    next_obs, reward, terminal= self.eval_env.step(action) #next_obs = world model forecast
+ValueError: too many values to unpack (expected 3)
+Traceback (most recent call last):
+  File "mopo.py", line 183, in <module>
+    main(args=get_args())
+  File "mopo.py", line 163, in main
+    policy, trainer = train(env, run, logger, seed, args)
+  File "/home/ubuntu/GORMPO/train.py", line 189, in train
+    trainer.train_policy()
+  File "/home/ubuntu/GORMPO/trainer.py", line 137, in train_policy
+    eval_info = self._evaluate()
+  File "/home/ubuntu/GORMPO/trainer.py", line 186, in _evaluate
+    next_obs, reward, terminal= self.eval_env.step(action) #next_obs = world model forecast
+ValueError: too many values to unpack (expected 3)

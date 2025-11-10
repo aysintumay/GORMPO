@@ -1,0 +1,156 @@
+setting device: cuda:0
+Environment without noise
+opened the pickle file for synthetic dataset
+Model loaded from: /public/gormpo/models/halfcheetah/realnvp_model.pth
+Metadata loaded from: /public/gormpo/models/halfcheetah/realnvp_meta_data.pkl
+Threshold: -31.227603912353516
+training log mean and std of classifier:  5.054104328155518 9.443124771118164
+[34m[1mwandb[0m: wandb.init() called while a run is active and reinit is set to 'default', so returning the previous run.
+[1;32m [info][0m: Start training dynamics
+[1;32m [info][0m: loss/model_eval_mse_loss: 18.095221
+[1;32m [info][0m: loss/model_eval_mse_loss: 18.071178
+[1;32m [info][0m: loss/model_eval_mse_loss: 18.045538
+[1;32m [info][0m: loss/model_eval_mse_loss: 18.015654
+[1;32m [info][0m: loss/model_eval_mse_loss: 17.978895
+[1;32m [info][0m: loss/model_eval_mse_loss: 17.932215
+[1;32m [info][0m: loss/model_eval_mse_loss: 17.872211
+[1;32m [info][0m: loss/model_eval_mse_loss: 17.795912
+[1;32m [info][0m: loss/model_eval_mse_loss: 17.701918
+[1;32m [info][0m: loss/model_eval_mse_loss: 17.593327
+[1;32m [info][0m: loss/model_eval_mse_loss: 17.479704
+[1;32m [info][0m: loss/model_eval_mse_loss: 17.376419
+[1;32m [info][0m: loss/model_eval_mse_loss: 17.297199
+[1;32m [info][0m: loss/model_eval_mse_loss: 17.270611
+[1;32m [info][0m: loss/model_eval_mse_loss: 17.241268
+[1;32m [info][0m: loss/model_eval_mse_loss: 17.192284
+[1;32m [info][0m: loss/model_eval_mse_loss: 17.115747
+[1;32m [info][0m: loss/model_eval_mse_loss: 17.014185
+[1;32m [info][0m: loss/model_eval_mse_loss: 16.894260
+[1;32m [info][0m: loss/model_eval_mse_loss: 16.754452
+[1;32m [info][0m: loss/model_eval_mse_loss: 16.595779
+[1;32m [info][0m: loss/model_eval_mse_loss: 16.427549
+[1;32m [info][0m: loss/model_eval_mse_loss: 16.259531
+[1;32m [info][0m: loss/model_eval_mse_loss: 16.098049
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.946678
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.811612
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.698222
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.604935
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.532254
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.479897
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.447023
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.432825
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.445620
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.461263
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.481795
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.491637
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.504907
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.512329
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.506200
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.487556
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.456484
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.413058
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.371704
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.296279
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.215856
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.130220
+[1;32m [info][0m: loss/model_eval_mse_loss: 15.035294
+[1;32m [info][0m: loss/model_eval_mse_loss: 14.946197
+[1;32m [info][0m: loss/model_eval_mse_loss: 14.866236
+[1;32m [info][0m: loss/model_eval_mse_loss: 14.792335
+[1;32m [info][0m: loss/model_eval_mse_loss: 14.725123
+[1;32m [info][0m: loss/model_eval_mse_loss: 14.669646
+[1;32m [info][0m: loss/model_eval_mse_loss: 14.629112
+[1;32m [info][0m: loss/model_eval_mse_loss: 14.606043
+[1;32m [info][0m: loss/model_eval_mse_loss: 14.600621
+[1;32m [info][0m: loss/model_eval_mse_loss: 14.613702
+[1;32m [info][0m: loss/model_eval_mse_loss: 14.629662
+[1;32m [info][0m: loss/model_eval_mse_loss: 14.662169
+[1;32m [info][0m: loss/model_eval_mse_loss: 14.719441
+[1;32m [info][0m: loss/model_eval_mse_loss: 14.779773
+[1;32m [info][0m: total time: 1.717s
+Epoch #1/100: 100%|██████| 1000/1000 [00:21<00:00, 47.11it/s, alpha=0.74, entropy=4.09, loss/actor=-3.21, loss/alpha=-3.03, loss/critic1=30.6, loss/critic2=1.99]
+Traceback (most recent call last):
+  File "/home/ubuntu/miniconda3/envs/gormpo/lib/python3.8/runpy.py", line 194, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/home/ubuntu/miniconda3/envs/gormpo/lib/python3.8/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/home/ubuntu/.vscode-server/extensions/ms-python.debugpy-2025.14.1-linux-x64/bundled/libs/debugpy/adapter/../../debugpy/launcher/../../debugpy/__main__.py", line 71, in <module>
+    cli.main()
+  File "/home/ubuntu/.vscode-server/extensions/ms-python.debugpy-2025.14.1-linux-x64/bundled/libs/debugpy/adapter/../../debugpy/launcher/../../debugpy/../debugpy/server/cli.py", line 508, in main
+    run()
+  File "/home/ubuntu/.vscode-server/extensions/ms-python.debugpy-2025.14.1-linux-x64/bundled/libs/debugpy/adapter/../../debugpy/launcher/../../debugpy/../debugpy/server/cli.py", line 358, in run_file
+    runpy.run_path(target, run_name="__main__")
+  File "/home/ubuntu/.vscode-server/extensions/ms-python.debugpy-2025.14.1-linux-x64/bundled/libs/debugpy/_vendored/pydevd/_pydevd_bundle/pydevd_runpy.py", line 310, in run_path
+    return _run_module_code(code, init_globals, run_name, pkg_name=pkg_name, script_name=fname)
+  File "/home/ubuntu/.vscode-server/extensions/ms-python.debugpy-2025.14.1-linux-x64/bundled/libs/debugpy/_vendored/pydevd/_pydevd_bundle/pydevd_runpy.py", line 127, in _run_module_code
+    _run_code(code, mod_globals, init_globals, mod_name, mod_spec, pkg_name, script_name)
+  File "/home/ubuntu/.vscode-server/extensions/ms-python.debugpy-2025.14.1-linux-x64/bundled/libs/debugpy/_vendored/pydevd/_pydevd_bundle/pydevd_runpy.py", line 118, in _run_code
+    exec(code, run_globals)
+  File "/home/ubuntu/GORMPO/mopo.py", line 182, in <module>
+    main(args=get_args())
+  File "/home/ubuntu/GORMPO/mopo.py", line 162, in main
+    policy, trainer = train(env, run, logger, seed, args)
+  File "/home/ubuntu/GORMPO/train.py", line 189, in train
+    trainer.train_policy()
+  File "/home/ubuntu/GORMPO/trainer.py", line 155, in train_policy
+    policy_copy = copy.deepcopy(self.algo.policy.to('cpu').state_dict())
+  File "/home/ubuntu/GORMPO/trainer.py", line 155, in train_policy
+    policy_copy = copy.deepcopy(self.algo.policy.to('cpu').state_dict())
+  File "/home/ubuntu/.vscode-server/extensions/ms-python.debugpy-2025.14.1-linux-x64/bundled/libs/debugpy/_vendored/pydevd/_pydevd_bundle/pydevd_frame.py", line 989, in trace_dispatch
+    self.do_wait_suspend(thread, frame, event, arg)
+  File "/home/ubuntu/.vscode-server/extensions/ms-python.debugpy-2025.14.1-linux-x64/bundled/libs/debugpy/_vendored/pydevd/_pydevd_bundle/pydevd_frame.py", line 172, in do_wait_suspend
+    self._args[0].do_wait_suspend(*args, **kwargs)
+  File "/home/ubuntu/.vscode-server/extensions/ms-python.debugpy-2025.14.1-linux-x64/bundled/libs/debugpy/_vendored/pydevd/pydevd.py", line 2188, in do_wait_suspend
+    keep_suspended = self._do_wait_suspend(thread, frame, event, arg, trace_suspend_type, from_this_thread, frames_tracker)
+  File "/home/ubuntu/.vscode-server/extensions/ms-python.debugpy-2025.14.1-linux-x64/bundled/libs/debugpy/_vendored/pydevd/pydevd.py", line 2257, in _do_wait_suspend
+    notify_event.wait(wait_timeout)
+  File "/home/ubuntu/miniconda3/envs/gormpo/lib/python3.8/threading.py", line 558, in wait
+    signaled = self._cond.wait(timeout)
+  File "/home/ubuntu/miniconda3/envs/gormpo/lib/python3.8/threading.py", line 306, in wait
+    gotit = waiter.acquire(True, timeout)
+KeyboardInterrupt
+Traceback (most recent call last):
+  File "/home/ubuntu/miniconda3/envs/gormpo/lib/python3.8/runpy.py", line 194, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/home/ubuntu/miniconda3/envs/gormpo/lib/python3.8/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/home/ubuntu/.vscode-server/extensions/ms-python.debugpy-2025.14.1-linux-x64/bundled/libs/debugpy/adapter/../../debugpy/launcher/../../debugpy/__main__.py", line 71, in <module>
+    cli.main()
+  File "/home/ubuntu/.vscode-server/extensions/ms-python.debugpy-2025.14.1-linux-x64/bundled/libs/debugpy/adapter/../../debugpy/launcher/../../debugpy/../debugpy/server/cli.py", line 508, in main
+    run()
+  File "/home/ubuntu/.vscode-server/extensions/ms-python.debugpy-2025.14.1-linux-x64/bundled/libs/debugpy/adapter/../../debugpy/launcher/../../debugpy/../debugpy/server/cli.py", line 358, in run_file
+    runpy.run_path(target, run_name="__main__")
+  File "/home/ubuntu/.vscode-server/extensions/ms-python.debugpy-2025.14.1-linux-x64/bundled/libs/debugpy/_vendored/pydevd/_pydevd_bundle/pydevd_runpy.py", line 310, in run_path
+    return _run_module_code(code, init_globals, run_name, pkg_name=pkg_name, script_name=fname)
+  File "/home/ubuntu/.vscode-server/extensions/ms-python.debugpy-2025.14.1-linux-x64/bundled/libs/debugpy/_vendored/pydevd/_pydevd_bundle/pydevd_runpy.py", line 127, in _run_module_code
+    _run_code(code, mod_globals, init_globals, mod_name, mod_spec, pkg_name, script_name)
+  File "/home/ubuntu/.vscode-server/extensions/ms-python.debugpy-2025.14.1-linux-x64/bundled/libs/debugpy/_vendored/pydevd/_pydevd_bundle/pydevd_runpy.py", line 118, in _run_code
+    exec(code, run_globals)
+  File "/home/ubuntu/GORMPO/mopo.py", line 182, in <module>
+    main(args=get_args())
+  File "/home/ubuntu/GORMPO/mopo.py", line 162, in main
+    policy, trainer = train(env, run, logger, seed, args)
+  File "/home/ubuntu/GORMPO/train.py", line 189, in train
+    trainer.train_policy()
+  File "/home/ubuntu/GORMPO/trainer.py", line 155, in train_policy
+    policy_copy = copy.deepcopy(self.algo.policy.to('cpu').state_dict())
+  File "/home/ubuntu/GORMPO/trainer.py", line 155, in train_policy
+    policy_copy = copy.deepcopy(self.algo.policy.to('cpu').state_dict())
+  File "/home/ubuntu/.vscode-server/extensions/ms-python.debugpy-2025.14.1-linux-x64/bundled/libs/debugpy/_vendored/pydevd/_pydevd_bundle/pydevd_frame.py", line 989, in trace_dispatch
+    self.do_wait_suspend(thread, frame, event, arg)
+  File "/home/ubuntu/.vscode-server/extensions/ms-python.debugpy-2025.14.1-linux-x64/bundled/libs/debugpy/_vendored/pydevd/_pydevd_bundle/pydevd_frame.py", line 172, in do_wait_suspend
+    self._args[0].do_wait_suspend(*args, **kwargs)
+  File "/home/ubuntu/.vscode-server/extensions/ms-python.debugpy-2025.14.1-linux-x64/bundled/libs/debugpy/_vendored/pydevd/pydevd.py", line 2188, in do_wait_suspend
+    keep_suspended = self._do_wait_suspend(thread, frame, event, arg, trace_suspend_type, from_this_thread, frames_tracker)
+  File "/home/ubuntu/.vscode-server/extensions/ms-python.debugpy-2025.14.1-linux-x64/bundled/libs/debugpy/_vendored/pydevd/pydevd.py", line 2257, in _do_wait_suspend
+    notify_event.wait(wait_timeout)
+  File "/home/ubuntu/miniconda3/envs/gormpo/lib/python3.8/threading.py", line 558, in wait
+    signaled = self._cond.wait(timeout)
+  File "/home/ubuntu/miniconda3/envs/gormpo/lib/python3.8/threading.py", line 306, in wait
+    gotit = waiter.acquire(True, timeout)
+KeyboardInterrupt
+Exception ignored in: <module 'threading' from '/home/ubuntu/miniconda3/envs/gormpo/lib/python3.8/threading.py'>
+Traceback (most recent call last):
+  File "/home/ubuntu/miniconda3/envs/gormpo/lib/python3.8/threading.py", line 1388, in _shutdown
+    lock.acquire()
+KeyboardInterrupt:

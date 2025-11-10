@@ -1,0 +1,11 @@
+{"time":"2025-11-09T23:13:29.205278418Z","level":"INFO","msg":"stream: starting","core version":"0.22.2"}
+{"time":"2025-11-09T23:13:29.545892535Z","level":"INFO","msg":"stream: created new stream","id":"c3rx3asr"}
+{"time":"2025-11-09T23:13:29.545991646Z","level":"INFO","msg":"handler: started","stream_id":"c3rx3asr"}
+{"time":"2025-11-09T23:13:29.54627728Z","level":"INFO","msg":"stream: started","id":"c3rx3asr"}
+{"time":"2025-11-09T23:13:29.54631873Z","level":"INFO","msg":"sender: started","stream_id":"c3rx3asr"}
+{"time":"2025-11-09T23:13:29.5463437Z","level":"INFO","msg":"writer: started","stream_id":"c3rx3asr"}
+{"time":"2025-11-09T23:16:48.797707576Z","level":"INFO","msg":"stream: closing","id":"c3rx3asr"}
+{"time":"2025-11-09T23:16:49.18318823Z","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2025-11-09T23:16:49.37095591Z","level":"INFO","msg":"handler: closed","stream_id":"c3rx3asr"}
+{"time":"2025-11-09T23:16:49.371327144Z","level":"INFO","msg":"sender: closed","stream_id":"c3rx3asr"}
+{"time":"2025-11-09T23:16:49.371391445Z","level":"INFO","msg":"stream: closed","id":"c3rx3asr"}

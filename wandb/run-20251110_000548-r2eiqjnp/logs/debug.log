@@ -1,0 +1,5 @@
+2025-11-10 00:05:48,622 INFO    MainThread:193686 [wandb_init.py:setup_run_log_directory():705] Logging user logs to /home/ubuntu/GORMPO/wandb/run-20251110_000548-r2eiqjnp/logs/debug.log
+2025-11-10 00:05:48,622 INFO    MainThread:193686 [wandb_init.py:setup_run_log_directory():706] Logging internal logs to /home/ubuntu/GORMPO/wandb/run-20251110_000548-r2eiqjnp/logs/debug-internal.log
+2025-11-10 00:05:48,622 INFO    MainThread:193686 [wandb_init.py:init():832] calling init triggers
+2025-11-10 00:05:48,622 INFO    MainThread:193686 [wandb_init.py:init():837] wandb.init called with sweep_config: {}
+config: {'_wandb': {}}

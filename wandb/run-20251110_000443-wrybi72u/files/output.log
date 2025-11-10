@@ -1,0 +1,51 @@
+setting device: cuda:5
+Environment without noise
+opened the pickle file for synthetic dataset
+Model loaded from: /public/gormpo/models/halfcheetah/realnvp_model.pth
+Metadata loaded from: /public/gormpo/models/halfcheetah/realnvp_meta_data.pkl
+Threshold: -31.227603912353516
+training log mean and std of classifier:  5.054104328155518 9.443124771118164
+[34m[1mwandb[0m: wandb.init() called while a run is active and reinit is set to 'default', so returning the previous run.
+[1;32m [info][0m: Start training dynamics
+[1;32m [info][0m: loss/model_eval_mse_loss: 31.141598
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.887186
+Traceback (most recent call last):
+  File "mopo.py", line 183, in <module>
+    main(args=get_args())
+  File "mopo.py", line 163, in main
+    policy, trainer = train(env, run, logger, seed, args)
+  File "/home/ubuntu/GORMPO/train.py", line 183, in train
+    trainer.train_dynamics()
+  File "/home/ubuntu/GORMPO/trainer.py", line 99, in train_dynamics
+    self.algo.learn_dynamics()
+  File "/home/ubuntu/GORMPO/algo/mopo.py", line 105, in learn_dynamics
+    model_log_infos = self.dynamics_model.update(train_data_batch)
+  File "/home/ubuntu/GORMPO/transition_model.py", line 153, in update
+    train_transition_loss.backward()
+  File "/home/ubuntu/miniconda3/envs/gormpo/lib/python3.8/site-packages/torch/_tensor.py", line 521, in backward
+    torch.autograd.backward(
+  File "/home/ubuntu/miniconda3/envs/gormpo/lib/python3.8/site-packages/torch/autograd/__init__.py", line 289, in backward
+    _engine_run_backward(
+  File "/home/ubuntu/miniconda3/envs/gormpo/lib/python3.8/site-packages/torch/autograd/graph.py", line 769, in _engine_run_backward
+    return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+KeyboardInterrupt
+Traceback (most recent call last):
+  File "mopo.py", line 183, in <module>
+    main(args=get_args())
+  File "mopo.py", line 163, in main
+    policy, trainer = train(env, run, logger, seed, args)
+  File "/home/ubuntu/GORMPO/train.py", line 183, in train
+    trainer.train_dynamics()
+  File "/home/ubuntu/GORMPO/trainer.py", line 99, in train_dynamics
+    self.algo.learn_dynamics()
+  File "/home/ubuntu/GORMPO/algo/mopo.py", line 105, in learn_dynamics
+    model_log_infos = self.dynamics_model.update(train_data_batch)
+  File "/home/ubuntu/GORMPO/transition_model.py", line 153, in update
+    train_transition_loss.backward()
+  File "/home/ubuntu/miniconda3/envs/gormpo/lib/python3.8/site-packages/torch/_tensor.py", line 521, in backward
+    torch.autograd.backward(
+  File "/home/ubuntu/miniconda3/envs/gormpo/lib/python3.8/site-packages/torch/autograd/__init__.py", line 289, in backward
+    _engine_run_backward(
+  File "/home/ubuntu/miniconda3/envs/gormpo/lib/python3.8/site-packages/torch/autograd/graph.py", line 769, in _engine_run_backward
+    return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+KeyboardInterrupt

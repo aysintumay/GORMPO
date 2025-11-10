@@ -1,0 +1,45 @@
+setting device: cuda:5
+Environment without noise
+opened the pickle file for synthetic dataset
+Model loaded from: /public/gormpo/models/halfcheetah/realnvp_model.pth
+Metadata loaded from: /public/gormpo/models/halfcheetah/realnvp_meta_data.pkl
+Threshold: -31.227603912353516
+training log mean and std of classifier:  5.054104328155518 9.443124771118164
+[34m[1mwandb[0m: wandb.init() called while a run is active and reinit is set to 'default', so returning the previous run.
+[1;32m [info][0m: Start training dynamics
+[1;32m [info][0m: loss/model_eval_mse_loss: 38.911961
+[1;32m [info][0m: loss/model_eval_mse_loss: 38.954594
+[1;32m [info][0m: loss/model_eval_mse_loss: 39.000668
+[1;32m [info][0m: loss/model_eval_mse_loss: 39.056110
+[1;32m [info][0m: loss/model_eval_mse_loss: 39.126522
+[1;32m [info][0m: loss/model_eval_mse_loss: 39.218121
+[1;32m [info][0m: total time: 0.330s
+Epoch #1/1:   8%|▍     | 80/1000 [00:02<00:30, 30.45it/s, alpha=0.976, entropy=4.01, loss/actor=-4.25, loss/alpha=-0.239, loss/critic1=11.8, loss/critic2=3.87]
+Traceback (most recent call last):
+  File "mopo.py", line 181, in <module>
+    main(args=get_args())
+  File "mopo.py", line 161, in main
+    policy, trainer = train(env, run, logger, seed, args)
+  File "/home/ubuntu/GORMPO/train.py", line 189, in train
+    trainer.train_policy()
+  File "/home/ubuntu/GORMPO/trainer.py", line 118, in train_policy
+    loss,q_values = self.algo.learn_policy()
+  File "/home/ubuntu/GORMPO/algo/mopo.py", line 164, in learn_policy
+    loss,q_values = self.policy.learn(data)
+  File "/home/ubuntu/GORMPO/algo/sac.py", line 99, in learn
+    next_q = torch.min(
+KeyboardInterrupt
+Traceback (most recent call last):
+  File "mopo.py", line 181, in <module>
+    main(args=get_args())
+  File "mopo.py", line 161, in main
+    policy, trainer = train(env, run, logger, seed, args)
+  File "/home/ubuntu/GORMPO/train.py", line 189, in train
+    trainer.train_policy()
+  File "/home/ubuntu/GORMPO/trainer.py", line 118, in train_policy
+    loss,q_values = self.algo.learn_policy()
+  File "/home/ubuntu/GORMPO/algo/mopo.py", line 164, in learn_policy
+    loss,q_values = self.policy.learn(data)
+  File "/home/ubuntu/GORMPO/algo/sac.py", line 99, in learn
+    next_q = torch.min(
+KeyboardInterrupt

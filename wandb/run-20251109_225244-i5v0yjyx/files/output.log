@@ -1,0 +1,36 @@
+setting device: cuda:5
+Environment without noise
+Traceback (most recent call last):
+  File "/home/ubuntu/GORMPO/train.py", line 30, in train
+    with open(args.data_path, "rb") as f:
+FileNotFoundError: [Errno 2] No such file or directory: 'public/sparse_d4rl/hopper-medium-v2.pkl'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "mopo.py", line 181, in <module>
+    main(args=get_args())
+  File "mopo.py", line 161, in main
+    policy, trainer = train(env, run, logger, seed, args)
+  File "/home/ubuntu/GORMPO/train.py", line 34, in train
+    dataset = np.load(args.data_path)
+  File "/home/ubuntu/miniconda3/envs/gormpo/lib/python3.8/site-packages/numpy/lib/npyio.py", line 405, in load
+    fid = stack.enter_context(open(os_fspath(file), "rb"))
+FileNotFoundError: [Errno 2] No such file or directory: 'public/sparse_d4rl/hopper-medium-v2.pkl'
+Traceback (most recent call last):
+  File "/home/ubuntu/GORMPO/train.py", line 30, in train
+    with open(args.data_path, "rb") as f:
+FileNotFoundError: [Errno 2] No such file or directory: 'public/sparse_d4rl/hopper-medium-v2.pkl'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "mopo.py", line 181, in <module>
+    main(args=get_args())
+  File "mopo.py", line 161, in main
+    policy, trainer = train(env, run, logger, seed, args)
+  File "/home/ubuntu/GORMPO/train.py", line 34, in train
+    dataset = np.load(args.data_path)
+  File "/home/ubuntu/miniconda3/envs/gormpo/lib/python3.8/site-packages/numpy/lib/npyio.py", line 405, in load
+    fid = stack.enter_context(open(os_fspath(file), "rb"))
+FileNotFoundError: [Errno 2] No such file or directory: 'public/sparse_d4rl/hopper-medium-v2.pkl'

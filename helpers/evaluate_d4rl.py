@@ -99,6 +99,7 @@ def get_mopo(args):
         alpha=args.alpha,
         device=args.device
     )
+    print('mopo is migrated to', args.device)
     policy_state_dict = torch.load(args.policy_path, map_location=args.device)
     sac_policy.load_state_dict(policy_state_dict)
     return sac_policy
@@ -106,27 +107,27 @@ def get_mopo(args):
 
 def _evaluate(policy, eval_env, episodes, args, plot=None):
         policy.eval()
-        obs, _ = eval_env.reset()
+        obs = eval_env.reset()
         eval_ep_info_buffer = []
         num_episodes = 0
         episode_reward, episode_length = 0, 0
 
         while num_episodes < episodes:
             action = policy.sample_action(obs, deterministic=True)
-            next_obs, reward, terminal, truncated, _= eval_env.step(action) #next_obs = world model forecast
+            next_obs, reward, terminal, _= eval_env.step(action) #next_obs = world model forecast
             episode_reward += reward
             episode_length += 1
 
             obs = next_obs  #next_obs = world model forecast
 
-            if terminal or truncated:
+            if terminal:
                 eval_ep_info_buffer.append(
                     {"episode_reward": episode_reward, "episode_length": episode_length}
                 )
 
                 num_episodes +=1
                 episode_reward, episode_length = 0, 0
-                obs, _ = eval_env.reset()
+                obs = eval_env.reset()
 
         return {
             "eval/episode_reward": [ep_info["episode_reward"] for ep_info in eval_ep_info_buffer],

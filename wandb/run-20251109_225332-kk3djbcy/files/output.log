@@ -1,0 +1,29 @@
+setting device: cuda:5
+Environment without noise
+opened the pickle file for synthetic dataset
+Traceback (most recent call last):
+  File "mopo.py", line 181, in <module>
+    main(args=get_args())
+  File "mopo.py", line 161, in main
+    policy, trainer = train(env, run, logger, seed, args)
+  File "/home/ubuntu/GORMPO/train.py", line 66, in train
+    static_fns = importlib.import_module(import_path).StaticFns
+  File "/home/ubuntu/miniconda3/envs/gormpo/lib/python3.8/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1014, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 991, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 973, in _find_and_load_unlocked
+ModuleNotFoundError: No module named 'static_fns.HalfCheetah'
+Traceback (most recent call last):
+  File "mopo.py", line 181, in <module>
+    main(args=get_args())
+  File "mopo.py", line 161, in main
+    policy, trainer = train(env, run, logger, seed, args)
+  File "/home/ubuntu/GORMPO/train.py", line 66, in train
+    static_fns = importlib.import_module(import_path).StaticFns
+  File "/home/ubuntu/miniconda3/envs/gormpo/lib/python3.8/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1014, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 991, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 973, in _find_and_load_unlocked
+ModuleNotFoundError: No module named 'static_fns.HalfCheetah'
