@@ -1,7 +1,0 @@
-2025-11-10 00:00:38,713 INFO    MainThread:192144 [wandb_init.py:setup_run_log_directory():705] Logging user logs to /home/ubuntu/GORMPO/wandb/run-20251110_000038-p4f0u9zy/logs/debug.log
-2025-11-10 00:00:38,713 INFO    MainThread:192144 [wandb_init.py:setup_run_log_directory():706] Logging internal logs to /home/ubuntu/GORMPO/wandb/run-20251110_000038-p4f0u9zy/logs/debug-internal.log
-2025-11-10 00:00:38,714 INFO    MainThread:192144 [wandb_init.py:init():832] calling init triggers
-2025-11-10 00:00:38,714 INFO    MainThread:192144 [wandb_init.py:init():837] wandb.init called with sweep_config: {}
-config: {'_wandb': {}}
-2025-11-10 00:01:00,576 INFO    wandb-AsyncioManager-main:192144 [service_client.py:_forward_responses():80] Reached EOF.
-2025-11-10 00:01:00,577 INFO    wandb-AsyncioManager-main:192144 [mailbox.py:close():137] Closing mailbox, abandoning 1 handles.
