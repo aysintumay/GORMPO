@@ -325,10 +325,17 @@ def calculate_nll_binned(
             density=False
         )
         
-        # Convert to probabilities with smoothing to avoid log(0)
-        # Add smoothing to all bins (Laplace smoothing / add-one smoothing)
-        prob_mass = counts + smoothing
-        prob_mass = prob_mass / prob_mass.sum()  # Normalize
+        # Convert counts to probability density with smoothing
+        # Standard histogram density: density = counts / (total_count * bin_width)
+        # With smoothing: density = (counts + smoothing) / (total_smoothed * bin_width)
+        # This ensures the integral of density equals 1: sum(density * bin_width) = 1
+        smoothed_counts = counts + smoothing
+        total_smoothed = smoothed_counts.sum()  # = total_count + smoothing * num_bins
+        # Compute density: normalized by total_smoothed and bin_width
+        # This removes the influence of bin_width on NLL (NLL = -log(density))
+        prob_density = smoothed_counts / (total_smoothed * bin_width)
+        # Also compute probability mass for stats (normalized to sum to 1)
+        prob_mass = smoothed_counts / total_smoothed
         
         bin_probs_per_dim.append(prob_mass)
         
@@ -345,9 +352,13 @@ def calculate_nll_binned(
             target_bin_idx = max(0, min(target_bin_idx, len(prob_mass) - 1))
         target_bins_per_dim.append(target_bin_idx)
         
-        # Calculate NLL = -log(P(target in this bin))
-        target_prob = prob_mass[target_bin_idx]
-        nll_per_dim[dim_idx] = -np.log(target_prob + smoothing)
+        # Calculate NLL from probability density: NLL = -log(pdf)
+        # Using density removes the influence of bin_width on NLL values
+        # The density is computed as: pdf = (counts + smoothing) / (total * bin_width)
+        # So NLL = -log(pdf) is now independent of bin_width (for the same underlying distribution)
+        target_density = prob_density[target_bin_idx]
+        # Ensure density is positive (smoothing already applied in density calculation)
+        nll_per_dim[dim_idx] = -np.log(np.maximum(target_density, 1e-20))
     
     total_nll = nll_per_dim.sum()
     
@@ -592,6 +603,7 @@ def main():
         sampling_fn_batch = ddpm_stochastic_sample_batch
     else:  # ddim
         try:
+            from diffusers.schedulers.scheduling_ddim import DDIMScheduler
             scheduler = DDIMScheduler.from_pretrained(sched_dir)
         except Exception:
             print("Warning: Could not load DDIMScheduler, creating default")
