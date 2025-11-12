@@ -20,10 +20,7 @@ import torch
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 from GORMPO.models.policy_models  import MLP, ActorProb, Critic, DiagGaussian
 from GORMPO.algo.sac import SACPolicy
-from  GORMPO.common.logger import Logger
-from  GORMPO.common.util import set_device_and_logger
-from  GORMPO.common import util
-from GORMPO.helpers.plotter import plot_policy, plot_score_histograms
+
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -107,31 +104,38 @@ def get_mopo(args):
 
 def _evaluate(policy, eval_env, episodes, args, plot=None):
         policy.eval()
-        obs = eval_env.reset()
+        obs,_ = eval_env.reset()
         eval_ep_info_buffer = []
         num_episodes = 0
         episode_reward, episode_length = 0, 0
 
         while num_episodes < episodes:
             action = policy.sample_action(obs, deterministic=True)
-            next_obs, reward, terminal, _= eval_env.step(action) #next_obs = world model forecast
+            next_obs, reward, terminal, truncated,_= eval_env.step(action) #next_obs = world model forecast
             episode_reward += reward
             episode_length += 1
 
             obs = next_obs  #next_obs = world model forecast
 
-            if terminal:
+            if terminal or truncated:
                 eval_ep_info_buffer.append(
                     {"episode_reward": episode_reward, "episode_length": episode_length}
                 )
 
                 num_episodes +=1
                 episode_reward, episode_length = 0, 0
-                obs = eval_env.reset()
-
+                obs,_ = eval_env.reset()
+        eval_info = {
+                        "eval/episode_reward": [ep_info["episode_reward"] for ep_info in eval_ep_info_buffer],
+                        "eval/episode_length": [ep_info["episode_length"] for ep_info in eval_ep_info_buffer]
+                    }
+        ep_reward_mean, ep_reward_std = np.mean(eval_info["eval/episode_reward"]), np.std(eval_info["eval/episode_reward"])
+        ep_length_mean, ep_length_std = np.mean(eval_info["eval/episode_length"]), np.std(eval_info["eval/episode_length"])
         return {
-            "eval/episode_reward": [ep_info["episode_reward"] for ep_info in eval_ep_info_buffer],
-            "eval/episode_length": [ep_info["episode_length"] for ep_info in eval_ep_info_buffer]
+            "mean_return":ep_reward_mean,
+            "std_return": ep_reward_std,
+            "mean_length": ep_length_mean,
+            "std_length": ep_length_std
         }
 
 
@@ -275,6 +279,12 @@ if __name__ == "__main__":
     args.config = config_args.config
     print(args.config)
 
+    t0 = datetime.datetime.now().strftime("%m%d_%H%M%S")
+    wandb.init(
+    project="mopo-eval",
+    name=f"eval_{args.task}_{args.algo_name}_{t0}",
+    config=vars(args)
+        )
     
     results = []
     for seed in args.seeds:
@@ -283,12 +293,7 @@ if __name__ == "__main__":
         np.random.seed(args.seed)
         torch.manual_seed(args.seed)
 
-        t0 = datetime.datetime.now().strftime("%m%d_%H%M%S")
-        wandb.init(
-        project="mopo-eval",
-        name=f"eval_{args.task}_{args.algo_name}_{t0}",
-        config=vars(args)
-        )
+       
         
         log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}_{args.algo_name}'
         log_path = os.path.join(args.logdir, args.task, args.algo_name, log_file)

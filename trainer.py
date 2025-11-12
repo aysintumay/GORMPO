@@ -67,7 +67,7 @@ class Trainer:
         log_freq,
         run_id,
         env_name = '',
-        eval_episodes=10,
+        eval_episodes=100,
         terminal_counter=1
         
     ):
@@ -169,7 +169,7 @@ class Trainer:
             plot_p_loss(np.array(entropy).reshape(-1,1), 'Entropy')
             plot_p_loss(np.array(alpha_loss).reshape(-1,1), 'Alpha')
 
-            plot_accuracy(np.array(reward_l), np.array(reward_std_l)/self._eval_episodes, 'Average Return')
+            plot_accuracy(np.array(reward_l), np.array(reward_std_l), 'Average Return')
             
         self.logger.print("total time: {:.3f}s".format(time.time() - start_time))
 
@@ -183,7 +183,7 @@ class Trainer:
 
         while num_episodes < self._eval_episodes:
             action = self.algo.policy.sample_action(obs, deterministic=True)
-            next_obs, reward, terminal= self.eval_env.step(action) #next_obs = world model forecast
+            next_obs, reward, terminal, _= self.eval_env.step(action) #next_obs = world model forecast
             episode_reward += reward
             episode_length += 1
 

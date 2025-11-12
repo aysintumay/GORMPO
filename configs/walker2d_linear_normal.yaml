@@ -1,9 +1,9 @@
 task: Walker2d
 algo-name: gormpo
-reward-penalty-coef: 0.005
+reward-penalty-coef: 1
 seed: 1
 data_path: "/public/sparse_d4rl/walker2d-medium-v2.pkl"
 epoch: 100
 penalty_type: 'tanh'
-classifier_model_name: "/public/gormpo/models/walker2d/realnvp"
+classifier_model_name: "/public/gormpo/models/walker2d_normal/realnvp"
 

@@ -8,6 +8,7 @@ import torch
 import numpy as np
 import importlib
 import copy
+import d4rl
 
 
 device = None
@@ -180,29 +181,29 @@ def load_dataset_with_validation_split(
                 dataset_info['format'] = 'npz'
             except Exception as e:
                 raise ValueError(f"Could not load dataset from {args.data_path}: {e}")
-
-        # Validate required keys
-        missing_keys = [key for key in required_keys if key not in dataset]
-        if missing_keys:
-            available_keys = list(dataset.keys())
-            print(f"Warning: Missing required keys {missing_keys}. Available keys: {available_keys}")
-
-        # Apply max_samples limit if specified
-        if max_samples is not None:
-            dataset = {k: v[:max_samples] for k, v in dataset.items()}
-            print(f'Limited dataset to {max_samples} samples')
-
-        dataset_info['original_size'] = len(dataset['observations']) if 'observations' in dataset else len(list(dataset.values())[0])
-
-        # Create train/val split since file datasets typically don't have predefined splits
-        train_data, val_data = _create_train_val_split_dict(dataset, val_split_ratio + test_split_ratio)
-        val_data, test_data = _create_train_val_split_dict(val_data, val_split_ratio / (val_split_ratio + test_split_ratio))
-        dataset_info['created_val_split'] = True
-
-        buffer_len = dataset_info['original_size']
-    
     else:
-        raise ValueError("Must provide either args.data_path or env parameter")
+        # dataset = env.get_dataset()
+        dataset = d4rl.qlearning_dataset(env)
+        # Validate required keys
+    missing_keys = [key for key in required_keys if key not in dataset]
+    if missing_keys:
+        available_keys = list(dataset.keys())
+        print(f"Warning: Missing required keys {missing_keys}. Available keys: {available_keys}")
+
+    # Apply max_samples limit if specified
+    if max_samples is not None:
+        dataset = {k: v[:max_samples] for k, v in dataset.items()}
+        print(f'Limited dataset to {max_samples} samples')
+
+    dataset_info['original_size'] = len(dataset['observations']) if 'observations' in dataset else len(list(dataset.values())[0])
+
+    # Create train/val split since file datasets typically don't have predefined splits
+    train_data, val_data = _create_train_val_split_dict(dataset, val_split_ratio + test_split_ratio)
+    val_data, test_data = _create_train_val_split_dict(val_data, val_split_ratio / (val_split_ratio + test_split_ratio))
+    dataset_info['created_val_split'] = True
+
+    buffer_len = dataset_info['original_size']
+    
 
     # Prepare return dictionary
     result = {
@@ -246,7 +247,9 @@ def _create_train_val_split_dict(
 
     # Get dataset size from first key
     first_key = list(dataset.keys())[0]
+    # print(first_key)
     total_size = len(dataset[first_key])
+    # print(total_size)
 
     # Calculate split indices for temporal split
     # Train on earlier data, validate on later data
@@ -260,7 +263,6 @@ def _create_train_val_split_dict(
     # Split each array in the dataset
     train_dataset = {}
     val_dataset = {}
-
     for key, values in dataset.items():
         if isinstance(values, np.ndarray):
             train_dataset[key] = values[train_indices]
@@ -268,8 +270,9 @@ def _create_train_val_split_dict(
         else:
             # Handle non-numpy arrays (e.g., lists)
             values_array = np.array(values)
-            train_dataset[key] = values_array[train_indices]
-            val_dataset[key] = values_array[val_indices]
+            # print( dataset.keys())
+            train_dataset[key] = values_array[np.array(train_indices)]
+            val_dataset[key] = values_array[np.array(val_indices)]
 
     print(f"Temporal split dataset: {train_size} train samples, {val_size} validation samples")
 

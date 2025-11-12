@@ -19,7 +19,7 @@ from trainer import Trainer
 from common.util import set_device_and_logger
 from common import util
 from realnvp_module.realnvp import RealNVP 
-
+import d4rl
 
 
 def train(env, run, logger, seed, args):
@@ -50,7 +50,7 @@ def train(env, run, logger, seed, args):
             # dataset.labels = dataset.labels[:5]
 
         else:
-            dataset = env.get_dataset() 
+            dataset = d4rl.qlearning_dataset(env) 
     
 
     args.obs_shape = env.observation_space.shape
@@ -160,7 +160,7 @@ def train(env, run, logger, seed, args):
     )
     #load world model
 
-    # dynamics_model.load_model(f'dynamics_model') 
+    # dynamics_model.load_model(args.task) 
 
    
     # create trainer
