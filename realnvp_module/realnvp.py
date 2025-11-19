@@ -1486,29 +1486,29 @@ if __name__ == "__main__":
     ).to(device)
 
     # print("Training RealNVP model...")
-    history = model.fit(
-        train_data=train_data,
-        val_data=val_data,
-        epochs=config.get('epochs', 100),
-        batch_size=config.get('batch_size', 128),
-        lr=config.get('lr', 1e-3),
-        patience=config.get('patience', 15),
-        verbose=config.get('verbose', True)
-    )
-    # Save model if requested
-    if config.get('model_save_path', False):
-        save_path = config.get('model_save_path', 'saved_models/realnvp')
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        model.save_model(save_path)
-        print(f"Model saved to: {save_path}_model.pth")
+    # history = model.fit(
+    #     train_data=train_data,
+    #     val_data=val_data,
+    #     epochs=config.get('epochs', 100),
+    #     batch_size=config.get('batch_size', 128),
+    #     lr=config.get('lr', 1e-3),
+    #     patience=config.get('patience', 15),
+    #     verbose=config.get('verbose', True)
+    # )
+    # # Save model if requested
+    # if config.get('model_save_path', False):
+    #     save_path = config.get('model_save_path', 'saved_models/realnvp')
+    #     os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    #     model.save_model(save_path)
+    #     print(f"Model saved to: {save_path}_model.pth")
     #load pretrained model
-    # model_dict = RealNVP.load_model(save_path=args.model_save_path)
-    # model = model_dict['model']
-    # model.to(device)
+    model_dict = RealNVP.load_model(save_path=args.model_save_path)
+    model = model_dict['model']
+    model.to(device)
 
-    # print(args.device)
-    # model.threshold = model_dict['thr']
-    # print(model.device)
+    print(args.device)
+    model.threshold = model_dict['thr']
+    print(model.device)
     # Evaluate anomaly detection
     print("\nEvaluating anomaly detection performance...")
     # results = model.evaluate_anomaly_detection(
@@ -1546,8 +1546,7 @@ if __name__ == "__main__":
         noise_levels=noise_levels
     )
 
-    print("Scores test ID (pure test set):", scores_test_in_dist.mean().item())
-
+  
     # Plot validation vs test ID distribution
     print("\n" + "="*80)
     print("Creating Validation vs Test ID Distribution Plot...")
@@ -1629,5 +1628,6 @@ if __name__ == "__main__":
 
 
     
+    print("Scores test ID (pure test set):", scores_test_in_dist.mean().item())
 
     print("\nRealNVP training and evaluation completed!")
