@@ -15,7 +15,15 @@ import gym
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from common.buffer import ReplayBuffer
-from common.util import load_dataset_with_validation_split
+from common.util import load_dataset_with_validation_split, create_synthetic_data
+from helpers.plotter import (
+    plot_likelihood_distributions,
+    plot_val_test_id_distribution,
+    plot_ood_metrics,
+    plot_roc_curves,
+    plot_likelihood_histograms,
+    plot_tsne
+)
 
 
 class MLP(nn.Module):
@@ -1495,7 +1503,7 @@ if __name__ == "__main__":
     #     patience=config.get('patience', 15),
     #     verbose=config.get('verbose', True)
     # )
-    # # Save model if requested
+    # Save model if requested
     # if config.get('model_save_path', False):
     #     save_path = config.get('model_save_path', 'saved_models/realnvp')
     #     os.makedirs(os.path.dirname(save_path), exist_ok=True)

@@ -323,3 +323,44 @@ def validate_dataset_structure(
     return True
 
 
+def create_synthetic_data(n_samples=1000, dim=2, anomaly_type="outlier"):
+    """
+    Generate synthetic normal and anomalous data in arbitrary dimensions.
+
+    Args:
+        n_samples (int): number of normal samples
+        dim (int): dimensionality of data
+        anomaly_type (str): "outlier" or "uniform"
+
+    Returns:
+        (torch.FloatTensor, torch.FloatTensor): normal_data, anomaly_data
+    """
+    normal_data = []
+    for _ in range(n_samples):
+        if np.random.rand() < 0.7:
+            # Main cluster around 0
+            mean = np.zeros(dim)
+            cov = np.eye(dim)
+            sample = np.random.multivariate_normal(mean, cov, 1)
+        else:
+            # Secondary cluster around 3
+            mean = np.ones(dim) * 3
+            cov = 0.5 * np.eye(dim)
+            sample = np.random.multivariate_normal(mean, cov, 1)
+        normal_data.append(sample[0])
+
+    normal_data = np.array(normal_data)
+
+    # Anomalous data
+    if anomaly_type == "outlier":
+        mean = np.ones(dim) * 10
+        cov = 2 * np.eye(dim)
+        anomaly_data = np.random.multivariate_normal(mean, cov, n_samples // 5)
+    elif anomaly_type == "uniform":
+        anomaly_data = np.random.uniform(-5, 8, (n_samples // 5, dim))
+    else:
+        raise ValueError(f"Unknown anomaly type: {anomaly_type}")
+
+    return torch.FloatTensor(normal_data), torch.FloatTensor(anomaly_data)
+
+
