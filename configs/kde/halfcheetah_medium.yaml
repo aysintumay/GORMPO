@@ -1,0 +1,23 @@
+task: halfcheetah-medium-v2
+env: ""
+
+# KDE model hyperparameters
+bandwidth: 1.0
+k_neighbors: 100
+percentile: 5.0
+
+# Data splitting
+test_size: 0.2
+val_size: 0.1
+temporal_split: false
+
+# Training options
+optimize_percentile: false
+optimization_metric: density_range
+pca: false
+
+# Output
+plot: true
+model_save_path: /public/gormpo/models/halfcheetah_normal/kde
+devid: 0
+seed: 42

@@ -15,7 +15,15 @@ import gym
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from common.buffer import ReplayBuffer
-from common.util import load_dataset_with_validation_split
+from common.util import load_dataset_with_validation_split, create_synthetic_data
+from helpers.plotter import (
+    plot_likelihood_distributions,
+    plot_val_test_id_distribution,
+    plot_ood_metrics,
+    plot_roc_curves,
+    plot_likelihood_histograms,
+    plot_tsne
+)
 
 
 class MLP(nn.Module):
@@ -1486,29 +1494,29 @@ if __name__ == "__main__":
     ).to(device)
 
     # print("Training RealNVP model...")
-    history = model.fit(
-        train_data=train_data,
-        val_data=val_data,
-        epochs=config.get('epochs', 100),
-        batch_size=config.get('batch_size', 128),
-        lr=config.get('lr', 1e-3),
-        patience=config.get('patience', 15),
-        verbose=config.get('verbose', True)
-    )
+    # history = model.fit(
+    #     train_data=train_data,
+    #     val_data=val_data,
+    #     epochs=config.get('epochs', 100),
+    #     batch_size=config.get('batch_size', 128),
+    #     lr=config.get('lr', 1e-3),
+    #     patience=config.get('patience', 15),
+    #     verbose=config.get('verbose', True)
+    # )
     # Save model if requested
-    if config.get('model_save_path', False):
-        save_path = config.get('model_save_path', 'saved_models/realnvp')
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        model.save_model(save_path)
-        print(f"Model saved to: {save_path}_model.pth")
+    # if config.get('model_save_path', False):
+    #     save_path = config.get('model_save_path', 'saved_models/realnvp')
+    #     os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    #     model.save_model(save_path)
+    #     print(f"Model saved to: {save_path}_model.pth")
     #load pretrained model
-    # model_dict = RealNVP.load_model(save_path=args.model_save_path)
-    # model = model_dict['model']
-    # model.to(device)
+    model_dict = RealNVP.load_model(save_path=args.model_save_path)
+    model = model_dict['model']
+    model.to(device)
 
-    # print(args.device)
-    # model.threshold = model_dict['thr']
-    # print(model.device)
+    print(args.device)
+    model.threshold = model_dict['thr']
+    print(model.device)
     # Evaluate anomaly detection
     print("\nEvaluating anomaly detection performance...")
     # results = model.evaluate_anomaly_detection(
