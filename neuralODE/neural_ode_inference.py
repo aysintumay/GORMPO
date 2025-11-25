@@ -1,17 +1,24 @@
 import argparse
 import json
 import os
+import sys
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Tuple
 
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 
 try:
     import yaml  # type: ignore
 except Exception:
     yaml = None
+
+if __package__ is None or __package__ == "":
+    project_root = Path(__file__).resolve().parents[1]
+    if str(project_root) not in sys.path:
+        sys.path.append(str(project_root))
 
 from neuralODE.neural_ode_density import (
     ContinuousNormalizingFlow,
@@ -31,6 +38,7 @@ class EvalConfig:
     npz_path: str
     model_path: str
     batch_size: int = 512
+    max_samples: int = 0  # 0 means evaluate all samples
     hidden_dims: Tuple[int, ...] = (512, 512)
     activation: str = "silu"
     time_dependent: bool = True
@@ -71,9 +79,16 @@ def load_flow(cfg: EvalConfig, target_dim: int) -> ContinuousNormalizingFlow:
 
 
 def evaluate(cfg: EvalConfig) -> None:
-    dataset = NPZTargetDataset(cfg.npz_path)
+    full_dataset = NPZTargetDataset(cfg.npz_path)
+    target_dim = full_dataset.target_dim
+    if cfg.max_samples > 0:
+        num_samples = min(cfg.max_samples, len(full_dataset))
+        dataset = Subset(full_dataset, list(range(num_samples)))
+        print(f"[Eval] Limiting evaluation to first {num_samples} samples")
+    else:
+        dataset = full_dataset
     loader = DataLoader(dataset, batch_size=cfg.batch_size, shuffle=False, drop_last=False)
-    flow = load_flow(cfg, dataset.target_dim)
+    flow = load_flow(cfg, target_dim)
 
     total_logp = 0.0
     total_samples = 0
@@ -139,6 +154,7 @@ def parse_args() -> EvalConfig:
     parser.add_argument("--npz", required=("npz" not in yaml_defaults), default=dget("npz", None))
     parser.add_argument("--model", required=("model" not in yaml_defaults), default=dget("model", None))
     parser.add_argument("--batch", type=int, default=dget("batch", 512))
+    parser.add_argument("--max-samples", type=int, default=dget("max_samples", 0), help="Limit evaluation to first N samples (0 = all samples)")
     parser.add_argument("--hidden-dims", type=int, nargs="+", default=dget("hidden_dims", [512, 512]))
     parser.add_argument("--activation", type=str, default=dget("activation", "silu"), choices=["silu", "tanh"])
     parser.add_argument("--time-dependent", dest="time_dependent", action="store_true")
@@ -161,6 +177,7 @@ def parse_args() -> EvalConfig:
         npz_path=args.npz,
         model_path=args.model,
         batch_size=args.batch,
+        max_samples=args.max_samples,
         hidden_dims=hidden_dims,
         activation=args.activation,
         time_dependent=args.time_dependent,
