@@ -10,4 +10,4 @@ device: cuda
 inference_steps: 50
 scheduler_type: ddpm
 output_dir: diffusion/monte_carlo_results/hopper_unconditional_ddpm/
-
+max_test_samples: 1000

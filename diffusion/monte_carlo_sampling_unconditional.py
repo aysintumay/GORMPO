@@ -30,6 +30,7 @@ except Exception:
 from ddim_training_unconditional import (
     UnconditionalEpsilonMLP,
     UnconditionalEpsilonTransformer,
+    log_prob_elbo,
 )
 
 
@@ -494,6 +495,7 @@ def main():
     parser.add_argument("--device", type=str, default=dget("device", "cuda" if torch.cuda.is_available() else "cpu"))
     parser.add_argument("--num-dims-to-plot", type=int, default=dget("num_dims_to_plot", None), help="Number of dimensions to plot histograms for (None = plot all dimensions)")
     parser.add_argument("--bin-width", type=float, default=dget("bin_width", 0.1), help="Bin width for NLL calculation (only used if --test-npz is provided)")
+    parser.add_argument("--max-test-samples", type=int, default=dget("max_test_samples", None), help="Maximum number of test samples to evaluate NLL on (None = use all samples)")
 
     args = parser.parse_args()
 
@@ -517,6 +519,7 @@ def main():
     os.makedirs(args.output_dir, exist_ok=True)
 
     # Load test data if provided (for comparison/evaluation)
+    target_all_np = None
     target_first_np = None
     if test_npz:
         data = np.load(test_npz)
@@ -531,10 +534,22 @@ def main():
             print(f"Warning: Could not find target data in {test_npz}. Available keys: {list(data.keys())}")
             print("Proceeding without target comparison.")
         else:
-            # Take only the first test case for comparison
-            target_first_np = target[0:1].flatten() if len(target.shape) > 1 else target.flatten()
-            print(f"Using first test case from {test_npz} for comparison:")
-            print(f"  Target shape: {target_first_np.shape}")
+            # Load test samples (optionally limit the number)
+            if len(target.shape) > 1:
+                target_all_np = target  # Shape: (num_samples, target_dim)
+            else:
+                target_all_np = target.reshape(1, -1)  # Reshape to (1, target_dim)
+            
+            # Limit number of test samples if requested
+            max_test_samples = args.max_test_samples
+            if max_test_samples is not None and max_test_samples > 0 and target_all_np.shape[0] > max_test_samples:
+                print(f"Limiting test samples from {target_all_np.shape[0]} to {max_test_samples}")
+                target_all_np = target_all_np[:max_test_samples]
+            
+            # Also keep first for plotting/comparison
+            target_first_np = target_all_np[0].flatten()
+            print(f"Loaded {target_all_np.shape[0]} test samples from {test_npz}:")
+            print(f"  Target shape: {target_all_np.shape}")
 
     # Load scaler for de-normalization
     mean_target_arr = None
@@ -665,7 +680,8 @@ def main():
     print(f"\nSaved samples to {samples_path}")
 
     # If target provided, compute NLL and plot comparisons
-    if target_first_np is not None:
+    if target_all_np is not None:
+        # For plotting, use first sample
         target_orig = inverse_scale_target(
             torch.from_numpy(target_first_np).float().unsqueeze(0),
             mean_target_arr,
@@ -673,30 +689,83 @@ def main():
         ).cpu().numpy().flatten()
         
         errors = sample_means - target_orig
-        print(f"\nComparison with ground truth:")
+        print(f"\nComparison with ground truth (first sample):")
         print(f"  Mean error: {errors.mean():.6f} ± {errors.std():.6f}")
         print(f"  Max absolute error: {np.abs(errors).max():.6f}")
 
-        # Calculate NLL using binning
-        print(f"\nCalculating NLL with bin width={args.bin_width}...")
+        # Calculate NLL using ELBO (log_prob_elbo) for all test samples
+        print(f"\nCalculating NLL using ELBO (log_prob_elbo) for all {target_all_np.shape[0]} test samples...")
+        # Use normalized targets for model (model expects normalized inputs)
+        target_all_normalized = torch.from_numpy(target_all_np).float().to(device)
+        
+        # Process in batches to avoid memory issues
+        eval_batch_size = min(512, target_all_np.shape[0])
+        nll_elbo_list = []
+        log_prob_elbo_list = []
+        
+        for i in range(0, target_all_np.shape[0], eval_batch_size):
+            batch_targets = target_all_normalized[i:i + eval_batch_size]
+            batch_log_probs = log_prob_elbo(
+                model=model,
+                scheduler=scheduler,
+                x0=batch_targets,
+                device=device,
+            )
+            # NLL = -log_prob (this is summed over dimensions)
+            batch_nll_total = -batch_log_probs
+            batch_nll_per_dim = batch_nll_total
+            nll_elbo_list.append(batch_nll_per_dim.cpu())
+            log_prob_elbo_list.append(batch_log_probs.cpu())
+        
+        # Concatenate and compute statistics
+        nll_elbo_all = np.concatenate([nll.numpy() for nll in nll_elbo_list], axis=0)
+        log_prob_elbo_all = np.concatenate([lp.numpy() for lp in log_prob_elbo_list], axis=0)
+        nll_elbo_mean = nll_elbo_all.mean()
+        nll_elbo_std = nll_elbo_all.std()
+        
+        print(f"\nELBO-based NLL per sample (computed for {target_all_np.shape[0]} test samples):")
+        print(f"  NOTE: Each sample gets its own NLL (NOT averaged inside batch)")
+        print(f"  NOTE: NLL is normalized by dividing by {target_dim} dimensions (average per dimension)")
+        print(f"  Target dimension: {target_dim}")
+        print(f"  Mean NLL per sample (per dimension, averaged): {nll_elbo_mean:.6f} ± {nll_elbo_std:.6f}")
+        print(f"  Min NLL per sample: {nll_elbo_all.min():.6f}")
+        print(f"  Max NLL per sample: {nll_elbo_all.max():.6f}")
+        print(f"  Median NLL per sample: {np.median(nll_elbo_all):.6f}")
+        print(f"  Mean Log probability per sample: {log_prob_elbo_all.mean():.6f} ± {log_prob_elbo_all.std():.6f}")
+        print(f"  First 10 NLL values per sample (per dimension): {nll_elbo_all[:10]}")
+        
+        # Calculate NLL using binning (for comparison)
+        print(f"\nCalculating NLL with binning (bin width={args.bin_width})...")
         total_nll, nll_per_dim, nll_stats = calculate_nll_binned(
             samples=all_samples,
             target=target_orig,
             bin_width=args.bin_width,
         )
         
-        print(f"\nNLL Statistics:")
+        print(f"\nBinning-based NLL Statistics:")
         print(f"  Total NLL: {total_nll:.6f}")
         print(f"  Mean NLL per dimension: {nll_per_dim.mean():.6f} ± {nll_per_dim.std():.6f}")
         print(f"  Min NLL per dimension: {nll_per_dim.min():.6f}")
         print(f"  Max NLL per dimension: {nll_per_dim.max():.6f}")
         print(f"  Number of bins used: {nll_stats['num_bins']}")
         print(f"  Value range: [{nll_stats['value_range'][0]:.4f}, {nll_stats['value_range'][1]:.4f}]")
+        
+        print(f"\nComparison (first sample only for binning):")
+        print(f"  ELBO NLL per dimension (mean over all test samples): {nll_elbo_mean:.6f}")
+        print(f"  Binning NLL per dimension (first sample, mean): {nll_per_dim.mean():.6f}")
+        print(f"  Binning NLL per dimension (first sample, total): {total_nll / target_dim:.6f}")
+        print(f"  Note: Binning NLL is computed only for the first test sample")
+        print(f"  Note: Both methods now report NLL per dimension (averaged)")
 
         # Save NLL results
         nll_results_path = os.path.join(args.output_dir, "nll_results.npz")
         np.savez(
             nll_results_path,
+            nll_elbo_mean=nll_elbo_mean,
+            nll_elbo_std=nll_elbo_std,
+            nll_elbo_per_sample=nll_elbo_all,  # NLL for each test sample
+            log_prob_elbo_mean=log_prob_elbo_all.mean(),
+            log_prob_elbo_per_sample=log_prob_elbo_all,  # Log prob for each test sample
             total_nll=total_nll,
             nll_per_dim=nll_per_dim,
             bin_width=args.bin_width,
@@ -704,6 +773,19 @@ def main():
             value_range=nll_stats['value_range'],
         )
         print(f"Saved NLL results to {nll_results_path}")
+        print(f"  - nll_elbo_per_sample: NLL for each of {target_all_np.shape[0]} test samples (shape: {nll_elbo_all.shape})")
+        
+        # Also save per-sample NLL to a text file for easy inspection
+        nll_per_sample_path = os.path.join(args.output_dir, "nll_per_sample.txt")
+        with open(nll_per_sample_path, "w") as f:
+            f.write(f"NLL per sample (ELBO method)\n")
+            f.write(f"Total samples: {len(nll_elbo_all)}\n")
+            f.write(f"Mean: {nll_elbo_mean:.6f}, Std: {nll_elbo_std:.6f}\n")
+            f.write(f"Min: {nll_elbo_all.min():.6f}, Max: {nll_elbo_all.max():.6f}\n")
+            f.write(f"\nNLL per sample:\n")
+            for i, nll in enumerate(nll_elbo_all):
+                f.write(f"Sample {i}: {nll:.6f}\n")
+        print(f"Saved per-sample NLL values to {nll_per_sample_path}")
 
         # Plot distributions
         plot_path = os.path.join(args.output_dir, "monte_carlo_distributions.png")
