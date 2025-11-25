@@ -541,7 +541,7 @@ def log_prob_elbo(
         beta_t = betas[t - 1]
         # Posterior variance (tilde beta_t) with clamp
         beta_t_tilde = (1.0 - a_bar_prev) / (1.0 - a_bar_t) * beta_t
-        beta_t_tilde = torch.clamp(beta_t_tilde, min=1e-12)
+        beta_t_tilde = torch.clamp(beta_t_tilde, min=1e-20)
         
         # Predict epsilon at timestep t
         t_batch = torch.full((bsz,), t - 1, device=device, dtype=torch.long)
@@ -567,9 +567,15 @@ def log_prob_elbo(
             x_t = mu_q + torch.sqrt(beta_t_tilde) * noise
         else:
             # Reconstruction term: -log p_theta(x0|x1)
-            var = torch.clamp(beta_t_tilde, min=1e-12)
+            # At t=1, beta_t_tilde → 0, so use beta_1 instead as in DDPM paper
+            # This avoids numerical instability from dividing by near-zero variance
+            var = beta_t  # Use beta_1 directly instead of posterior variance
+            var = torch.clamp(var, min=1e-20)
+            # Proper Gaussian NLL formula: NLL = 0.5 * (log(2πσ²) + (x-μ)²/σ²) summed over dims
+            # Since var is scalar (same for all dims), factor out the log term
             nll0 = 0.5 * (
-                ((x0 - mu_theta) ** 2).sum(dim=1) / var + dim * torch.log(2 * torch.pi * var)
+                dim * torch.log(2 * torch.pi * var) +  # Constant log term × dim
+                ((x0 - mu_theta) ** 2 / var).sum(dim=1)  # Squared error term summed
             )
             total = total + nll0
     
