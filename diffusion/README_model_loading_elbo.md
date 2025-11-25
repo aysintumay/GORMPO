@@ -11,6 +11,7 @@ This guide explains how to load pretrained unconditional diffusion models and co
 - [OOD Detection](#ood-detection)
 - [Complete Examples](#complete-examples)
 - [Troubleshooting](#troubleshooting)
+- [Configuration](#configuration-files)
 
 ---
 

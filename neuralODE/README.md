@@ -55,12 +55,7 @@ Key CLI flags (overridable even when using YAML):
 Compute evaluation-set NLLs (optionally saving metrics/per-sample logp):
 
 ```bash
-python neuralODE/neural_ode_inference.py \
-  --config neuralODE/configs/hopper_mlp.yaml \
-  --model /data/sparse_d4rl/pretrained/neural_ode/hopper_medium_v2/model.pt \
-  --npz /public/d4rl/neuralODE_processed/hopper-medium-v2_eval.npz \
-  --save-metrics /tmp/hopper_eval_metrics.json \
-  --save-logp /tmp/hopper_eval_logp.npy
+python neuralODE/neural_ode_inference.py --config neuralODE/configs/test/hopper.yaml
 ```
 
 You can reuse the same YAML file that was used for training—the evaluator will pull matching keys (hidden dims, solver, tolerances, device, etc.). Just point `--model` to the saved weights and override `--npz` if you evaluate a different split.
