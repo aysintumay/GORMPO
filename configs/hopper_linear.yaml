@@ -1,9 +1,0 @@
-task: abiomed
-algo-name: gormpo
-reward-penalty-coef: 0.005
-seed: 1
-data_path: "public/sparse_d4rl/hopper-medium-v2.pkl"
-epoch: 100
-penalty_type: 'linear'
-classifier_model_name: 
-
