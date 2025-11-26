@@ -11,6 +11,7 @@ This guide explains how to load pretrained unconditional diffusion models and co
 - [OOD Detection](#ood-detection)
 - [Complete Examples](#complete-examples)
 - [Troubleshooting](#troubleshooting)
+- [Configuration](#configuration-files)
 
 ---
 
@@ -56,12 +57,31 @@ test_data = torch.randn(100, ckpt['target_dim']).to(device)  # Example
 # 4. Compute ELBO NLL
 log_probs = log_prob_elbo(model, scheduler, test_data, device)
 nll_total = -log_probs  # Total NLL per sample
-nll_per_dim = nll_total / ckpt['target_dim']  # NLL per dimension
 
 print(f"Mean NLL (total): {nll_total.mean().item():.2f} nats")
 # Expected for ID data (17 dims): 10-50 nats total
 # Expected for OOD data (17 dims): 200-1000 nats total
 ```
+
+### Using Config File
+
+You can also use the `monte_carlo_sampling_unconditional.py` script with config files:
+
+```bash
+# Example using HalfCheetah config
+python diffusion/monte_carlo_sampling_unconditional.py \
+    --config diffusion/configs/test/halfcheetah_mlp_ddpm_unconditional.yaml
+
+# Example using Hopper config
+python diffusion/monte_carlo_sampling_unconditional.py \
+    --config diffusion/configs/test/hopper_mlp_ddpm_unconditional.yaml
+```
+
+Config files specify:
+- Model directory with checkpoint
+- Test data path
+- Output directory for results
+- Batch size, inference steps, etc.
 
 ---
 
@@ -545,7 +565,28 @@ if __name__ == '__main__':
     main()
 ```
 
-### Example 2: OOD Detection Pipeline
+### Example 2: Using monte_carlo_sampling_unconditional.py
+
+The `monte_carlo_sampling_unconditional.py` script provides a complete pipeline for:
+- Loading pretrained models
+- Computing ELBO NLL on test data
+- Comparing NLL distributions
+
+```bash
+# Run with config file
+python diffusion/monte_carlo_sampling_unconditional.py \
+    --config diffusion/configs/test/halfcheetah_mlp_ddpm_unconditional.yaml
+
+# Or specify parameters directly
+python diffusion/monte_carlo_sampling_unconditional.py \
+    --model-dir /data/models/halfcheetah_unconditional \
+    --test-npz /data/halfcheetah_test.npz \
+    --output-dir results/halfcheetah_nll \
+    --batch-size 1000 \
+    --device cuda
+```
+
+### Example 3: Custom OOD Detection Pipeline
 
 ```python
 import numpy as np
@@ -724,7 +765,48 @@ ood_data = np.load('different_environment.npz')['action']
 5. **ROC AUC** is the best metric for OOD detection performance
 6. **Total NLL scales with dimensionality** - higher dims → larger NLL values
 
-For more examples, see:
-- `monte_carlo_sampling_unconditional.py` - Sampling and NLL evaluation
-- `ood_evaluation.py` - Comprehensive OOD detection pipeline
-- `README_ood_evaluation.md` - OOD evaluation documentation
+## Configuration Files
+
+Example configs are available in `diffusion/configs/test/`:
+
+**DDPM (stochastic sampling):**
+- `halfcheetah_mlp_ddpm_unconditional.yaml`
+- `hopper_mlp_ddpm_unconditional.yaml`
+- `walker2d_mlp_ddpm_unconditional.yaml`
+
+**DDIM (deterministic sampling):**
+- `halfcheetah_mlp_ddim_unconditional.yaml`
+- `hopper_mlp_ddim_unconditional.yaml`
+- `walker2d_mlp_ddim_unconditional.yaml`
+
+Each config specifies:
+```yaml
+out: /path/to/model/directory          # Model checkpoint directory
+test_npz: /path/to/test_data.npz       # Test data with 'action' key
+model_dir: /path/to/model/directory    # Same as 'out'
+num_samples: 10000                      # Number of samples to generate
+batch_size: 1000                        # Batch size for processing
+device: cuda                            # Device (cuda/cpu)
+inference_steps: 50                     # Number of denoising steps
+scheduler_type: ddpm                    # Scheduler type (ddpm/ddim)
+output_dir: results/                    # Where to save results
+max_test_samples: 1000                  # Max test samples for NLL eval
+```
+
+### Running with Config
+
+```bash
+# Compute ELBO NLL on test data
+python diffusion/monte_carlo_sampling_unconditional.py \
+    --config diffusion/configs/test/halfcheetah_mlp_ddpm_unconditional.yaml
+
+# Override specific parameters
+python diffusion/monte_carlo_sampling_unconditional.py \
+    --config diffusion/configs/test/hopper_mlp_ddpm_unconditional.yaml \
+    --batch-size 2000 \
+    --max-test-samples 500
+```
+
+For more details, see:
+- `monte_carlo_sampling_unconditional.py` - Complete sampling and NLL evaluation script
+- `ddim_training_unconditional.py` - Model definitions and ELBO computation
