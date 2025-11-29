@@ -67,7 +67,7 @@ class Trainer:
         log_freq,
         run_id,
         env_name = '',
-        eval_episodes=10,
+        eval_episodes=100,
         terminal_counter=1
         
     ):
@@ -152,8 +152,10 @@ class Trainer:
             model_save_dir = util.logger_model.log_path
             if not os.path.exists(model_save_dir):
                 os.makedirs(model_save_dir)
-            policy_copy = copy.deepcopy(self.algo.policy)
-            torch.save(policy_copy.to('cpu').state_dict(), os.path.join(model_save_dir, f"policy_{self.env_name}.pth")) 
+            # Copy state dict without modifying original
+            policy_copy = {k: v.cpu().clone() for k, v in self.algo.policy.state_dict().items()}
+            # policy_copy = copy.deepcopy(self.algo.policy.to('cpu').state_dict())
+            torch.save(policy_copy, os.path.join(model_save_dir, f"policy_{self.env_name}.pth")) 
         
         if self.run_id != 0:
             #plot q_values for each epoch
@@ -167,34 +169,34 @@ class Trainer:
             plot_p_loss(np.array(entropy).reshape(-1,1), 'Entropy')
             plot_p_loss(np.array(alpha_loss).reshape(-1,1), 'Alpha')
 
-            plot_accuracy(np.array(reward_l), np.array(reward_std_l)/self._eval_episodes, 'Average Return')
+            plot_accuracy(np.array(reward_l), np.array(reward_std_l), 'Average Return')
             
         self.logger.print("total time: {:.3f}s".format(time.time() - start_time))
 
 
     def _evaluate(self):
         self.algo.policy.eval()
-        obs, _ = self.eval_env.reset()
+        obs = self.eval_env.reset()
         eval_ep_info_buffer = []
         num_episodes = 0
         episode_reward, episode_length = 0, 0
 
         while num_episodes < self._eval_episodes:
             action = self.algo.policy.sample_action(obs, deterministic=True)
-            next_obs, reward, terminal, truncated, _= self.eval_env.step(action) #next_obs = world model forecast
+            next_obs, reward, terminal, _= self.eval_env.step(action) #next_obs = world model forecast
             episode_reward += reward
             episode_length += 1
 
             obs = next_obs  #next_obs = world model forecast
 
-            if terminal or truncated:
+            if terminal:
                 eval_ep_info_buffer.append(
                     {"episode_reward": episode_reward, "episode_length": episode_length}
                 )
 
                 num_episodes +=1
                 episode_reward, episode_length = 0, 0
-                obs, _ = self.eval_env.reset()
+                obs= self.eval_env.reset()
 
         return {
             "eval/episode_reward": [ep_info["episode_reward"] for ep_info in eval_ep_info_buffer],

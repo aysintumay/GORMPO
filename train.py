@@ -10,7 +10,6 @@ import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
 from transition_model import TransitionModel
-from realnvp import RealNVP
 from models.policy_models import MLP, ActorProb, Critic, DiagGaussian
 from algo.sac import SACPolicy
 from algo.mopo import MOPO
@@ -19,8 +18,10 @@ from common.logger import Logger
 from trainer import Trainer
 from common.util import set_device_and_logger
 from common import util
-from realnvp.realnvp import RealNVP 
-
+from realnvp_module.realnvp import RealNVP 
+from vae_module.vae import VAE
+from kde_module.kde import PercentileThresholdKDE
+import d4rl
 
 
 def train(env, run, logger, seed, args):
@@ -35,7 +36,7 @@ def train(env, run, logger, seed, args):
             dataset = np.load(args.data_path)
             dataset = {k: dataset[k] for k in dataset.files}
             print('opened the npz file for synthetic dataset')
-        # dataset = {k: v[:5] for k, v in dataset.items()}
+        # dataset = {k: v[:100] for k, v in dataset.items()}
         buffer_len = len(dataset['observations'])
     else:
         if args.task == "abiomed":
@@ -51,7 +52,7 @@ def train(env, run, logger, seed, args):
             # dataset.labels = dataset.labels[:5]
 
         else:
-            dataset = env.get_dataset() 
+            dataset = d4rl.qlearning_dataset(env) 
     
 
     args.obs_shape = env.observation_space.shape
@@ -63,9 +64,9 @@ def train(env, run, logger, seed, args):
 
     # import configs
     task = args.task.split('-')[0]
-    import_path = f"static_fns.{task}"
+    import_path = f"static_fns.{task.lower()}"
     static_fns = importlib.import_module(import_path).StaticFns
-    config_path = f"config.{task}"
+    config_path = f"configs.{task.lower()}"
     config = importlib.import_module(config_path).default_config
 
     # create policy model
@@ -111,10 +112,24 @@ def train(env, run, logger, seed, args):
         alpha=args.alpha,
         device=util.device
     )
-    classifier = RealNVP(
+
+    if "vae" in args.classifier_model_name:
+        classifier = VAE(
+            # hidden_dims= args.vae_hidden_dims,
+            device=util.device
+        ).to(util.device)
+        classifier_dict = classifier.load_model(args.classifier_model_name)
+    elif "realnvp" in args.classifier_model_name:
+        classifier = RealNVP(
         device=util.device
-    ).to(util.device)
-    classifier_dict = classifier.load_model(args.classifier_model_name)
+        ).to(util.device)
+        classifier_dict = classifier.load_model(args.classifier_model_name)
+    elif "kde" in args.classifier_model_name:
+        classifier = PercentileThresholdKDE(
+        devid=args.devid
+        )
+        classifier_dict = classifier.load_model(args.classifier_model_name)
+    
     # create dynamics model
     dynamics_model = TransitionModel(obs_space=env.observation_space,
                                      action_space=env.action_space,
@@ -161,7 +176,7 @@ def train(env, run, logger, seed, args):
     )
     #load world model
 
-    # dynamics_model.load_model(f'dynamics_model') 
+    # dynamics_model.load_model(args.task) 
 
    
     # create trainer

@@ -11,44 +11,25 @@ from matplotlib import pyplot as plt
 import sys
 import yaml
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-import algo.continuous_bcq.BCQ as BCQ
-import gymnasium as gym
-from bcq import eval_policy
+# import gymnasium as gym
+import gym
 # import d4rl
 
 import numpy as np
 import torch
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-from mopo_abiomed.models.policy_models  import MLP, ActorProb, Critic, DiagGaussian
-from mopo_abiomed.algo.sac import SACPolicy
-from  mopo_abiomed.common.logger import Logger
-from  mopo_abiomed.common.util import set_device_and_logger
-from  mopo_abiomed.common import util
-from mopo_abiomed.helpers.plotter import plot_policy, plot_score_histograms
+from GORMPO.models.policy_models  import MLP, ActorProb, Critic, DiagGaussian
+from GORMPO.algo.sac import SACPolicy
+
 
 import warnings
 warnings.filterwarnings("ignore")
-from noisy_mujoco.wrappers import (
+from wrapper import (
                         RandomNormalNoisyActions, 
                         RandomNormalNoisyTransitions,
                         RandomNormalNoisyTransitionsActions
                         )
-                        
-from noisy_mujoco.abiomed_env.rl_env import AbiomedRLEnvFactory
-from noisy_mujoco.abiomed_env.cost_func import (compute_acp_cost, 
-                                                unstable_percentage_model_merged,
-                                                unstable_percentage_model_gradient,
-                                                weaning_score_model_merged,
-                                                compute_acp_cost_model,
-                                                weaning_score_model_gradient,
-                                                compute_air_aggregate_gradient_threshold,
-                                                compute_map_model_air, 
-                                                compute_hr_model_air,
-                                                compute_pulsatility_model_air,
-                                                aggregate_air_model, 
-                                                weaning_score_model, 
-                                                unstable_percentage_model, 
-                                                super_metric)
+                    
 
 
 """
@@ -115,317 +96,68 @@ def get_mopo(args):
         alpha=args.alpha,
         device=args.device
     )
+    print('mopo is migrated to', args.device)
     policy_state_dict = torch.load(args.policy_path, map_location=args.device)
     sac_policy.load_state_dict(policy_state_dict)
     return sac_policy
 
-def get_bcq(env, args):
-
-    state_dim = env.observation_space.shape[0]
-    action_dim = env.action_space.shape[0] 
-    max_action = float(env.action_space.high[0])
-    
-    args.obs_shape = env.observation_space.shape
-    args.action_dim = np.prod(env.action_space.shape)
-    device = torch.device(args.devid if torch.cuda.is_available() else "cpu")
-
-    policy = BCQ.BCQ(state_dim, action_dim,  max_action, device, args.discount, args.tau, args.lmbda, args.phi)
-    policy.load(args.policy_path, state_dim, action_dim, device)
-    return policy
-
-def custom_evaluation_metric(reward, ws, acp, air):
-    """
-    Calculate the custom evaluation metric: 0.3*reward + 0.3*WS + 0.2*ACP + 0.2*AIR
-    """
-    return 0.3 * reward + 0.3 * ws - 0.2 * acp + 0.2 * air
 
 def _evaluate(policy, eval_env, episodes, args, plot=None):
-        
-    #Whenever evaluating, turn off reward shaping
-    eval_env.gamma1 = 0
-    eval_env.gamma2 = 0
-    eval_env.gamma3 = 0
+        policy.eval()
+        obs = eval_env.reset()
+        eval_ep_info_buffer = []
+        num_episodes = 0
+        episode_reward, episode_length = 0, 0
 
+        while num_episodes < episodes:
+            action = policy.sample_action(obs, deterministic=True)
+            next_obs, reward, terminal, info = eval_env.step(action) #next_obs = world model forecast
+            episode_reward += reward
+            episode_length += 1
 
-    eval_ep_info_buffer = []
-    num_episodes = 0
-    episode_reward, episode_length, episode_acp_cost = 0, 0, 0
-    total_map_air_sum = 0.0
-    total_hr_air_sum = 0.0
-    total_pulsatility_air_sum = 0.0
-    total_acp = 0.0
+            obs = next_obs  #next_obs = world model forecast
 
+            if terminal:
+                eval_ep_info_buffer.append(
+                    {"episode_reward": episode_reward, "episode_length": episode_length}
+                )
 
-    #added
-    actions = []
-    states = []
-    nondiscrete_actions =[]
-    
-    total_map_air_sum = 0.0
-    total_hr_air_sum = 0.0
-    total_pulsatility_air_sum = 0.0
-    total_aggregate_air_sum = 0.0
-    total_unstable_percentage_sum = 0.0
-    total_unstable_percentage_gradient_sum = 0.0
-    total_unstable_percentage_merged_sum = 0.0
-    total_super = 0.0
-    wean_score = 0.0
-    ws_merged = 0.0
-    ws_thr = 0.0
-    
-
-    policy.eval()
-    # if num_episodes==4:
-    #     obs, info = eval_env.reset(idx=num_episodes)
-    # else:
-    obs, info = eval_env.reset(idx=100) #262 99:mopo mbpo 208:c 0: mbpo_kde
-    all_states = info['all_states']  #normalized
-    all_states = np.concatenate([obs.reshape(1,-1), all_states], axis=0)
-    
-    ep_states = []
-
-    acp_num = 0.0
-    ws_num = 0.0
-    acp_list = []
-    ws_list = []
-    ws_merged_list = []
-    rwd_list = []
-    plotted_max_acp = 0
-    plotted_min_acp = 0
-    plotted_max_ws = 0
-    plotted_min_ws = 0
-    plotted_max_rwd = 0
-    plotted_min_rwd = 0
-
-    while num_episodes < episodes:
-        
-        action = policy.sample_action(obs, deterministic=True)
-
-        # wandb.log(log_data)
-        nondiscrete_actions.append(action)
-        next_obs, reward, terminal, truncated,  _ = eval_env.step(action)
-        
-        
-        episode_reward += reward
-        # rwd_list.append(reward)
-
-        #added
-        episode_length += 1
-        ep_states.append(obs)
-
-        obs = next_obs
-        
-        if terminal or truncated:
-            #added
-            actions.append(eval_env.episode_actions)
-            states.append(ep_states)
-        
-            ep_states_np = np.array(ep_states)
-            # print(ep_states_np.shape)
-            episode_acp_cost = compute_acp_cost_model(eval_env.world_model, eval_env.episode_actions, ep_states_np)
-            total_acp += episode_acp_cost
-            acp_list.append(episode_acp_cost)
-            episode_map_cost = compute_map_model_air(eval_env.world_model, ep_states_np, eval_env.episode_actions)
-            total_map_air_sum += episode_map_cost
-            nondiscrete_actions = []
-            
-            
-            episode_hr_cost = compute_hr_model_air(eval_env.world_model, ep_states_np, eval_env.episode_actions)
-            total_hr_air_sum += episode_hr_cost
-
-            episode_pulsatility_cost = compute_pulsatility_model_air(eval_env.world_model, ep_states_np, eval_env.episode_actions)
-            total_pulsatility_air_sum += episode_pulsatility_cost
-
-            episode_aggregate_cost = compute_air_aggregate_gradient_threshold(eval_env.world_model, ep_states_np,eval_env.episode_actions)
-            total_aggregate_air_sum += episode_aggregate_cost
-            ws,_ = weaning_score_model_gradient(eval_env.world_model, ep_states_np, eval_env.episode_actions)
-            wean_score += ws
-            ws_list.append(ws)
-
-            ws_m = weaning_score_model_merged(eval_env.world_model, ep_states_np, eval_env.episode_actions)
-            ws_merged += ws_m
-            ws_merged_list.append(ws_m)
-            ws_thr += weaning_score_model(eval_env.world_model, ep_states_np, eval_env.episode_actions)
-
-            # ws2 = weaning_score_model(eval_env.world_model, ep_states_np, eval_env.episode_actions)
-            # wean_score2 += ws2 
-            unstable_ep = unstable_percentage_model(eval_env.world_model, ep_states_np)
-            total_unstable_percentage_sum += unstable_ep
-            total_unstable_percentage_gradient_sum += unstable_percentage_model_gradient(eval_env.world_model, ep_states_np)
-            total_unstable_percentage_merged_sum += unstable_percentage_model_merged(eval_env.world_model, ep_states_np)
-
-            # total_super    += super_metric(eval_env.world_model, ep_states_np, eval_env.episode_actions)
-
-            
-            episode_log_data = {
-                "eval/episode_map_air": episode_map_cost,
-                "eval/episode_hr_air": episode_hr_cost,
-                "eval/episode_pulsatility_air": episode_pulsatility_cost
-            }
-            wandb.log(episode_log_data)
-
-            eval_ep_info_buffer.append(
-                {"episode_reward": episode_reward, "episode_length": episode_length}
-            ) 
-            rwd_list.append(episode_reward)
-            next_state_l = ep_states.copy()
-            next_state_l.append(obs)
-            # if (num_episodes ==0) and plot:
-            #     print('WS',ws, 'ACP', episode_acp_cost)
-            #     print('UNSTABILITY MERGED',unstable_ep)
-            #     plot_policy(eval_env, next_state_l[1:], all_states, args.algo_name.upper())
-
-            # if (episode_acp_cost == 6.0):
-            #     acp_num += 1.0
-                
-            
-
-            # if (episode_acp_cost == 0.0) and (plotted_min_acp==0):
-            #     plotted_min_acp=1
-            #     plot_policy(eval_env, next_state_l[1:], all_states, args.algo_name.upper()+" Min ACP")
-
-            # if (episode_acp_cost == 5.0) and ( plotted_max_acp==0):
-            #     plotted_max_acp=1
-            #     plot_policy(eval_env, next_state_l[1:], all_states, args.algo_name.upper()+" Max ACP")
-
-            # # if ws < 0.0:
-            # # #     ws_num += 1.0
-            # if ws <= -0.33 and plotted_min_ws==0:
-            #     plotted_min_ws=1
-            #     plot_policy(eval_env, next_state_l[1:], all_states, args.algo_name.upper()+" Min WS")
-            # if ws ==1.0 and plotted_max_ws==0:
-            #     plotted_max_ws=1
-            #     print("NUM EPIOSDES", num_episodes)
-            #     plot_policy(eval_env, next_state_l[1:], all_states, args.algo_name.upper()+" Max WS")
-
-            # if episode_reward >= 3.5 and plotted_max_rwd==0:
-            #     plotted_max_rwd=1
-            #     plot_policy(eval_env, next_state_l[1:], all_states, args.algo_name.upper()+" Max Reward")
-            # if episode_reward ==-12.0 and plotted_min_rwd == 0:
-            #     plotted_min_rwd=1
-            #     plot_policy(eval_env, next_state_l[1:], all_states, args.algo_name.upper()+" Min Reward")
-
-            episode_reward, episode_length = 0, 0
-            num_episodes +=1
-            
-            obs, info = eval_env.reset()
-            ep_states = []
-            all_states = info['all_states']  #normalized
-            all_states = np.concatenate([obs.reshape(1,-1), all_states], axis=0)
-    # print(np.unique(rwd_list), len(rwd_list))
-    print(max(rwd_list), min(rwd_list), np.max(acp_list), np.min(acp_list), np.max(ws_list), np.min(ws_list))
-    if plot is True:
-        plot_score_histograms(acp_list, ws_list, rwd_list, args.algo_name)
-    eval_info = {
+                num_episodes +=1
+                episode_reward, episode_length = 0, 0
+                obs = eval_env.reset()
+        eval_info = {
                         "eval/episode_reward": [ep_info["episode_reward"] for ep_info in eval_ep_info_buffer],
                         "eval/episode_length": [ep_info["episode_length"] for ep_info in eval_ep_info_buffer]
                     }
-
-    ep_reward_mean, ep_reward_std = np.mean(eval_info["eval/episode_reward"]), np.std(eval_info["eval/episode_reward"])
-    ep_length_mean, ep_length_std = np.mean(eval_info["eval/episode_length"]), np.std(eval_info["eval/episode_length"])
-    print(f"Mean Return: {ep_reward_mean:.2f} ± {ep_reward_std:.2f}")
-    total_acp /= num_episodes
-    # print(f"Mean ACP over episodes: {total_acp:.5f}")
-
-    final_avg_air_map = total_map_air_sum / num_episodes
-    # print(f"MAP AIR over episodes: {final_avg_air_map:.5f}")
-
-    final_avg_air_hr = total_hr_air_sum / num_episodes
-    # print(f"HR AIR over episodes: {final_avg_air_hr:.5f}")
-
-    final_avg_air_pulsatility = total_pulsatility_air_sum / num_episodes
-    # print(f"Pulsatility AIR over episodes: {final_avg_air_pulsatility:.5f}")
-
-    unsafe_hours = total_unstable_percentage_sum/num_episodes
-    unsafe_hours_gradient = total_unstable_percentage_gradient_sum/num_episodes
-    unsafe_hours_merged = total_unstable_percentage_merged_sum/num_episodes
-    # print(f"Total unstable hours {unsafe_hours}%")
-
-    final_avg_wean_score = wean_score/num_episodes
-    final_avg_wean_merged_score = ws_merged/num_episodes
-    final_wean_thr_score = ws_thr/num_episodes
-
-    # print(f"Weaning score: {final_avg_wean_score}")
-
-    final_aggregate_air = total_aggregate_air_sum/num_episodes
-    # print(f"Aggregate AIR over episodes: {final_aggregate_air}")
-    super_mean = total_super/num_episodes
-
-    custom_metric = custom_evaluation_metric(ep_reward_mean, final_avg_wean_score, total_acp, final_aggregate_air)
-
-    
-    print("---------------------------------------")
-    print(f"Evaluation over {ep_length_mean} episodes:")
-    print(f"  Return: {ep_reward_mean:.3f}")
-    print(f"  ACP score: {total_acp:.4f}")
-    print(f"  MAP AIR/ep: {final_avg_air_map:.5f} | HR AIR/ep: {final_avg_air_hr:.5f} | "
-        f"Pulsatility AIR/ep: {final_avg_air_pulsatility:.5f}")
-    print(f"  Aggregate AIR/ep: {final_aggregate_air:.5f}")
-    print(f"  Unstable hours (%): {unsafe_hours:.3f}")
-    print(f"  Unstable hours gradient (%): {unsafe_hours_gradient:.3f}")
-    print(f"  Unstable hours merged (%): {unsafe_hours_merged:.3f}")
-    print(f"  Weaning score: {final_avg_wean_score:.5f}")
-    print(f"  Weaning merged score: {final_avg_wean_merged_score:.5f}")
-    print(f"  Weaning thr score: {final_wean_thr_score:.5f}")
-    print(f"Super metric: {super_mean:.5f}")
-    print('percentage of episodes with ACP >= 3.0:', (acp_num/episodes)*100.0, "maximum acp in eval episodes:", max(acp_list), "minimum acp in eval episodes:", min(acp_list))
-    print('percentage of episodes with Weaning score <= 0.0:', (ws_num/episodes)*100.0, "maximum weaning score in eval episodes:", max(ws_list), "minimum weaning score in eval episodes:", min(ws_list))
-    print("---------------------------------------")
-
-    return {    
-            'mean_return': ep_reward_mean,
-            'std_return': ep_reward_std,
-            'mean_length': ep_length_mean,
-            'std_length': ep_length_std,
-            'mean_acp': total_acp,
-            'mean_map_air': final_avg_air_map,
-            'mean_hr_air': final_avg_air_hr,
-            'mean_pulsatility_air': final_avg_air_pulsatility,
-            'mean_aggregate_air': final_aggregate_air,
-            'mean_unsafe_hours': unsafe_hours,
-            'mean_wean_score': final_avg_wean_score,
-            'mean_wean_score_merged': final_avg_wean_merged_score,
-            'mean_wean_score_thr': final_wean_thr_score,
-
-            # 'super_metric': super_mean,
-            'custom_metric': custom_metric
+        ep_reward_mean, ep_reward_std = np.mean(eval_info["eval/episode_reward"]), np.std(eval_info["eval/episode_reward"])
+        ep_length_mean, ep_length_std = np.mean(eval_info["eval/episode_length"]), np.std(eval_info["eval/episode_length"])
+        return {
+            "mean_return":ep_reward_mean,
+            "std_return": ep_reward_std,
+            "mean_length": ep_length_mean,
+            "std_length": ep_length_std
         }
 
 
-
 def get_env():
-    if "abiomed" in args.task.lower():
-        env = AbiomedRLEnvFactory.create_env(
-                                        model_name=args.model_name,
-                                        model_path=args.model_path_wm,
-                                        data_path=args.data_path_wm,
-                                        max_steps=args.max_steps,
-                                        action_space_type="continuous",
-                                        reward_type="smooth",
-                                        normalize_rewards=True,
-                                        seed=args.seed,
-                                        device = args.device,
-                                        )
-        args.obs_shape = env.observation_space.shape[0]
-        args.action_dim = env.action_space.shape[0]
-    else:
-        env = gym.make(args.task)
-        args.obs_shape = env.observation_space.shape
-        args.action_dim = np.prod(env.action_space.shape)
+   
+    env = gym.make(args.task)
+    args.obs_shape = env.observation_space.shape
+    args.action_dim = np.prod(env.action_space.shape)
 
-        if args.action and not args.transition:
-            print("Environment with noisy actions")
-            env = RandomNormalNoisyActions(env=env, noise_rate=args.noise_rate_action, loc = args.loc, scale = args.scale_action)
-        elif args.transition and not args.action:
-            print("Environment with noisy transitions")
-            env = RandomNormalNoisyTransitions(env=env, noise_rate=args.noise_rate_transition, loc = args.loc, scale = args.scale_transition)
-        elif args.transition and args.action:
-            print("Environment with noisy actions and transitions")
-            env = RandomNormalNoisyTransitionsActions(env=env, noise_rate_action=args.noise_rate_action, loc = args.loc, scale_action = args.scale_action,\
-                                                            noise_rate_transition=args.noise_rate_transition, scale_transition = args.scale_transition)
-        else:
-            print("Environment without noise")
-            env = env
+    if args.action and not args.transition:
+        print("Environment with noisy actions")
+        env = RandomNormalNoisyActions(env=env, noise_rate=args.noise_rate_action, loc = args.loc, scale = args.scale_action)
+    elif args.transition and not args.action:
+        print("Environment with noisy transitions")
+        env = RandomNormalNoisyTransitions(env=env, noise_rate=args.noise_rate_transition, loc = args.loc, scale = args.scale_transition)
+    elif args.transition and args.action:
+        print("Environment with noisy actions and transitions")
+        env = RandomNormalNoisyTransitionsActions(env=env, noise_rate_action=args.noise_rate_action, loc = args.loc, scale_action = args.scale_action,\
+                                                        noise_rate_transition=args.noise_rate_transition, scale_transition = args.scale_transition)
+    else:
+        print("Environment without noise")
+        env = env
 
     return env
 
@@ -487,7 +219,7 @@ if __name__ == "__main__":
     base = argparse.ArgumentParser(parents=[config_parser], add_help=False)
     base.add_argument(
         "--algo-name",
-        choices=["mbpo","mopo",'mgpo',"bcq","bc","physician"],
+        choices=["mbpo","mopo",'gormpo',"bcq","bc","physician"],
         default="mopo",
         help="Which algorithm’s flags to load"
     )
@@ -514,34 +246,6 @@ if __name__ == "__main__":
     parser.add_argument("--logdir", type=str, default="log")
     parser.add_argument("--log-freq", type=int, default=1000)
     
-
-    #world transformer arguments
-    parser.add_argument('-seq_dim', '--seq_dim', type=int, metavar='<dim>', default=12,
-                        help='Specify the sequence dimension.')
-    parser.add_argument('-output_dim', '--output_dim', type=int, metavar='<dim>', default=11*12,
-                        help='Specify the sequence dimension.')
-    parser.add_argument('-bc', '--bc', type=int, metavar='<size>', default=64,
-                        help='Specify the batch size.')
-    parser.add_argument('-nepochs', '--nepochs', type=int, metavar='<epochs>', default=20,
-                        help='Specify the number of epochs to train for.')
-    parser.add_argument('-encoder_size', '--encs', type=int, metavar='<size>', default=2,
-                help='Set the number of encoder layers.') 
-    parser.add_argument('-lr', '--lr', type=float, metavar='<size>', default=0.001,
-                        help='Specify the learning rate.')
-    parser.add_argument('-encoder_dropout', '--encoder_dropout', type=float, metavar='<size>', default=0.1,
-                help='Set the tunable dropout.')
-    parser.add_argument('-decoder_dropout', '--decoder_dropout', type=float, metavar='<size>', default=0.1,
-                help='Set the tunable dropout.')
-    parser.add_argument('-dim_model', '--dim_model', type=int, metavar='<size>', default=256,
-                help='Set the number of encoder layers.')
-    parser.add_argument('-path', '--path', type=str, metavar='<cohort>', 
-                        default='/data/abiomed_tmp/processed',
-                        help='Specify the path to read data.')
-    #=================Abiomed Environment Arguments================
-    parser.add_argument("--model_name", type=str, default="10min_1hr_all_data")
-    parser.add_argument("--model_path_wm", type=str, default=None)
-    parser.add_argument("--data_path_wm", type=str, default=None)
-    parser.add_argument("--max_steps", type=int, default=6)
     #===============Noisy Environment Arguments================
     parser.add_argument("--noise_rate_action", type=float, help="Portion of action to be noisy with probability", default=0.01)
     parser.add_argument("--noise_rate_transition", type=float, help="Portion of transitions to be noisy with probability", default=0.01)
@@ -558,7 +262,7 @@ if __name__ == "__main__":
     elif args_partial.algo_name == "mbpo":
         mopo_args(parser)
         
-    elif args_partial.algo_name == "mgpo":
+    elif args_partial.algo_name == "gormpo":
         mopo_args(parser)
     elif args_partial.algo_name == "physician":
         mopo_args(parser)
@@ -575,6 +279,12 @@ if __name__ == "__main__":
     args.config = config_args.config
     print(args.config)
 
+    t0 = datetime.datetime.now().strftime("%m%d_%H%M%S")
+    wandb.init(
+    project="mopo-eval",
+    name=f"eval_{args.task}_{args.algo_name}_{t0}",
+    config=vars(args)
+        )
     
     results = []
     for seed in args.seeds:
@@ -583,66 +293,33 @@ if __name__ == "__main__":
         np.random.seed(args.seed)
         torch.manual_seed(args.seed)
 
-        t0 = datetime.datetime.now().strftime("%m%d_%H%M%S")
-        wandb.init(
-        project="mopo-eval",
-        name=f"eval_{args.task}_{args.algo_name}_{t0}",
-        config=vars(args)
-        )
+       
         
         log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}_{args.algo_name}'
-        # log_file = 'seed_1_0415_200911-walker2d_random_v0_mopo'
         log_path = os.path.join(args.logdir, args.task, args.algo_name, log_file)
 
         model_path = os.path.join(args.model_path, args.task, args.algo_name, log_file)
-        # writer = SummaryWriter(log_path)
-        # writer.add_text("args", str(args))
-        # logger = Logger(writer=writer,log_path=log_path)
-        # model_logger = Logger(writer=writer,log_path=model_path)
-
-        # Devid = args.devid if args.device == 'cuda' else -1
+       
         args.device = f'cuda:{args.devid}'
 
-        # args.device = set_device_and_logger(Devid, logger, model_logger)
         
         env = get_env() 
-        if args_partial.algo_name != "bcq":
-            policy = get_mopo(args)
-            eval_info = _evaluate(policy, env, args.eval_episodes, args,plot=True)
-        elif args_partial.algo_name == "bcq":
-            policy = get_bcq(env, args)
-            eval_info = eval_policy(policy, env, args.task, args.eval_episodes, plot=False)
+        policy = get_mopo(args)
+        eval_info = _evaluate(policy, env, args.eval_episodes, args,plot=True)
+        
         mean_return = eval_info["mean_return"]
         std_return = eval_info["std_return"]
         mean_length = eval_info["mean_length"]
         std_length = eval_info["std_length"]
-        mean_acp = eval_info["mean_acp"]
-        mean_map_air = eval_info["mean_map_air"]
-        mean_hr_air = eval_info["mean_hr_air"]
-        mean_pulsatility_air = eval_info["mean_pulsatility_air"]
-        mean_aggregate_air = eval_info["mean_aggregate_air"]
-        mean_unsafe_hours = eval_info["mean_unsafe_hours"]
-        mean_wean_score = eval_info["mean_wean_score"]
-        # mean_super = eval_info["super_metric"]
 
     
         results.append({
-            # 'seed': seed,
+            'seed': seed,
             'mean_return': mean_return,
             'std_return': std_return,
             'mean_length': mean_length,
             'std_length': std_length,
-            'mean_acp': mean_acp,
-            'mean_map_air': mean_map_air,
-            'mean_hr_air': mean_hr_air,
-            'mean_pulsatility_air': mean_pulsatility_air,
-            'mean_aggregate_air': mean_aggregate_air,
-            'mean_unsafe_hours': mean_unsafe_hours,
-            'mean_wean_score': mean_wean_score,
-            'mean_wean_score_merged': eval_info["mean_wean_score_merged"],
-            'mean_wean_score_thr': eval_info["mean_wean_score_thr"],
-            # 'mean_super': mean_super,
-
+           
         })
         
         print(f"Mean Return: {mean_return:.2f} ± {std_return:.2f}")
