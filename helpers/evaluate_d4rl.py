@@ -11,8 +11,8 @@ from matplotlib import pyplot as plt
 import sys
 import yaml
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-import algo.continuous_bcq.BCQ as BCQ
-import gymnasium as gym
+# import gymnasium as gym
+import gym
 # import d4rl
 
 import numpy as np
@@ -104,27 +104,27 @@ def get_mopo(args):
 
 def _evaluate(policy, eval_env, episodes, args, plot=None):
         policy.eval()
-        obs,_ = eval_env.reset()
+        obs = eval_env.reset()
         eval_ep_info_buffer = []
         num_episodes = 0
         episode_reward, episode_length = 0, 0
 
         while num_episodes < episodes:
             action = policy.sample_action(obs, deterministic=True)
-            next_obs, reward, terminal, truncated,_= eval_env.step(action) #next_obs = world model forecast
+            next_obs, reward, terminal, info = eval_env.step(action) #next_obs = world model forecast
             episode_reward += reward
             episode_length += 1
 
             obs = next_obs  #next_obs = world model forecast
 
-            if terminal or truncated:
+            if terminal:
                 eval_ep_info_buffer.append(
                     {"episode_reward": episode_reward, "episode_length": episode_length}
                 )
 
                 num_episodes +=1
                 episode_reward, episode_length = 0, 0
-                obs,_ = eval_env.reset()
+                obs = eval_env.reset()
         eval_info = {
                         "eval/episode_reward": [ep_info["episode_reward"] for ep_info in eval_ep_info_buffer],
                         "eval/episode_length": [ep_info["episode_length"] for ep_info in eval_ep_info_buffer]

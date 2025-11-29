@@ -199,7 +199,7 @@ class RealNVP(nn.Module):
         )
         # print(log_det.max().item(), np.exp(log_det.max().item()))
 
-        return (log_prior + log_det).cpu()
+        return (log_prior + log_det).cpu().numpy()
 
     def sample(self, num_samples: int) -> torch.Tensor:
         """Generate samples from the model."""

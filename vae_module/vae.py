@@ -163,6 +163,8 @@ class VAE(nn.Module):
 
         Uses negative reconstruction error as the score.
         """
+        if isinstance(x, np.ndarray):
+            x = torch.FloatTensor(x).to(self.device)
         self.eval()
         with torch.no_grad():
             recon, mu, logvar = self.forward(x)
@@ -171,7 +173,7 @@ class VAE(nn.Module):
             # Return negative error (higher is better/more normal)
             scores = -recon_error
 
-        return scores.cpu()
+        return scores.cpu().numpy()
 
     def sample(self, num_samples: int) -> torch.Tensor:
         """Generate samples from the model."""
@@ -479,7 +481,7 @@ class VAE(nn.Module):
         print(f"Metadata saved to: {save_path}_meta_data.pkl")
 
     @classmethod
-    def load_model(cls, save_path: str, hidden_dims: List[int] = [256, 256]):
+    def load_model(cls, save_path: str, hidden_dims: List[int] = [256, 128]):
         """
         Load a saved VAE model.
 
@@ -513,7 +515,7 @@ class VAE(nn.Module):
         print(f"Threshold: {model.threshold}")
 
         model_dict = {
-            'model': model,
+            'model': model.to(metadata['device']),
             'thr': model.threshold,
             'mean': metadata["mean"],
             'std': metadata["std"]
@@ -695,7 +697,8 @@ if __name__ == "__main__":
         normal_data, anomaly_data = create_synthetic_data(
             n_samples=config.get('n_samples', 2000),
             dim=config.get('input_dim', 2),
-            anomaly_type=config.get('anomaly_type', 'outlier')
+            anomaly_type=config.get('anomaly_type', 'outlier'),
+            magn = 3
         )
 
         # Split normal data
@@ -721,32 +724,37 @@ if __name__ == "__main__":
         device=device
     ).to(device)
 
-    print("Training VAE model...")
-    history = model.fit(
-        train_data=train_data,
-        val_data=val_data,
-        test_data=test_data,
-        epochs=config.get('epochs', 100),
-        batch_size=config.get('batch_size', 128),
-        lr=config.get('lr', 1e-3),
-        beta=config.get('beta', 1.0),
-        patience=config.get('patience', 15),
-        verbose=config.get('verbose', True)
-    )
+    # print("Training VAE model...")
+    # history = model.fit(
+    #     train_data=train_data,
+    #     val_data=val_data,
+    #     test_data=test_data,
+    #     epochs=config.get('epochs', 100),
+    #     batch_size=config.get('batch_size', 128),
+    #     lr=config.get('lr', 1e-3),
+    #     beta=config.get('beta', 1.0),
+    #     patience=config.get('patience', 15),
+    #     verbose=config.get('verbose', True)
+    # )
 
     # Plot training curves
-    plot_training_curves(history, save_path=f"figures/{args.task}/vae_training.png")
+    # plot_training_curves(history, save_path=f"figures/{args.task}/vae_training.png")
 
     # Save model if requested
-    if config.get('model_save_path', False):
-        save_path = config.get('model_save_path', 'saved_models/vae')
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        model.save_model(save_path, train_data)
-        print(f"Model saved to: {save_path}_model.pth")
-
+    # if config.get('model_save_path', False):
+    #     save_path = config.get('model_save_path', 'saved_models/vae')
+    #     os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    #     model.save_model(save_path, train_data)
+    #     print(f"Model saved to: {save_path}_model.pth")
+    dict_model = model.load_model(args.model_save_path, hidden_dims=config.get('hidden_dims', [256, 256]))
+    model = dict_model['model'].to(device)
+    print(dict_model['mean'])
     # Evaluate on test data
     print("\nEvaluating VAE on test set...")
     test_scores = model.score_samples(test_data.to(device))
     print(f"Test scores - Mean: {test_scores.mean():.4f}, Std: {test_scores.std():.4f}")
+    train_scores = model.score_samples(train_data.to(device))
+    print(f"Train scores - Mean: {train_scores.mean():.4f}, Std: {train_scores.std():.4f}")
+
 
     print("\nVAE training and evaluation completed!")

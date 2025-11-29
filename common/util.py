@@ -323,7 +323,7 @@ def validate_dataset_structure(
     return True
 
 
-def create_synthetic_data(n_samples=1000, dim=2, anomaly_type="outlier"):
+def create_synthetic_data(n_samples=1000, dim=2, anomaly_type="outlier", magn=3, return_mixed=False, anomaly_ratio=0.2):
     """
     Generate synthetic normal and anomalous data in arbitrary dimensions.
 
@@ -331,9 +331,13 @@ def create_synthetic_data(n_samples=1000, dim=2, anomaly_type="outlier"):
         n_samples (int): number of normal samples
         dim (int): dimensionality of data
         anomaly_type (str): "outlier" or "uniform"
+        magn (float): magnitude for secondary cluster in normal data
+        return_mixed (bool): if True, return mixed data with labels; if False, return separate normal and anomaly data
+        anomaly_ratio (float): ratio of anomalous samples in mixed data (only used if return_mixed=True)
 
     Returns:
-        (torch.FloatTensor, torch.FloatTensor): normal_data, anomaly_data
+        If return_mixed=False: (torch.FloatTensor, torch.FloatTensor): normal_data, anomaly_data
+        If return_mixed=True: (torch.FloatTensor, torch.LongTensor): mixed_data, labels (0=normal, 1=anomaly)
     """
     normal_data = []
     for _ in range(n_samples):
@@ -343,17 +347,19 @@ def create_synthetic_data(n_samples=1000, dim=2, anomaly_type="outlier"):
             cov = np.eye(dim)
             sample = np.random.multivariate_normal(mean, cov, 1)
         else:
-            # Secondary cluster around 3
-            mean = np.ones(dim) * 3
+            # Secondary cluster around magn
+            mean = np.ones(dim) * magn
             cov = 0.5 * np.eye(dim)
             sample = np.random.multivariate_normal(mean, cov, 1)
         normal_data.append(sample[0])
 
     normal_data = np.array(normal_data)
 
-    # Anomalous data
+    # Anomalous data - magnitude depends on magn parameter for OOD testing
     if anomaly_type == "outlier":
-        mean = np.ones(dim) * 10
+        # Scale anomaly distance based on magn
+        anomaly_mean_scale = 10 + magn
+        mean = np.ones(dim) * anomaly_mean_scale
         cov = 2 * np.eye(dim)
         anomaly_data = np.random.multivariate_normal(mean, cov, n_samples // 5)
     elif anomaly_type == "uniform":
@@ -361,6 +367,29 @@ def create_synthetic_data(n_samples=1000, dim=2, anomaly_type="outlier"):
     else:
         raise ValueError(f"Unknown anomaly type: {anomaly_type}")
 
-    return torch.FloatTensor(normal_data), torch.FloatTensor(anomaly_data)
+    if return_mixed:
+        # Create mixed dataset with specified anomaly ratio
+        n_anomaly = int(len(normal_data) * anomaly_ratio)
+        n_normal = len(normal_data) - n_anomaly
+
+        # Sample from normal and anomaly data
+        normal_indices = np.random.choice(len(normal_data), n_normal, replace=False)
+        anomaly_indices = np.random.choice(len(anomaly_data), min(n_anomaly, len(anomaly_data)), replace=True)
+
+        selected_normal = normal_data[normal_indices]
+        selected_anomaly = anomaly_data[anomaly_indices]
+
+        # Combine and create labels
+        mixed_data = np.vstack([selected_normal, selected_anomaly])
+        labels = np.concatenate([np.zeros(len(selected_normal)), np.ones(len(selected_anomaly))])
+
+        # Shuffle
+        shuffle_idx = np.random.permutation(len(mixed_data))
+        mixed_data = mixed_data[shuffle_idx]
+        labels = labels[shuffle_idx]
+
+        return torch.FloatTensor(mixed_data), torch.LongTensor(labels)
+    else:
+        return torch.FloatTensor(normal_data), torch.FloatTensor(anomaly_data)
 
 

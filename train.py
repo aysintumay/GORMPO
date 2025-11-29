@@ -19,6 +19,8 @@ from trainer import Trainer
 from common.util import set_device_and_logger
 from common import util
 from realnvp_module.realnvp import RealNVP 
+from vae_module.vae import VAE
+from kde_module.kde import PercentileThresholdKDE
 import d4rl
 
 
@@ -110,10 +112,24 @@ def train(env, run, logger, seed, args):
         alpha=args.alpha,
         device=util.device
     )
-    classifier = RealNVP(
+
+    if "vae" in args.classifier_model_name:
+        classifier = VAE(
+            # hidden_dims= args.vae_hidden_dims,
+            device=util.device
+        ).to(util.device)
+        classifier_dict = classifier.load_model(args.classifier_model_name)
+    elif "realnvp" in args.classifier_model_name:
+        classifier = RealNVP(
         device=util.device
-    ).to(util.device)
-    classifier_dict = classifier.load_model(args.classifier_model_name)
+        ).to(util.device)
+        classifier_dict = classifier.load_model(args.classifier_model_name)
+    elif "kde" in args.classifier_model_name:
+        classifier = PercentileThresholdKDE(
+        devid=args.devid
+        )
+        classifier_dict = classifier.load_model(args.classifier_model_name)
+    
     # create dynamics model
     dynamics_model = TransitionModel(obs_space=env.observation_space,
                                      action_space=env.action_space,
