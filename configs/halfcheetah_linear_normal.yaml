@@ -1,0 +1,9 @@
+task: halfcheetah-medium-v2
+algo-name: gormpo
+reward-penalty-coef: 1
+seed: 1
+# data_path: "/public/sparse_d4rl/halfcheetah-medium-v2.pkl"
+epoch: 100
+penalty_type: 'tanh'
+classifier_model_name: "/public/gormpo/models/halfcheetah_normal/realnvp"
+
