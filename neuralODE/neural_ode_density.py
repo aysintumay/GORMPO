@@ -195,7 +195,7 @@ class ContinuousNormalizingFlow(nn.Module):
     def score_samples(self, x: torch.Tensor, device: Optional[str]) -> torch.Tensor:
         if not isinstance(x, torch.Tensor):
             x = torch.tensor(x, dtype=torch.float32, device=device, requires_grad=True)
-        torch.set_grad_enabled(True)
+        torch.set_grad_enabled(True) #hot fix
         # with torch.no_grad():
         logp0 = torch.zeros(x.size(0), device=x.device)
         z1, logp1 = self._odeint(x, logp0, reverse=False)
@@ -264,7 +264,7 @@ def train(cfg: TrainConfig) -> None:
         epoch_loss = 0.0
         for batch in loader:
             x = batch.to(cfg.device)
-            log_px = flow.log_prob(x)
+            log_px = flow.score_samples(x)
             loss = -log_px.mean()
 
             optimizer.zero_grad(set_to_none=True)
