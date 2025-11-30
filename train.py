@@ -6,6 +6,7 @@ import sys
 import pickle
 
 import gym
+import json
 import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
@@ -131,26 +132,30 @@ def train(env, run, logger, seed, args):
         devid=args.devid
         )
         classifier_dict = classifier.load_model(args.classifier_model_name)
-    elif "neuralode" in args.classifier_model_name:
-                
+    elif "neuralODE" in args.classifier_model_name:
+        print("Loading Neural ODE based classifier... for task:", args.task)
         # Load model
         cfg = neural_ode_inference.EvalConfig(
-        hidden_dims=[64, 64],
-        activation="tanh",
+        npz_path= '',
+        model_path=args.classifier_model_name,
+        hidden_dims= [512, 512],
+        activation="silu",
         time_dependent=True,
-        device="cuda" if torch.cuda.is_available() else "cpu",
+        device=f"cuda:{args.devid}" if torch.cuda.is_available() else "cpu",
         t0=0.0,
         t1=1.0,
         solver="dopri5",
         rtol=1e-5,
         atol=1e-5,
-        model_path="checkpoints/flow_model.pt"
             )   
-        flow = neural_ode_inference.load_flow(cfg, f'cuda:{args.devid}')
+        flow = neural_ode_inference.load_flow(cfg, args.target_dim)
         #load the json file
-        
-
-        classifier_dict = {'model': flow}
+        thr_path = f"neuralODE/test/{args.task.lower().split('_')[0].split('-')[0]}_metrics.json"
+        #load json
+        with open(thr_path, 'r') as f:
+            metrics = json.load(f)
+        thr = metrics["percentile_1.0_logp"]
+        classifier_dict = {'model': flow, 'thr': thr}
     # create dynamics model
     dynamics_model = TransitionModel(obs_space=env.observation_space,
                                      action_space=env.action_space,
@@ -217,7 +222,7 @@ def train(env, run, logger, seed, args):
     )
 
     # pretrain dynamics model on the whole dataset
-    trainer.train_dynamics()
+    # trainer.train_dynamics()
     
 
     # policy_state_dict = torch.load(os.path.join(util.logger_model.log_path, f"policy_{args.task}.pth"))
