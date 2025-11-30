@@ -1,0 +1,9 @@
+Start training dynamics
+loss/model_eval_mse_loss: 31.141598
+loss/model_eval_mse_loss: 0.887186
+loss/model_eval_mse_loss: 0.716648
+loss/model_eval_mse_loss: 0.660502
+loss/model_eval_mse_loss: 0.618747
+loss/model_eval_mse_loss: 0.590073
+loss/model_eval_mse_loss: 0.547321
+loss/model_eval_mse_loss: 0.525811

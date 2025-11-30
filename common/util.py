@@ -8,6 +8,7 @@ import torch
 import numpy as np
 import importlib
 import copy
+import d4rl
 
 
 device = None
@@ -180,29 +181,29 @@ def load_dataset_with_validation_split(
                 dataset_info['format'] = 'npz'
             except Exception as e:
                 raise ValueError(f"Could not load dataset from {args.data_path}: {e}")
-
-        # Validate required keys
-        missing_keys = [key for key in required_keys if key not in dataset]
-        if missing_keys:
-            available_keys = list(dataset.keys())
-            print(f"Warning: Missing required keys {missing_keys}. Available keys: {available_keys}")
-
-        # Apply max_samples limit if specified
-        if max_samples is not None:
-            dataset = {k: v[:max_samples] for k, v in dataset.items()}
-            print(f'Limited dataset to {max_samples} samples')
-
-        dataset_info['original_size'] = len(dataset['observations']) if 'observations' in dataset else len(list(dataset.values())[0])
-
-        # Create train/val split since file datasets typically don't have predefined splits
-        train_data, val_data = _create_train_val_split_dict(dataset, val_split_ratio + test_split_ratio)
-        val_data, test_data = _create_train_val_split_dict(val_data, val_split_ratio / (val_split_ratio + test_split_ratio))
-        dataset_info['created_val_split'] = True
-
-        buffer_len = dataset_info['original_size']
-    
     else:
-        raise ValueError("Must provide either args.data_path or env parameter")
+        # dataset = env.get_dataset()
+        dataset = d4rl.qlearning_dataset(env)
+        # Validate required keys
+    missing_keys = [key for key in required_keys if key not in dataset]
+    if missing_keys:
+        available_keys = list(dataset.keys())
+        print(f"Warning: Missing required keys {missing_keys}. Available keys: {available_keys}")
+
+    # Apply max_samples limit if specified
+    if max_samples is not None:
+        dataset = {k: v[:max_samples] for k, v in dataset.items()}
+        print(f'Limited dataset to {max_samples} samples')
+
+    dataset_info['original_size'] = len(dataset['observations']) if 'observations' in dataset else len(list(dataset.values())[0])
+
+    # Create train/val split since file datasets typically don't have predefined splits
+    train_data, val_data = _create_train_val_split_dict(dataset, val_split_ratio + test_split_ratio)
+    val_data, test_data = _create_train_val_split_dict(val_data, val_split_ratio / (val_split_ratio + test_split_ratio))
+    dataset_info['created_val_split'] = True
+
+    buffer_len = dataset_info['original_size']
+    
 
     # Prepare return dictionary
     result = {
@@ -246,7 +247,9 @@ def _create_train_val_split_dict(
 
     # Get dataset size from first key
     first_key = list(dataset.keys())[0]
+    # print(first_key)
     total_size = len(dataset[first_key])
+    # print(total_size)
 
     # Calculate split indices for temporal split
     # Train on earlier data, validate on later data
@@ -260,7 +263,6 @@ def _create_train_val_split_dict(
     # Split each array in the dataset
     train_dataset = {}
     val_dataset = {}
-
     for key, values in dataset.items():
         if isinstance(values, np.ndarray):
             train_dataset[key] = values[train_indices]
@@ -268,8 +270,9 @@ def _create_train_val_split_dict(
         else:
             # Handle non-numpy arrays (e.g., lists)
             values_array = np.array(values)
-            train_dataset[key] = values_array[train_indices]
-            val_dataset[key] = values_array[val_indices]
+            # print( dataset.keys())
+            train_dataset[key] = values_array[np.array(train_indices)]
+            val_dataset[key] = values_array[np.array(val_indices)]
 
     print(f"Temporal split dataset: {train_size} train samples, {val_size} validation samples")
 
@@ -318,5 +321,75 @@ def validate_dataset_structure(
         raise ValueError(f"Dataset has {lengths[0]} samples, but {min_samples} required")
 
     return True
+
+
+def create_synthetic_data(n_samples=1000, dim=2, anomaly_type="outlier", magn=3, return_mixed=False, anomaly_ratio=0.2):
+    """
+    Generate synthetic normal and anomalous data in arbitrary dimensions.
+
+    Args:
+        n_samples (int): number of normal samples
+        dim (int): dimensionality of data
+        anomaly_type (str): "outlier" or "uniform"
+        magn (float): magnitude for secondary cluster in normal data
+        return_mixed (bool): if True, return mixed data with labels; if False, return separate normal and anomaly data
+        anomaly_ratio (float): ratio of anomalous samples in mixed data (only used if return_mixed=True)
+
+    Returns:
+        If return_mixed=False: (torch.FloatTensor, torch.FloatTensor): normal_data, anomaly_data
+        If return_mixed=True: (torch.FloatTensor, torch.LongTensor): mixed_data, labels (0=normal, 1=anomaly)
+    """
+    normal_data = []
+    for _ in range(n_samples):
+        if np.random.rand() < 0.7:
+            # Main cluster around 0
+            mean = np.zeros(dim)
+            cov = np.eye(dim)
+            sample = np.random.multivariate_normal(mean, cov, 1)
+        else:
+            # Secondary cluster around magn
+            mean = np.ones(dim) * magn
+            cov = 0.5 * np.eye(dim)
+            sample = np.random.multivariate_normal(mean, cov, 1)
+        normal_data.append(sample[0])
+
+    normal_data = np.array(normal_data)
+
+    # Anomalous data - magnitude depends on magn parameter for OOD testing
+    if anomaly_type == "outlier":
+        # Scale anomaly distance based on magn
+        anomaly_mean_scale = 10 + magn
+        mean = np.ones(dim) * anomaly_mean_scale
+        cov = 2 * np.eye(dim)
+        anomaly_data = np.random.multivariate_normal(mean, cov, n_samples // 5)
+    elif anomaly_type == "uniform":
+        anomaly_data = np.random.uniform(-5, 8, (n_samples // 5, dim))
+    else:
+        raise ValueError(f"Unknown anomaly type: {anomaly_type}")
+
+    if return_mixed:
+        # Create mixed dataset with specified anomaly ratio
+        n_anomaly = int(len(normal_data) * anomaly_ratio)
+        n_normal = len(normal_data) - n_anomaly
+
+        # Sample from normal and anomaly data
+        normal_indices = np.random.choice(len(normal_data), n_normal, replace=False)
+        anomaly_indices = np.random.choice(len(anomaly_data), min(n_anomaly, len(anomaly_data)), replace=True)
+
+        selected_normal = normal_data[normal_indices]
+        selected_anomaly = anomaly_data[anomaly_indices]
+
+        # Combine and create labels
+        mixed_data = np.vstack([selected_normal, selected_anomaly])
+        labels = np.concatenate([np.zeros(len(selected_normal)), np.ones(len(selected_anomaly))])
+
+        # Shuffle
+        shuffle_idx = np.random.permutation(len(mixed_data))
+        mixed_data = mixed_data[shuffle_idx]
+        labels = labels[shuffle_idx]
+
+        return torch.FloatTensor(mixed_data), torch.LongTensor(labels)
+    else:
+        return torch.FloatTensor(normal_data), torch.FloatTensor(anomaly_data)
 
 
