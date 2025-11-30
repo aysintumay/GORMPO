@@ -9,7 +9,7 @@ import pickle
 import torch
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
-
+from typing import Optional
 try:
     from torchdiffeq import odeint
 except Exception as e:  # pragma: no cover - dependency check
@@ -192,7 +192,11 @@ class ContinuousNormalizingFlow(nn.Module):
         )
         return z_t[-1], logp_t[-1]
 
-    def log_prob(self, x: torch.Tensor) -> torch.Tensor:
+    def score_samples(self, x: torch.Tensor, device: Optional[str]) -> torch.Tensor:
+        if not isinstance(x, torch.Tensor):
+            x = torch.tensor(x, dtype=torch.float32, device=device, requires_grad=True)
+        torch.set_grad_enabled(True) #hot fix
+        # with torch.no_grad():
         logp0 = torch.zeros(x.size(0), device=x.device)
         z1, logp1 = self._odeint(x, logp0, reverse=False)
         logpz = -0.5 * (
@@ -260,7 +264,7 @@ def train(cfg: TrainConfig) -> None:
         epoch_loss = 0.0
         for batch in loader:
             x = batch.to(cfg.device)
-            log_px = flow.log_prob(x)
+            log_px = flow.score_samples(x)
             loss = -log_px.mean()
 
             optimizer.zero_grad(set_to_none=True)
