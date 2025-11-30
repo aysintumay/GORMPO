@@ -21,6 +21,8 @@ from common import util
 from realnvp_module.realnvp import RealNVP 
 from vae_module.vae import VAE
 from kde_module.kde import PercentileThresholdKDE
+from neuralODE.neural_ode_density import ContinuousNormalizingFlow
+from neuralODE import neural_ode_inference as neural_ode_inference
 import d4rl
 
 
@@ -129,7 +131,26 @@ def train(env, run, logger, seed, args):
         devid=args.devid
         )
         classifier_dict = classifier.load_model(args.classifier_model_name)
-    
+    elif "neuralode" in args.classifier_model_name:
+                
+        # Load model
+        cfg = neural_ode_inference.EvalConfig(
+        hidden_dims=[64, 64],
+        activation="tanh",
+        time_dependent=True,
+        device="cuda" if torch.cuda.is_available() else "cpu",
+        t0=0.0,
+        t1=1.0,
+        solver="dopri5",
+        rtol=1e-5,
+        atol=1e-5,
+        model_path="checkpoints/flow_model.pt"
+            )   
+        flow = neural_ode_inference.load_flow(cfg, f'cuda:{args.devid}')
+        #load the json file
+        
+
+        classifier_dict = {'model': flow}
     # create dynamics model
     dynamics_model = TransitionModel(obs_space=env.observation_space,
                                      action_space=env.action_space,

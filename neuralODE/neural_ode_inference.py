@@ -192,6 +192,9 @@ def parse_args() -> EvalConfig:
     )
 
 
+    return flow, cfg
+
+
 if __name__ == "__main__":
     config = parse_args()
     evaluate(config)
