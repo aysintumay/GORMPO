@@ -7,8 +7,8 @@ import numpy as np
 import torch
 import pandas as pd
 # import gymnasium as gym
-# import d4rl
-# import d4rl.gym_mujoco  # Explicit import to register MuJoCo environments
+import d4rl
+import d4rl.gym_mujoco  # Explicit import to register MuJoCo environments
 import gym
 from matplotlib import pyplot as plt
 import yaml
@@ -31,7 +31,7 @@ warnings.filterwarnings("ignore")
 def get_args():
     print("Running", __file__)
     config_parser = argparse.ArgumentParser(add_help=False)
-    config_parser.add_argument("--config", type=str, default="configs/halfcheetah_linear.yaml")
+    config_parser.add_argument("--config", type=str, default="configs/neuralODE/halfcheetah_normal.yaml")
     config_args, remaining_argv = config_parser.parse_known_args()
     if config_args.config:
         with open(config_args.config, "r") as f:
@@ -48,7 +48,7 @@ def get_args():
     parser.add_argument(
                     "--devid", 
                     type=int,
-                    default=0,
+                    default=5,
                     help="Which GPU device index to use"
                 )
 
@@ -69,7 +69,7 @@ def get_args():
     parser.add_argument("--n-elites", type=int, default=5)
     parser.add_argument("--reward-penalty-coef", type=float, default=0.5) #1e=6
     parser.add_argument("--rollout-length", type=int, default=5) #1 
-    parser.add_argument("--rollout-batch-size", type=int, default=50000) #50000
+    parser.add_argument("--rollout-batch-size", type=int, default=5000) #50000
     parser.add_argument("--rollout-freq", type=int, default=1000)
     parser.add_argument("--model-retain-epochs", type=int, default=5)
     parser.add_argument("--real-ratio", type=float, default=0.05)
@@ -86,7 +86,7 @@ def get_args():
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
     
     parser.add_argument("--density_model", type=str, default="realnvp")
-    parser.add_argument("--classifier_model_name", type=str, default="abiomed/trained_kde_abiomed")
+    parser.add_argument("--classifier_model_name", type=str, default="neuralode")
     #============ noisy mujoco arguments ============
     parser.add_argument("--noise_rate_action", type=float, help="Portion of action to be noisy with probability", default=0.01)
     parser.add_argument("--noise_rate_transition", type=float, help="Portion of transitions to be noisy with probability", default=0.01)

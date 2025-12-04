@@ -168,7 +168,7 @@ def evaluate(cfg: EvalConfig) -> None:
     torch.set_grad_enabled(True)
     for batch in loader:
         x = batch.to(cfg.device)
-        logp = flow.log_prob(x)
+        logp = flow.score_sample(x)
         total_logp += logp.sum().item()
         total_samples += x.size(0)
         # Always collect log probabilities for percentile calculation
@@ -288,6 +288,9 @@ def parse_args() -> EvalConfig:
         percentile=args.percentile,
         save_plot=args.save_plot,
     )
+
+
+    return flow, cfg
 
 
 if __name__ == "__main__":
