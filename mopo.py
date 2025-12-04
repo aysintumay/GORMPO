@@ -7,8 +7,8 @@ import numpy as np
 import torch
 import pandas as pd
 # import gymnasium as gym
-# import d4rl
-# import d4rl.gym_mujoco  # Explicit import to register MuJoCo environments
+import d4rl
+import d4rl.gym_mujoco  # Explicit import to register MuJoCo environments
 import gym
 from matplotlib import pyplot as plt
 import yaml

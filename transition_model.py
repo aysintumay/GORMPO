@@ -63,7 +63,7 @@ class TransitionModel:
             input_np = np.concatenate([state, action], axis=1)
         else:
             input_np = torch.cat([action.squeeze(1), reward.view(-1, 1)], dim=1)
-        print(input_np.shape)
+        # print(input_np.shape)
         log_probs = self.classifier_model.score_samples(input_np, self.device)
         if self.classifier_mean is not None and self.classifier_std is not None:
             log_probs = (log_probs - self.classifier_mean) / self.classifier_std
@@ -80,7 +80,7 @@ class TransitionModel:
                 0.0
             )
         elif type == "tanh":
-            weight = (np.tanh(0.1*(-log_probs + self.classifier_thr)))
+            weight = (np.tanh(0.1*(-log_probs.detach().cpu() + self.classifier_thr))).numpy()
         elif type == "softplus": #smooth and stable
             weight = np.log(1 + np.exp(-log_probs)).numpy()
       
