@@ -11,12 +11,12 @@ import os
 import sys
 import pickle
 import gym
-
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from common.buffer import ReplayBuffer
 from common.util import load_dataset_with_validation_split, create_synthetic_data
 from helpers.plotter import plot_training_curves
+from helpers.plotter import plot_likelihood_distributions
 
 
 class Encoder(nn.Module):
@@ -156,7 +156,7 @@ class VAE(nn.Module):
 
         return loss, recon_loss, kl_div
 
-    def score_samples(self, x: torch.Tensor) -> torch.Tensor:
+    def score_samples(self, x: torch.Tensor, device='cuda') -> torch.Tensor:
         """
         Compute anomaly scores for data points.
         Lower scores indicate higher likelihood of being anomalous.
@@ -750,6 +750,17 @@ if __name__ == "__main__":
     model = dict_model['model'].to(device)
     print(dict_model['mean'])
     # Evaluate on test data
+
+    plot_likelihood_distributions(
+                        model,
+                        train_data,
+                        val_data,
+                        ood_data=test_data,
+                        thr = model.threshold,
+                        title="Likelihood Distribution",
+                        savepath=None,
+                        bins=50
+                    )
     print("\nEvaluating VAE on test set...")
     test_scores = model.score_samples(test_data.to(device))
     print(f"Test scores - Mean: {test_scores.mean():.4f}, Std: {test_scores.std():.4f}")

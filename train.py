@@ -29,6 +29,13 @@ from diffusion.ddim_training_unconditional import log_prob_elbo
 from diffusers.schedulers.scheduling_ddim import DDIMScheduler
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 import d4rl
+from typing import Tuple
+import torch
+from torch import nn
+from diffusion.ddim_training_unconditional import (
+    UnconditionalEpsilonMLP,
+    UnconditionalEpsilonTransformer,
+)
 
 
 class DiffusionDensityWrapper:
@@ -70,13 +77,13 @@ class DiffusionDensityWrapper:
         )
 
         # Normalize by target dimension for consistency
-        log_probs_per_dim = log_probs / self.target_dim
+        log_probs_per_dim = log_probs
 
         return log_probs_per_dim
 
 
 def train(env, run, logger, seed, args):
-
+    print('rollout_batch_size:', args.rollout_batch_size)
     
     if args.data_path != None:
         try:
@@ -170,6 +177,7 @@ def train(env, run, logger, seed, args):
             device=util.device
         ).to(util.device)
         classifier_dict = classifier.load_model(args.classifier_model_name)
+        print("vae laoded")
     elif "realnvp" in args.classifier_model_name:
         classifier = RealNVP(
         device=util.device
@@ -208,8 +216,8 @@ def train(env, run, logger, seed, args):
         print("Loading Diffusion based classifier... for task:", args.task)
         # Load model using build_model_from_ckpt from monte_carlo_sampling_unconditional
         device = f"cuda:{args.devid}" if torch.cuda.is_available() else "cpu"
-        ckpt_path = os.path.join(args.classifier_model_name, "checkpoint.pt")
-        sched_dir = os.path.join(args.classifier_model_name, "scheduler")
+        ckpt_path = args.classifier_model_name
+        sched_dir = f"/public/gormpo/models/{args.task.lower().split('_')[0].split('-')[0]}/diffusion/scheduler/scheduler_config.json"
 
         # Build model
         model, cfg = build_model_from_ckpt(ckpt_path, device)
@@ -236,7 +244,7 @@ def train(env, run, logger, seed, args):
         diffusion_wrapper = DiffusionDensityWrapper(model, scheduler, target_dim, device)
 
         # Load threshold from metrics if available
-        thr_path = f"diffusion/test/{args.task.lower().split('_')[0].split('-')[0]}_metrics.json"
+        thr_path = f"diffusion/monte_carlo_results/{args.task.lower().split('_')[0].split('-')[0]}_unconditional_ddpm/elbo_metrics.json"
         if os.path.exists(thr_path):
             with open(thr_path, 'r') as f:
                 metrics = json.load(f)
@@ -292,7 +300,7 @@ def train(env, run, logger, seed, args):
     )
     #load world model
 
-    # dynamics_model.load_model(args.task) 
+    dynamics_model.load_model(args.task) 
 
    
     # create trainer

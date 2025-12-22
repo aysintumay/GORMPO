@@ -2,12 +2,26 @@ import numpy as np
 import torch
 import os
 import sys
+import wandb
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from common import util, functional
 from models.ensemble_dynamics import EnsembleModel
 from operator import itemgetter
 from common.normalizer import StandardNormalizer
 from copy import deepcopy
+
+def plot_weights(weights):
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots(figsize=(5,5))
+    plt.hist(weights, bins=25)
+    plt.title('Penalty Distribution')
+    plt.xlabel('Weight')
+    plt.ylabel('Frequency')
+    plt.show()
+    # wandb.log({"weights_histogram": plt})
+    wandb.log({f"weight_histogram": wandb.Image(fig)})
+
+    plt.close()
 
 
 class TransitionModel:
@@ -63,8 +77,10 @@ class TransitionModel:
             input_np = np.concatenate([state, action], axis=1)
         else:
             input_np = torch.cat([action.squeeze(1), reward.view(-1, 1)], dim=1)
-        # print(input_np.shape)
         log_probs = self.classifier_model.score_samples(input_np, self.device)
+        if isinstance(log_probs, torch.Tensor):
+            log_probs = log_probs.detach().cpu().numpy()
+        # print('log_probs mean and std: ', log_probs.mean(), log_probs.std())
         if self.classifier_mean is not None and self.classifier_std is not None:
             log_probs = (log_probs - self.classifier_mean) / self.classifier_std
         if type == "linear":
@@ -80,10 +96,13 @@ class TransitionModel:
                 0.0
             )
         elif type == "tanh":
-            weight = (np.tanh(0.1*(-log_probs.detach().cpu() + self.classifier_thr))).numpy()
+            weight = (np.tanh(0.1*(-log_probs + self.classifier_thr)))
+            # print(weight.mean(), weight.std())
         elif type == "softplus": #smooth and stable
             weight = np.log(1 + np.exp(-log_probs)).numpy()
-      
+        #plot the weights in histogram
+        # Plotting moved to algo/mopo.py:rollout_transitions() for better frequency control
+
         return weight
 
     @torch.no_grad()

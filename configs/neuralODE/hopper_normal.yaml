@@ -16,3 +16,4 @@ seed: 1
 # data_path: "/public/sparse_d4rl/hopper-medium-v2.pkl"
 epoch: 100
 penalty_type: 'tanh'
+rollout_batch_size: 100
