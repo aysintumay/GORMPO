@@ -239,7 +239,7 @@ class PercentileThresholdKDE:
 
         return log_density
 
-    def score_samples(self, X):
+    def score_samples(self, X, device='cuda'):
         """
         Compute log-density estimates for new data
 
@@ -769,51 +769,51 @@ def main():
     # model.load_model(args.model_save_path, use_gpu=not args.no_gpu, devid=args.devid)
     # print(f"Training completed in {fit_time:.2f} seconds")
     print("Creating synthetic data...")
-    normal_data, anomaly_data = create_synthetic_data(
-        n_samples=X_test.shape[0],
-        dim=X_test.shape[1],
-        anomaly_type='outlier'
-    )
+    # normal_data, anomaly_data = create_synthetic_data(
+    #     n_samples=X_test.shape[0],
+    #     dim=X_test.shape[1],
+    #     anomaly_type='outlier'
+    # )
 
     # evaluate_and_plot_density(model, X_val, X_train, X_test)
 
     # Print train and test scores
-    print(f"\n=== Density Scores ===")
-    train_scores = model.score_samples(X_train)
-    val_scores = model.score_samples(X_val)
-    test_scores = model.score_samples(X_test)
+    # print(f"\n=== Density Scores ===")
+    # train_scores = model.score_samples(X_train)
+    # val_scores = model.score_samples(X_val)
+    # test_scores = model.score_samples(X_test)
 
-    print(f"Train scores - Mean: {train_scores.mean():.4f}, Std: {train_scores.std():.4f}, Min: {train_scores.min():.4f}, Max: {train_scores.max():.4f}")
-    print(f"Validation scores - Mean: {val_scores.mean():.4f}, Std: {val_scores.std():.4f}, Min: {val_scores.min():.4f}, Max: {val_scores.max():.4f}")
-    print(f"Test scores - Mean: {test_scores.mean():.4f}, Std: {test_scores.std():.4f}, Min: {test_scores.min():.4f}, Max: {test_scores.max():.4f}")
+    # print(f"Train scores - Mean: {train_scores.mean():.4f}, Std: {train_scores.std():.4f}, Min: {train_scores.min():.4f}, Max: {train_scores.max():.4f}")
+    # print(f"Validation scores - Mean: {val_scores.mean():.4f}, Std: {val_scores.std():.4f}, Min: {val_scores.min():.4f}, Max: {val_scores.max():.4f}")
+    # print(f"Test scores - Mean: {test_scores.mean():.4f}, Std: {test_scores.std():.4f}, Min: {test_scores.min():.4f}, Max: {test_scores.max():.4f}")
 
-    # Print anomaly test scores (synthetic OOD data)
-    anomaly_scores = model.score_samples(anomaly_data)
-    print(f"\n=== Anomaly Test Scores (Synthetic OOD) ===")
-    print(f"Anomaly scores - Mean: {anomaly_scores.mean():.4f}, Std: {anomaly_scores.std():.4f}, Min: {anomaly_scores.min():.4f}, Max: {anomaly_scores.max():.4f}")
+    # # Print anomaly test scores (synthetic OOD data)
+    # anomaly_scores = model.score_samples(anomaly_data)
+    # print(f"\n=== Anomaly Test Scores (Synthetic OOD) ===")
+    # print(f"Anomaly scores - Mean: {anomaly_scores.mean():.4f}, Std: {anomaly_scores.std():.4f}, Min: {anomaly_scores.min():.4f}, Max: {anomaly_scores.max():.4f}")
 
-    # Print detection rates
-    train_preds = model.predict(X_train)
-    val_preds = model.predict(X_val)
-    test_preds = model.predict(X_test)
-    anomaly_preds = model.predict(anomaly_data)
+    # # Print detection rates
+    # train_preds = model.predict(X_train)
+    # val_preds = model.predict(X_val)
+    # test_preds = model.predict(X_test)
+    # anomaly_preds = model.predict(anomaly_data)
 
-    print(f"\n=== Detection Rates ===")
-    print(f"Train anomaly rate: {(train_preds == -1).mean():.2%}")
-    print(f"Validation anomaly rate: {(val_preds == -1).mean():.2%}")
-    print(f"Test anomaly rate: {(test_preds == -1).mean():.2%}")
-    print(f"Synthetic OOD anomaly rate: {(anomaly_preds == -1).mean():.2%}")
+    # print(f"\n=== Detection Rates ===")
+    # print(f"Train anomaly rate: {(train_preds == -1).mean():.2%}")
+    # print(f"Validation anomaly rate: {(val_preds == -1).mean():.2%}")
+    # print(f"Test anomaly rate: {(test_preds == -1).mean():.2%}")
+    # print(f"Synthetic OOD anomaly rate: {(anomaly_preds == -1).mean():.2%}")
 
-    # plot_likelihood_distributions(
-    #                     model,
-    #                     X_train,
-    #                     X_val,
-    #                     ood_data=normal_data,
-    #                     thr = model.threshold,
-    #                     title="Likelihood Distribution",
-    #                     savepath=None,
-    #                     bins=50
-    #                 )
+    plot_likelihood_distributions(
+                        model,
+                        X_train,
+                        X_val,
+                        ood_data=X_test,
+                        thr = model.threshold,
+                        title="Likelihood Distribution",
+                        savepath=None,
+                        bins=50
+                    )
     
     if config.get('model_save_path', False):
         save_path = config.get('model_save_path', 'saved_models/vae')

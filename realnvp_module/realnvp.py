@@ -188,7 +188,7 @@ class RealNVP(nn.Module):
 
         return z, log_det_total
 
-    def score_samples(self, x: torch.Tensor) -> torch.Tensor:
+    def score_samples(self, x: torch.Tensor, device='cuda') -> torch.Tensor:
         """Compute log probability of data points."""
         z, log_det = self.forward(x, reverse=False)
 

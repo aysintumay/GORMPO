@@ -170,7 +170,10 @@ class Trainer:
             plot_p_loss(np.array(alpha_loss).reshape(-1,1), 'Alpha')
 
             plot_accuracy(np.array(reward_l), np.array(reward_std_l), 'Average Return')
-            
+
+            # Plot penalty evolution across rollout iterations
+            self.algo.plot_penalty_evolution()
+
         self.logger.print("total time: {:.3f}s".format(time.time() - start_time))
 
 

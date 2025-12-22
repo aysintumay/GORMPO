@@ -414,9 +414,9 @@ def plot_likelihood_distributions(
     # Plot OOD distribution if provided
     if logp_ood is not None:
         plt.figure(figsize=(8, 5))
-        sns.histplot(logp_ood, bins=bins, color="red", alpha=0.4, label="Test/OOD", kde=True)
+        sns.histplot(logp_ood, bins=bins, color="blue", alpha=0.4, label="Test", kde=True)
         if thr is not None:
-            plt.axvline(x=thr, color='tab:red', linestyle='--', label='Threshold')
+            plt.axvline(x=thr, color='tab:red', linestyle='--', label=f'Threshold: {thr:.3f}')
         plt.xlabel("Log-likelihood", fontsize=14)
         plt.ylabel("Frequency", fontsize=14)
         plt.title(title, fontsize=16, fontweight='bold')

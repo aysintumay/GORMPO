@@ -14,7 +14,9 @@ try:
 except ImportError:
     def tqdm(iterable, desc=None):
         return iterable
-
+#change the path
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),'..')))
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 from diffusers.schedulers.scheduling_ddim import DDIMScheduler
 
@@ -29,7 +31,7 @@ except Exception:
     joblib = None
 
 
-from ddim_training_unconditional import (
+from diffusion.ddim_training_unconditional import (
     UnconditionalEpsilonMLP,
     UnconditionalEpsilonTransformer,
     log_prob_elbo,
@@ -76,7 +78,7 @@ def ddpm_stochastic_sample(
     target_dim: int,
     num_inference_steps: int = 1000,
     device: str = "cpu",
-    generator: torch.Generator | None = None,
+    generator: Optional[torch.Generator] = None,
 ) -> torch.Tensor:
     """
     DDPM stochastic sampling for unconditional generation with optional generator for reproducibility.
@@ -109,7 +111,7 @@ def ddim_deterministic_sample(
     target_dim: int,
     num_inference_steps: int = 50,
     device: str = "cpu",
-    generator: torch.Generator | None = None,
+    generator: Optional[torch.Generator] = None,
 ) -> torch.Tensor:
     """
     DDIM deterministic sampling (eta=0) with optional generator for initial noise.
@@ -258,7 +260,9 @@ def ddim_deterministic_sample_batch(
     return x
 
 
-def inverse_scale_target(x_norm: torch.Tensor, mean_arr: np.ndarray | None, std_arr: np.ndarray | None) -> torch.Tensor:
+def inverse_scale_target(x_norm: torch.Tensor,
+    mean_arr: Optional[np.ndarray],
+    std_arr: Optional[np.ndarray]) -> torch.Tensor:
     if mean_arr is None or std_arr is None:
         return x_norm
     mean_t = torch.as_tensor(mean_arr, dtype=x_norm.dtype, device=x_norm.device).view(1, -1)
@@ -364,7 +368,7 @@ def plot_distributions(
     samples: np.ndarray,
     target: np.ndarray,
     output_path: str,
-    num_dims_to_plot: int | None = None,
+    num_dims_to_plot: Optional[int] = None,
 ):
     """
     Plot distribution of Monte Carlo samples.

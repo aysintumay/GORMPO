@@ -1,6 +1,8 @@
 """
-Test VAE model on different OOD levels by varying magn parameter.
+Test VAE model on different OOD levels using pre-generated OOD test datasets.
 This script evaluates the model's ability to detect OOD samples at different distances.
+The test datasets are loaded from /public/d4rl/ood_test/{dataset_name}/ood-distance-{distance}.pkl
+where the first half is ID (in-distribution) and the second half is OOD (out-of-distribution).
 """
 
 import torch
@@ -10,150 +12,218 @@ import seaborn as sns
 import argparse
 import os
 import sys
-from sklearn.metrics import roc_auc_score, accuracy_score
+from sklearn.metrics import roc_auc_score, accuracy_score, roc_curve
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+# Import only necessary components
+import pickle
+
 # Import VAE model
 from vae_module.vae import VAE
-from common.util import create_synthetic_data
 
-
-def evaluate_ood_at_magn(model, magn, n_samples=1000, dim=2, anomaly_ratio=0.2, device='cpu'):
+def load_ood_test_data(dataset_name, distance, base_path='/public/d4rl/ood_test'):
     """
-    Evaluate VAE model on OOD data generated with a specific magn parameter.
+    Load OOD test data from pickle file.
+
+    Args:
+        dataset_name: Name of the dataset (e.g., 'halfcheetah-medium-v2')
+        distance: OOD distance level (int or float, e.g., 0.1, 0.3, 0.5, 0.7, 1)
+        base_path: Base directory containing OOD test datasets
+
+    Returns:
+        Numpy array of test data where first half is ID and second half is OOD
+    """
+    # Format distance value - preserve int/float type
+    distance_str = str(int(distance)) if isinstance(distance, int) else str(distance)
+    file_path = os.path.join(base_path, dataset_name, f'ood-distance-{distance_str}.pkl')
+
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Test data file not found: {file_path}")
+
+    print(f"Loading test data from: {file_path}")
+    with open(file_path, 'rb') as f:
+        data = pickle.load(f)
+
+    # If data is a dictionary, concatenate observations and actions
+    if isinstance(data, dict):
+        observations = data['observations']
+        actions = data['actions']
+
+        # Convert to numpy if needed
+        if isinstance(observations, torch.Tensor):
+            observations = observations.cpu().numpy()
+        if isinstance(actions, torch.Tensor):
+            actions = actions.cpu().numpy()
+
+        # Concatenate observations and actions
+        data = np.concatenate([observations, actions], axis=1)
+    # Convert to numpy if needed
+    elif isinstance(data, torch.Tensor):
+        data = data.cpu().numpy()
+
+    return data
+
+
+def evaluate_ood_at_distance(model, dataset_name, distance, base_path='/public/d4rl/ood_test', device='cpu', mean=None, std=None):
+    """
+    Evaluate VAE model on OOD test data at a specific distance level.
 
     Args:
         model: Trained VAE model
-        magn: Magnitude parameter for OOD data generation
-        n_samples: Number of samples to generate
-        dim: Dimensionality of data
-        anomaly_ratio: Ratio of anomalous samples
+        dataset_name: Name of the dataset
+        distance: OOD distance level
+        base_path: Base directory containing OOD test datasets
         device: Device to use
+        mean: Mean for normalization (if None, no normalization)
+        std: Standard deviation for normalization (if None, no normalization)
 
     Returns:
         Dictionary with evaluation metrics
     """
-    # Generate mixed data with specified magn
-    mixed_data, labels = create_synthetic_data(
-        n_samples=n_samples,
-        dim=dim,
-        anomaly_type="outlier",
-        magn=magn,
-        return_mixed=True,
-        anomaly_ratio=anomaly_ratio
-    )
+    # Load test data
+    test_data = load_ood_test_data(dataset_name, distance, base_path)
 
-    # Move to device
-    mixed_data = mixed_data.to(device)
-    labels = labels.cpu().numpy()
+    # First half is ID (label 0), second half is OOD (label 1)
+    n_samples = len(test_data)
+    half_point = n_samples // 2
 
-    # Get anomaly scores
+    # Create labels
+    labels = np.zeros(n_samples, dtype=int)
+    labels[half_point:] = 1  # Second half is OOD
+
+    print(f"  Total samples: {n_samples} (ID: {half_point}, OOD: {n_samples - half_point})")
+
+    # Normalize if mean and std are provided
+    if mean is not None and std is not None:
+        test_data = (test_data - mean) / (std + 1e-8)
+
+    # Convert to tensor and move to device
+    test_data_tensor = torch.FloatTensor(test_data).to(device)
+
+    # Get log-likelihood scores
     model.eval()
     with torch.no_grad():
-        log_probs = model.score_samples(mixed_data)
+        log_probs = model.score_samples(test_data_tensor)
 
-    log_probs_np = log_probs if isinstance(log_probs, np.ndarray) else log_probs.cpu().numpy()
+    # Convert to numpy if needed
+    if isinstance(log_probs, torch.Tensor):
+        log_probs = log_probs.cpu().numpy()
 
-    # Calculate metrics
-    mean_log_likelihood = log_probs_np.mean()
-    std_log_likelihood = log_probs_np.std()
+    # Calculate overall metrics
+    mean_log_likelihood = log_probs.mean()
+    std_log_likelihood = log_probs.std()
 
-    # Calculate metrics for normal and anomaly separately
-    normal_mask = labels == 0
-    anomaly_mask = labels == 1
+    # Calculate metrics for ID and OOD separately
+    id_mask = labels == 0
+    ood_mask = labels == 1
 
-    normal_log_probs = log_probs_np[normal_mask]
-    anomaly_log_probs = log_probs_np[anomaly_mask]
+    id_log_probs = log_probs[id_mask]
+    ood_log_probs = log_probs[ood_mask]
 
-    mean_normal = normal_log_probs.mean()
-    std_normal = normal_log_probs.std()
-    mean_anomaly = anomaly_log_probs.mean()
-    std_anomaly = anomaly_log_probs.std()
+    mean_id = id_log_probs.mean()
+    std_id = id_log_probs.std()
+    mean_ood = ood_log_probs.mean()
+    std_ood = ood_log_probs.std()
 
     # Calculate ROC AUC (higher anomaly score for lower log prob)
-    anomaly_scores = -log_probs_np
+    # For OOD detection: ID should have higher log prob (normal), OOD should have lower log prob (anomaly)
+    anomaly_scores = -log_probs
     roc_auc = roc_auc_score(labels, anomaly_scores)
+
+    # Calculate ROC curve for plotting
+    fpr, tpr, thresholds = roc_curve(labels, anomaly_scores)
 
     # Calculate accuracy if threshold is available
     if model.threshold is not None:
-        predictions = log_probs_np < model.threshold
+        # Predict OOD if log_prob < threshold
+        predictions = (log_probs < model.threshold).astype(int)
         accuracy = accuracy_score(labels, predictions)
     else:
         accuracy = None
 
     results = {
-        'magn': magn,
+        'distance': distance,
         'mean_log_likelihood': mean_log_likelihood,
         'std_log_likelihood': std_log_likelihood,
-        'mean_normal_log_likelihood': mean_normal,
-        'std_normal_log_likelihood': std_normal,
-        'mean_anomaly_log_likelihood': mean_anomaly,
-        'std_anomaly_log_likelihood': std_anomaly,
+        'mean_id_log_likelihood': mean_id,
+        'std_id_log_likelihood': std_id,
+        'mean_ood_log_likelihood': mean_ood,
+        'std_ood_log_likelihood': std_ood,
         'roc_auc': roc_auc,
         'accuracy': accuracy,
-        'log_probs': log_probs_np,
-        'labels': labels
+        'log_probs': log_probs,
+        'labels': labels,
+        'fpr': fpr,
+        'tpr': tpr,
+        'roc_thresholds': thresholds
     }
 
     return results
 
 
-def plot_results(all_results, save_dir='figures/vae_ood_magn_tests', model_name='VAE'):
+def plot_results(all_results, save_dir='figures/vae_ood_distance_tests', model_name='VAE', threshold=None):
     """
-    Plot comprehensive results for different magn values.
+    Plot comprehensive results for different OOD distance levels.
 
     Args:
         all_results: List of result dictionaries
         save_dir: Directory to save plots
         model_name: Name of the model for plot titles
+        threshold: Model threshold for OOD detection (optional)
     """
     os.makedirs(save_dir, exist_ok=True)
 
     # Extract data for plotting
-    magn_values = [r['magn'] for r in all_results]
+    distance_values = [r['distance'] for r in all_results]
     mean_log_likelihoods = [r['mean_log_likelihood'] for r in all_results]
-    mean_normal_lls = [r['mean_normal_log_likelihood'] for r in all_results]
-    mean_anomaly_lls = [r['mean_anomaly_log_likelihood'] for r in all_results]
+    mean_id_lls = [r['mean_id_log_likelihood'] for r in all_results]
+    mean_ood_lls = [r['mean_ood_log_likelihood'] for r in all_results]
     roc_aucs = [r['roc_auc'] for r in all_results]
     accuracies = [r['accuracy'] for r in all_results if r['accuracy'] is not None]
 
     # Create figure with 2x2 subplots
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-    fig.suptitle(f'{model_name} Performance on Different OOD Levels (varying magn)',
+    fig.suptitle(f'{model_name} Performance on Different OOD Distance Levels',
                  fontsize=16, fontweight='bold')
 
-    # Plot 1: Mean log-likelihood vs magn
+    # Plot 1: Mean log-likelihood vs distance
     ax1 = axes[0, 0]
-    ax1.plot(magn_values, mean_log_likelihoods, 'o-', linewidth=2, markersize=8,
+    ax1.plot(distance_values, mean_log_likelihoods, 'o-', linewidth=2, markersize=8,
              color='steelblue', label='Overall')
-    ax1.plot(magn_values, mean_normal_lls, 's-', linewidth=2, markersize=8,
-             color='green', label='Normal samples')
-    ax1.plot(magn_values, mean_anomaly_lls, '^-', linewidth=2, markersize=8,
-             color='red', label='Anomaly samples')
-    ax1.set_xlabel('Distance', fontsize=12)
+    ax1.plot(distance_values, mean_id_lls, 's-', linewidth=2, markersize=8,
+             color='green', label='ID samples')
+    ax1.plot(distance_values, mean_ood_lls, '^-', linewidth=2, markersize=8,
+             color='red', label='OOD samples')
+
+    # Add threshold line if available
+    if threshold is not None:
+        ax1.axhline(y=threshold, color='black', linestyle='--', linewidth=2,
+                   label=f'Threshold = {threshold:.3f}')
+
+    ax1.set_xlabel('OOD Distance', fontsize=12)
     ax1.set_ylabel('Mean Log-Likelihood', fontsize=12)
     ax1.set_title('Log-Likelihood vs OOD Distance', fontsize=13, fontweight='bold')
     ax1.legend()
     ax1.grid(True, alpha=0.3)
 
-    # Plot 2: ROC AUC vs magn
+    # Plot 2: ROC AUC vs distance
     ax2 = axes[0, 1]
-    ax2.plot(magn_values, roc_aucs, 'o-', linewidth=2, markersize=8, color='forestgreen')
+    ax2.plot(distance_values, roc_aucs, 'o-', linewidth=2, markersize=8, color='forestgreen')
     ax2.axhline(y=0.5, color='r', linestyle='--', label='Random Classifier', alpha=0.7)
-    ax2.set_xlabel('Distance', fontsize=12)
+    ax2.set_xlabel('OOD Distance', fontsize=12)
     ax2.set_ylabel('ROC AUC', fontsize=12)
     ax2.set_title('ROC AUC vs OOD Distance', fontsize=13, fontweight='bold')
     ax2.set_ylim([0, 1.05])
     ax2.legend()
     ax2.grid(True, alpha=0.3)
 
-    # Plot 3: Accuracy vs magn (if available)
+    # Plot 3: Accuracy vs distance (if available)
     ax3 = axes[1, 0]
     if accuracies:
-        ax3.plot(magn_values, accuracies, 'o-', linewidth=2, markersize=8, color='purple')
-        ax3.set_xlabel('Distance', fontsize=12)
+        ax3.plot(distance_values, accuracies, 'o-', linewidth=2, markersize=8, color='purple')
+        ax3.set_xlabel('OOD Distance', fontsize=12)
         ax3.set_ylabel('Accuracy', fontsize=12)
         ax3.set_title('Classification Accuracy vs OOD Distance', fontsize=13, fontweight='bold')
         ax3.set_ylim([0, 1.05])
@@ -169,14 +239,14 @@ def plot_results(all_results, save_dir='figures/vae_ood_magn_tests', model_name=
     ax4.axis('off')
 
     table_data = []
-    headers = ['Magn', 'Mean LL', 'Normal LL', 'Anomaly LL', 'ROC AUC']
+    headers = ['Distance', 'Mean LL', 'ID LL', 'OOD LL', 'ROC AUC']
 
     for r in all_results:
         row = [
-            f"{r['magn']:.0f}",
+            f"{r['distance']:.1f}",
             f"{r['mean_log_likelihood']:.3f}",
-            f"{r['mean_normal_log_likelihood']:.3f}",
-            f"{r['mean_anomaly_log_likelihood']:.3f}",
+            f"{r['mean_id_log_likelihood']:.3f}",
+            f"{r['mean_ood_log_likelihood']:.3f}",
             f"{r['roc_auc']:.3f}"
         ]
         table_data.append(row)
@@ -198,45 +268,110 @@ def plot_results(all_results, save_dir='figures/vae_ood_magn_tests', model_name=
                 table[(i, j)].set_facecolor('#f0f0f0')
 
     plt.tight_layout()
-    save_path = os.path.join(save_dir, 'ood_magn_summary.png')
+    save_path = os.path.join(save_dir, 'ood_distance_summary.png')
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
     print(f"\nSaved summary plot to: {save_path}")
     plt.close()
 
-    # Plot 5: Log-likelihood distributions for each magn
-    n_magn = len(all_results)
+    # Plot 5: ROC Curves for each distance
+    n_distances = len(all_results)
     n_cols = 3
-    n_rows = (n_magn + n_cols - 1) // n_cols
+    n_rows = (n_distances + n_cols - 1) // n_cols
 
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 4*n_rows))
-    fig.suptitle(f'{model_name} Log-Likelihood Distributions for Test Data of Different Gaussian Distances',
+    fig.suptitle(f'{model_name} ROC Curves for Different OOD Distance Levels',
                  fontsize=16, fontweight='bold')
 
-    axes = axes.flatten() if n_magn > 1 else [axes]
+    if n_distances > 1:
+        axes = axes.flatten()
+    else:
+        axes = [axes]
 
     for idx, r in enumerate(all_results):
         ax = axes[idx]
 
-        normal_mask = r['labels'] == 0
-        anomaly_mask = r['labels'] == 1
+        # Plot ROC curve
+        ax.plot(r['fpr'], r['tpr'], linewidth=2, label=f'ROC (AUC = {r["roc_auc"]:.3f})')
+        ax.plot([0, 1], [0, 1], 'k--', linewidth=1, label='Random')
 
-        normal_lls = r['log_probs'][normal_mask]
-        anomaly_lls = r['log_probs'][anomaly_mask]
+        ax.set_xlabel('False Positive Rate', fontsize=11)
+        ax.set_ylabel('True Positive Rate', fontsize=11)
+        ax.set_title(f'Distance = {r["distance"]}', fontsize=12, fontweight='bold')
+        ax.legend(loc='lower right')
+        ax.grid(True, alpha=0.3)
+        ax.set_xlim([0.0, 1.0])
+        ax.set_ylim([0.0, 1.05])
 
-        sns.histplot(normal_lls, bins=30, color='green', alpha=0.5,
-                    label='Normal', kde=True, ax=ax)
-        sns.histplot(anomaly_lls, bins=30, color='red', alpha=0.5,
-                    label='Anomaly', kde=True, ax=ax)
+    # Hide unused subplots
+    for idx in range(n_distances, len(axes)):
+        axes[idx].axis('off')
+
+    plt.tight_layout()
+    save_path = os.path.join(save_dir, 'roc_curves.png')
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    print(f"Saved ROC curve plots to: {save_path}")
+    plt.close()
+
+    # Plot 6: Log-likelihood distributions for each distance
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 4*n_rows))
+    fig.suptitle(f'{model_name} Log-Likelihood Distributions for Different OOD Distance Levels',
+                 fontsize=16, fontweight='bold')
+
+    if n_distances > 1:
+        axes = axes.flatten()
+    else:
+        axes = [axes]
+
+    for idx, r in enumerate(all_results):
+        ax = axes[idx]
+
+        id_mask = r['labels'] == 0
+        ood_mask = r['labels'] == 1
+
+        id_lls = r['log_probs'][id_mask]
+        ood_lls = r['log_probs'][ood_mask]
+        print(f"  Distance {r['distance']}: ID samples = {id_mask.sum()}, OOD samples = {ood_mask.sum()}")
+        print(f"  ID log-likelihood range: [{id_lls.min():.3f}, {id_lls.max():.3f}]")
+        print(f"  OOD log-likelihood range: [{ood_lls.min():.3f}, {ood_lls.max():.3f}]")
+        print(f"  Unique labels: {np.unique(r['labels'])}")
+        print(f"  Unique OOD values: {len(np.unique(ood_lls))}, std: {ood_lls.std():.6f}")
+
+        # Determine appropriate bins based on the combined range
+        all_lls = np.concatenate([id_lls, ood_lls])
+        ll_min, ll_max = all_lls.min(), all_lls.max()
+
+        # Use fixed bins for both distributions
+        bins = np.linspace(ll_min, ll_max, 50)
+
+        # Plot ID distribution
+        sns.histplot(id_lls, bins=bins, color='green', alpha=0.5,
+                    label='ID', kde=True, ax=ax, stat='density')
+
+        # Plot OOD distribution - check if all values are the same
+        if ood_lls.std() < 1e-6:
+            # All OOD values are essentially the same - plot as a vertical line
+            print(f"  WARNING: OOD samples have near-zero variance, plotting as vertical line")
+            y_max = ax.get_ylim()[1]
+            ax.axvline(x=ood_lls.mean(), color='red', linestyle='-', linewidth=3,
+                      alpha=0.7, label=f'OOD (n={len(ood_lls)})')
+        else:
+            sns.histplot(ood_lls, bins=bins, color='red', alpha=0.5,
+                        label='OOD', kde=True, ax=ax, stat='density')
+
+        # Add threshold line if available
+        if threshold is not None:
+            ax.axvline(x=threshold, color='black', linestyle='--', linewidth=2,
+                      label=f'Threshold = {threshold:.3f}')
 
         ax.set_xlabel('Log-Likelihood', fontsize=11)
         ax.set_ylabel('Frequency', fontsize=11)
-        ax.set_title(f'Distance = {r["magn"]}, ROC AUC = {r["roc_auc"]:.3f}',
+        ax.set_title(f'Distance = {r["distance"]}, ROC AUC = {r["roc_auc"]:.3f}',
                     fontsize=12, fontweight='bold')
         ax.legend()
         ax.grid(True, alpha=0.3)
 
     # Hide unused subplots
-    for idx in range(n_magn, len(axes)):
+    for idx in range(n_distances, len(axes)):
         axes[idx].axis('off')
 
     plt.tight_layout()
@@ -246,21 +381,31 @@ def plot_results(all_results, save_dir='figures/vae_ood_magn_tests', model_name=
     plt.close()
 
 
+def parse_number(value):
+    """Parse a number as int or float based on its representation."""
+    try:
+        # Try to parse as int first
+        if '.' not in value:
+            return int(value)
+        else:
+            return float(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"Invalid number: {value}")
+
+
 def main():
-    parser = argparse.ArgumentParser(description='Test VAE on different OOD levels')
+    parser = argparse.ArgumentParser(description='Test VAE on different OOD distance levels')
     parser.add_argument('--model_path', type=str, required=True,
                        help='Path to saved VAE model (without extension)')
-    parser.add_argument('--task', type=str, default='hopper-medium-v2',
-                       help='Task name for determining input dimensions')
-    parser.add_argument('--magn_values', type=int, nargs='+', default=[1, 2, 3, 4, 5, 6],
-                       help='List of magn values to test')
-    parser.add_argument('--n_samples', type=int, default=1000,
-                       help='Number of samples to generate for each test')
-    parser.add_argument('--anomaly_ratio', type=float, default=0.2,
-                       help='Ratio of anomalous samples in mixed data')
+    parser.add_argument('--dataset_name', type=str, required=True,
+                       help='Dataset name (e.g., halfcheetah-medium-v2, hopper-medium-v2)')
+    parser.add_argument('--distances', type=parse_number, nargs='+', default=[0.1, 0.3, 0.5, 0.7, 1],
+                       help='List of OOD distance values to test (supports both int and float)')
+    parser.add_argument('--base_path', type=str, default='/public/d4rl/ood_test',
+                       help='Base directory containing OOD test datasets')
     parser.add_argument('--device', type=str, default='cpu',
                        help='Device to use (cpu/cuda)')
-    parser.add_argument('--save_dir', type=str, default='figures/vae_ood_magn_tests',
+    parser.add_argument('--save_dir', type=str, default='figures/vae_ood_distance_tests',
                        help='Directory to save results')
 
     args = parser.parse_args()
@@ -272,11 +417,16 @@ def main():
         device = 'cpu'
 
     print(f"Using device: {device}")
+    print(f"Dataset: {args.dataset_name}")
+    print(f"OOD test data path: {args.base_path}")
 
     # Load model
     print(f"\nLoading VAE model from: {args.model_path}")
     model_dict = VAE.load_model(args.model_path)
     model = model_dict['model']
+    mean = model_dict.get('mean', None)
+    std = model_dict.get('std', None)
+
     model = model.to(device)
     model.eval()
 
@@ -284,46 +434,53 @@ def main():
     print(f"Model threshold: {model.threshold}")
     print(f"Model input dimension: {model.input_dim}")
 
-    input_dim = model.input_dim
-
-    # Test on different magn values
+    # Test on different distance values
     print("\n" + "="*80)
-    print("Testing VAE on Different OOD Levels")
+    print("Testing VAE on Different OOD Distance Levels")
     print("="*80)
 
     all_results = []
 
-    for magn in args.magn_values:
-        print(f"\nTesting magn = {magn}")
+    for distance in args.distances:
+        print(f"\nTesting distance = {distance}")
         print("-" * 40)
 
-        results = evaluate_ood_at_magn(
-            model=model,
-            magn=magn,
-            n_samples=args.n_samples,
-            dim=input_dim,
-            anomaly_ratio=args.anomaly_ratio,
-            device=device
-        )
+        try:
+            results = evaluate_ood_at_distance(
+                model=model,
+                dataset_name=args.dataset_name,
+                distance=distance,
+                base_path=args.base_path,
+                device=device,
+                mean=mean,
+                std=std
+            )
 
-        all_results.append(results)
+            all_results.append(results)
 
-        print(f"  Mean log-likelihood: {results['mean_log_likelihood']:.4f}")
-        print(f"  Normal samples mean LL: {results['mean_normal_log_likelihood']:.4f}")
-        print(f"  Anomaly samples mean LL: {results['mean_anomaly_log_likelihood']:.4f}")
-        print(f"  ROC AUC: {results['roc_auc']:.4f}")
-        if results['accuracy'] is not None:
-            print(f"  Accuracy: {results['accuracy']:.4f}")
+            print(f"  Mean log-likelihood: {results['mean_log_likelihood']:.4f}")
+            print(f"  ID samples mean LL: {results['mean_id_log_likelihood']:.4f}")
+            print(f"  OOD samples mean LL: {results['mean_ood_log_likelihood']:.4f}")
+            print(f"  ROC AUC: {results['roc_auc']:.4f}")
+            if results['accuracy'] is not None:
+                print(f"  Accuracy: {results['accuracy']:.4f}")
+        except FileNotFoundError as e:
+            print(f"  Error: {e}")
+            print(f"  Skipping distance {distance}")
 
-    # Create save directory with task name
-    save_dir = os.path.join(args.save_dir, args.task.replace('-', '_'))
+    if not all_results:
+        print("\nNo test data found! Please check the dataset path and distance values.")
+        return
+
+    # Create save directory with dataset name
+    save_dir = os.path.join(args.save_dir, args.dataset_name.replace('-', '_'))
 
     # Plot results
     print("\n" + "="*80)
     print("Generating Plots")
     print("="*80)
 
-    plot_results(all_results, save_dir=save_dir, model_name='VAE')
+    plot_results(all_results, save_dir=save_dir, model_name='VAE', threshold=model.threshold)
 
     print("\n" + "="*80)
     print("Testing Complete!")
@@ -333,12 +490,13 @@ def main():
     # Print summary
     print("\nSummary:")
     print("-" * 80)
-    print(f"{'Magn':<8} {'Mean LL':<12} {'Normal LL':<12} {'Anomaly LL':<12} {'ROC AUC':<10}")
+    print(f"{'Distance':<10} {'Mean LL':<12} {'ID LL':<12} {'OOD LL':<12} {'ROC AUC':<10} {'Accuracy':<10}")
     print("-" * 80)
     for r in all_results:
-        print(f"{r['magn']:<8.0f} {r['mean_log_likelihood']:<12.4f} "
-              f"{r['mean_normal_log_likelihood']:<12.4f} "
-              f"{r['mean_anomaly_log_likelihood']:<12.4f} {r['roc_auc']:<10.4f}")
+        acc_str = f"{r['accuracy']:.4f}" if r['accuracy'] is not None else "N/A"
+        print(f"{r['distance']:<10.1f} {r['mean_log_likelihood']:<12.4f} "
+              f"{r['mean_id_log_likelihood']:<12.4f} "
+              f"{r['mean_ood_log_likelihood']:<12.4f} {r['roc_auc']:<10.4f} {acc_str:<10}")
     print("-" * 80)
 
 

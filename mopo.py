@@ -31,7 +31,7 @@ warnings.filterwarnings("ignore")
 def get_args():
     print("Running", __file__)
     config_parser = argparse.ArgumentParser(add_help=False)
-    config_parser.add_argument("--config", type=str, default="configs/neuralODE/halfcheetah_normal.yaml")
+    config_parser.add_argument("--config", type=str, default="configs/diffusion/halfcheetah_normal.yaml")
     config_args, remaining_argv = config_parser.parse_known_args()
     if config_args.config:
         with open(config_args.config, "r") as f:
@@ -69,7 +69,7 @@ def get_args():
     parser.add_argument("--n-elites", type=int, default=5)
     parser.add_argument("--reward-penalty-coef", type=float, default=0.5) #1e=6
     parser.add_argument("--rollout-length", type=int, default=5) #1 
-    parser.add_argument("--rollout-batch-size", type=int, default=5000) #50000
+    parser.add_argument("--rollout-batch-size", type=int, default=50000) #50000
     parser.add_argument("--rollout-freq", type=int, default=1000)
     parser.add_argument("--model-retain-epochs", type=int, default=5)
     parser.add_argument("--real-ratio", type=float, default=0.05)
