@@ -489,19 +489,22 @@ def log_prob_elbo(
     scheduler: DDIMScheduler,
     x0: torch.Tensor,
     device: str = "cpu",
+    num_inference_steps: int = None,
 ) -> torch.Tensor:
     """
     Compute log p(x0) using the ELBO (Evidence Lower Bound) from the diffusion process.
-    
+
     This gives a lower bound on log p(x0) by using the variational bound:
     log p(x0) >= ELBO = E_q[log p(x0|x1)] - sum_t KL(q(x_{t-1}|x_t,x0) || p_theta(x_{t-1}|x_t)) - KL(q(x_T|x0) || p(x_T))
-    
+
     Args:
         model: Unconditional epsilon prediction model
         scheduler: DDIMScheduler (or DDPMScheduler) with diffusion parameters
         x0: Data samples of shape [batch_size, target_dim]
         device: Device to run computation on
-        
+        num_inference_steps: Number of timesteps to use (default: None = use all T timesteps)
+            If specified, uniformly subsample timesteps for faster approximation
+
     Returns:
         log_prob: Lower bound on log p(x0) for each sample, shape [batch_size]
     """
@@ -515,22 +518,38 @@ def log_prob_elbo(
     
     T = betas.shape[0]
     bsz, dim = x0.shape
-    
+
+    # Determine which timesteps to use
+    if num_inference_steps is not None and num_inference_steps < T:
+        # Uniformly subsample timesteps for faster approximation
+        # Use linspace to get evenly spaced timesteps
+        timesteps = torch.linspace(0, T - 1, num_inference_steps, dtype=torch.long, device=device)
+        # Ensure we include T-1 (last timestep) and 0 (first timestep)
+        if timesteps[-1] != T - 1:
+            timesteps[-1] = T - 1
+        if timesteps[0] != 0:
+            timesteps[0] = 0
+        # Convert to list and add 1 (since loop uses 1-indexed)
+        timestep_list = [int(t) + 1 for t in reversed(timesteps.cpu().tolist())]
+    else:
+        # Use all timesteps (original behavior)
+        timestep_list = list(reversed(range(1, T + 1)))
+
     # Sample a single q trajectory for expectation (Monte Carlo)
     eps = torch.randn(bsz, dim, device=device)
     x_t = torch.sqrt(alphas_cumprod[-1]) * x0 + torch.sqrt(1.0 - alphas_cumprod[-1]) * eps
-    
+
     total = torch.zeros(bsz, device=device)
-    
+
     # L_T = KL(q(x_T|x0) || N(0, I))
     mean_T = torch.sqrt(alphas_cumprod[-1]) * x0
     var_T = (1.0 - alphas_cumprod[-1]) * torch.ones_like(x0)
     mean_p = torch.zeros_like(x0)
     var_p = torch.ones_like(x0)
     total = total + gaussian_kl(mean_T, var_T, mean_p, var_p)
-    
-    # Loop t=T..2 for KL terms, and handle t=1 as NLL of p_theta(x0|x1)
-    for t in reversed(range(1, T + 1)):
+
+    # Loop through selected timesteps for KL terms, and handle t=1 as NLL of p_theta(x0|x1)
+    for t in timestep_list:
         at = alphas[t - 1]
         a_bar_t = alphas_cumprod[t - 1]
         if t > 1:
