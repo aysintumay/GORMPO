@@ -1,0 +1,28 @@
+# Diffusion Model OOD Detection Configuration
+# Configuration file for out-of-distribution detection using trained Diffusion models
+
+# Model directory
+model_dir: "/public/gormpo/models/halfcheetah/diffusion"  # Directory with checkpoint.pt and scheduler/
+
+# Data configuration
+data_path: "/public/d4rl/halfcheetah-medium-v2.pkl"  # Path to RL dataset
+
+# Data splitting
+max_samples: 6000
+val_ratio: 0.2
+test_ratio: 0.2
+
+# OOD detection parameters
+anomaly_fraction: 0.01  # Fraction of validation data to use for threshold (1% = lower percentile)
+batch_size: 64  # Batch size for processing (diffusion is memory-intensive)
+
+# Hardware
+device: "cuda"  # Options: "cuda" or "cpu"
+
+# Output and visualization
+plot_results: true
+save_dir: "figures/diffusion_ood/halfcheetah"
+save_model_path: "diffusion/halfcheetah_ood"  # Optional: save OOD model with threshold
+
+# Example usage:
+# python diffusion/diffusion_ood.py --config configs/diffusion/halfcheetah_ood.yaml
