@@ -1,0 +1,37 @@
+# Neural ODE Training Configuration
+# Configuration for training a Continuous Normalizing Flow on Walker2d dataset
+
+# Dataset configuration
+npz: "/public/sparse_d4rl/walker2d-medium-v2.pkl"  # Path to dataset
+out: "/public/gormpo/models/walker2d/neural_ode"    # Output directory
+
+# Training parameters
+epochs: 200
+batch: 512
+lr: 0.001
+wd: 0.0  # Weight decay
+
+# Model architecture
+hidden_dims: [512, 512]
+activation: "silu"  # Options: "silu" or "tanh"
+time_dependent: true
+
+# ODE solver configuration
+solver: "dopri5"  # Options: "dopri5", "rk4", "euler"
+t0: 0.0
+t1: 1.0
+rtol: 1.0e-5
+atol: 1.0e-5
+
+# Hardware
+device: "cuda"  # Options: "cuda" or "cpu"
+
+# Logging and checkpointing
+log_every: 100
+checkpoint_every: 50  # Save checkpoint every N epochs (0 = no checkpoints)
+
+# Random seed
+seed: 42
+
+# Usage:
+# python neuralODE/neural_ode_density.py --config configs/neuralODE/walker2d_train.yaml
