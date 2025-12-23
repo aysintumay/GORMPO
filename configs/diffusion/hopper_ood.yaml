@@ -1,0 +1,29 @@
+# Diffusion Model OOD Detection Configuration
+# Configuration file for out-of-distribution detection using trained Diffusion models
+
+# Model directory
+model_dir: "/public/gormpo/models/hopper/diffusion"  # Directory with checkpoint.pt and scheduler/
+
+# Data configuration
+data_path: "/public/d4rl/hopper-medium-v2.pkl"  # Path to RL dataset
+
+# Data splitting
+max_samples: 6000  # WARNING: ELBO uses 50K steps/sample! 1000=~40min, 500=~20min, 6000=~4hrs
+val_ratio: 0.2
+test_ratio: 0.2
+
+# OOD detection parameters
+anomaly_fraction: 0.01  # Fraction of validation data to use for threshold (1% = lower percentile)
+batch_size: 64  # IMPORTANT: ELBO requires 50,000 timesteps per sample! Keep batch small.
+# Note: Unlike DDIM sampling (20-100 steps), ELBO must use ALL training timesteps (50K)
+
+# Hardware
+device: "cuda"  # Options: "cuda" or "cpu"
+
+# Output and visualization
+plot_results: true
+save_dir: "figures/diffusion_ood/hopper"
+save_model_path: "diffusion/hopper_ood"  # Optional: save OOD model with threshold
+
+# Example usage:
+# python diffusion/diffusion_ood.py --config configs/diffusion/hopper_ood.yaml
