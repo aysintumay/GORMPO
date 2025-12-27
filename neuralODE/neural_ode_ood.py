@@ -62,38 +62,30 @@ class NeuralODEOOD:
         self.threshold = None
         self.flow.to(device)
 
-    def score_samples(self, x: torch.Tensor, batch_size: int = 512) -> torch.Tensor:
+    def score_samples(self, x: torch.Tensor, device: str = 'cuda') -> np.ndarray:
         """
-        Compute log probability of data points.
+        Compute log probability of data points (matches RealNVP interface).
 
         Args:
             x: Input tensor of shape (batch_size, dim)
-            batch_size: Batch size for processing (default: 512)
+            device: Device to use (ignored, uses model's device)
 
         Returns:
-            Log probabilities for each sample
+            Log probabilities as numpy array
         """
         self.flow.eval()
         # Note: Neural ODE requires gradients for divergence computation
-        # Don't use torch.no_grad() here
         if not isinstance(x, torch.Tensor):
             x = torch.tensor(x, dtype=torch.float32)
         x = x.to(self.device)
 
-        # Process in batches to avoid OOM
-        all_log_probs = []
-        for i in range(0, len(x), batch_size):
-            batch = x[i:min(i+batch_size, len(x))]
-            log_probs = self.flow.log_prob(batch)
-            all_log_probs.append(log_probs.detach().cpu())
-
-        return torch.cat(all_log_probs)
+        log_probs = self.flow.log_prob(x)
+        return log_probs.detach().cpu().numpy()
 
     def set_threshold(
         self,
         val_data: torch.Tensor,
-        anomaly_fraction: float = 0.01,
-        batch_size: int = 512
+        anomaly_fraction: float = 0.01
     ):
         """
         Set threshold for anomaly detection based on validation data.
@@ -101,37 +93,27 @@ class NeuralODEOOD:
         Args:
             val_data: Validation dataset (assumed to be normal data)
             anomaly_fraction: Fraction of validation data to classify as anomalies
-            batch_size: Batch size for processing validation data
         """
         self.flow.eval()
-        all_log_probs = []
+        val_data = val_data.to(self.device)
 
-        # Process in batches if dataset is large
-        num_samples = len(val_data)
-        for i in range(0, num_samples, batch_size):
-            batch = val_data[i:min(i+batch_size, num_samples)]
-            batch = batch.to(self.device)
-            # Neural ODE needs gradients for divergence computation
-            log_probs = self.flow.log_prob(batch)
-            all_log_probs.append(log_probs.detach().cpu())
-
-        log_probs = torch.cat(all_log_probs)
+        # Use score_samples which returns numpy array
+        log_probs = self.score_samples(val_data)
 
         # Set threshold as percentile of validation log probabilities
-        self.threshold = torch.quantile(log_probs, anomaly_fraction).item()
+        self.threshold = float(np.percentile(log_probs, anomaly_fraction * 100))
 
         print(f'Threshold set to {self.threshold:.4f} '
               f'(marking {anomaly_fraction*100:.1f}% of validation data as anomalies)')
 
         return self.threshold
 
-    def predict_anomaly(self, x: torch.Tensor, batch_size: int = 512) -> np.ndarray:
+    def predict_anomaly(self, x: torch.Tensor) -> np.ndarray:
         """
         Predict anomalies based on log probability threshold.
 
         Args:
             x: Input data
-            batch_size: Batch size for processing
 
         Returns:
             Boolean array indicating anomalies (True = anomaly)
@@ -139,29 +121,20 @@ class NeuralODEOOD:
         if self.threshold is None:
             raise ValueError("Threshold not set. Call set_threshold() first.")
 
-        log_probs = []
-        num_samples = len(x)
-
-        for i in range(0, num_samples, batch_size):
-            batch = x[i:min(i+batch_size, num_samples)]
-            batch_log_probs = self.score_samples(batch)
-            log_probs.append(batch_log_probs)
-
-        log_probs = torch.cat(log_probs).numpy()
+        log_probs = self.score_samples(x)
         return log_probs < self.threshold
 
-    def predict(self, x: torch.Tensor, batch_size: int = 512) -> np.ndarray:
+    def predict(self, x: torch.Tensor) -> np.ndarray:
         """
-        Predict anomalies based on threshold.
+        Predict anomalies based on threshold (matches RealNVP interface).
 
         Args:
             x: Test data
-            batch_size: Batch size for processing
 
         Returns:
             predictions: 1 for normal, -1 for anomaly
         """
-        anomalies = self.predict_anomaly(x, batch_size)
+        anomalies = self.predict_anomaly(x)
         return np.where(anomalies, -1, 1)
 
     def evaluate_anomaly_detection(
@@ -169,8 +142,7 @@ class NeuralODEOOD:
         normal_data: torch.Tensor,
         anomaly_data: torch.Tensor,
         plot: bool = True,
-        save_path: Optional[str] = None,
-        batch_size: int = 512
+        save_path: Optional[str] = None
     ) -> dict:
         """
         Evaluate anomaly detection performance.
@@ -180,28 +152,21 @@ class NeuralODEOOD:
             anomaly_data: Anomalous test data
             plot: Whether to plot ROC curve
             save_path: Path to save the ROC curve plot
-            batch_size: Batch size for processing
 
         Returns:
             Dictionary with evaluation metrics
         """
         self.flow.eval()
 
+        # Move data to device
+        normal_data = normal_data.to(self.device)
+        anomaly_data = anomaly_data.to(self.device)
+
         # Compute log probabilities for normal data
-        normal_log_probs = []
-        for i in range(0, len(normal_data), batch_size):
-            batch = normal_data[i:min(i+batch_size, len(normal_data))]
-            log_probs = self.score_samples(batch)
-            normal_log_probs.append(log_probs)
-        normal_log_probs = torch.cat(normal_log_probs).numpy()
+        normal_log_probs = self.score_samples(normal_data)
 
         # Compute log probabilities for anomaly data
-        anomaly_log_probs = []
-        for i in range(0, len(anomaly_data), batch_size):
-            batch = anomaly_data[i:min(i+batch_size, len(anomaly_data))]
-            log_probs = self.score_samples(batch)
-            anomaly_log_probs.append(log_probs)
-        anomaly_log_probs = torch.cat(anomaly_log_probs).numpy()
+        anomaly_log_probs = self.score_samples(anomaly_data)
 
         # Create labels (0 = normal, 1 = anomaly)
         y_true = np.concatenate([
@@ -258,13 +223,16 @@ class NeuralODEOOD:
 
     def save_model(self, save_path: str, train_data: Optional[torch.Tensor] = None):
         """
-        Save the Neural ODE OOD model and metadata.
+        Save the Neural ODE OOD model and metadata (matches RealNVP interface).
 
         Args:
             save_path: Base path for saving (without extension)
             train_data: Optional training data to compute statistics
         """
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        # Create directory if it doesn't exist
+        save_dir = os.path.dirname(save_path)
+        if save_dir:
+            os.makedirs(save_dir, exist_ok=True)
 
         # Save model state dict
         torch.save(self.flow.state_dict(), f"{save_path}_model.pt")
@@ -272,15 +240,15 @@ class NeuralODEOOD:
         # Compute training log probabilities if provided
         metadata = {
             'threshold': self.threshold,
-            'device': self.device,
+            'device': str(self.device),
         }
 
         if train_data is not None:
             self.flow.eval()
-            # score_samples already handles gradient computation internally
-            train_log_probs = self.score_samples(train_data.to(self.device))
-            metadata['mean'] = train_log_probs.mean().item()
-            metadata['std'] = train_log_probs.std().item()
+            train_data = train_data.to(self.device)
+            train_log_probs = self.score_samples(train_data)
+            metadata['mean'] = float(np.mean(train_log_probs))
+            metadata['std'] = float(np.std(train_log_probs))
 
         with open(f"{save_path}_metadata.pkl", 'wb') as f:
             pickle.dump(metadata, f)
@@ -371,8 +339,7 @@ def plot_likelihood_distributions(
     threshold: Optional[float] = None,
     title: str = "Likelihood Distribution (Neural ODE)",
     save_dir: str = "figures",
-    bins: int = 50,
-    batch_size: int = 512
+    bins: int = 50
 ):
     """
     Visualize log-likelihood distributions for train, val, and OOD data.
@@ -386,33 +353,23 @@ def plot_likelihood_distributions(
         title: Title for the plot
         save_dir: Directory to save figures
         bins: Number of histogram bins
-        batch_size: Batch size for processing
     """
     os.makedirs(save_dir, exist_ok=True)
 
     # Compute log-likelihoods
     print("Computing log-likelihoods for train data...")
-    logp_train = []
-    for i in range(0, len(train_data), batch_size):
-        batch = train_data[i:min(i+batch_size, len(train_data))]
-        logp_train.append(model.score_samples(batch))
-    logp_train = torch.cat(logp_train).numpy()
+    train_data = train_data.to(model.device)
+    logp_train = model.score_samples(train_data)
 
     print("Computing log-likelihoods for validation data...")
-    logp_val = []
-    for i in range(0, len(val_data), batch_size):
-        batch = val_data[i:min(i+batch_size, len(val_data))]
-        logp_val.append(model.score_samples(batch))
-    logp_val = torch.cat(logp_val).numpy()
+    val_data = val_data.to(model.device)
+    logp_val = model.score_samples(val_data)
 
     logp_ood = None
     if ood_data is not None:
         print("Computing log-likelihoods for OOD data...")
-        logp_ood = []
-        for i in range(0, len(ood_data), batch_size):
-            batch = ood_data[i:min(i+batch_size, len(ood_data))]
-            logp_ood.append(model.score_samples(batch))
-        logp_ood = torch.cat(logp_ood).numpy()
+        ood_data = ood_data.to(model.device)
+        logp_ood = model.score_samples(ood_data)
 
     if threshold is None:
         threshold = model.threshold
@@ -733,11 +690,11 @@ if __name__ == "__main__":
 
     # Set threshold (now on subsampled data)
     print(f"\nSetting threshold with {cfg.anomaly_fraction*100}% anomaly fraction...")
-    ood_model.set_threshold(val_data, cfg.anomaly_fraction, cfg.batch_size)
+    ood_model.set_threshold(val_data, cfg.anomaly_fraction)
 
     # Get predictions on training data
     print("\nComputing predictions on training data...")
-    predictions_tr = ood_model.predict(train_data, cfg.batch_size)
+    predictions_tr = ood_model.predict(train_data)
     scores_tr = ood_model.score_samples(train_data)
     scores_test_in_dist = ood_model.score_samples(test_data)
 
@@ -751,14 +708,14 @@ if __name__ == "__main__":
 
     # Evaluate on OOD test data
     print("\nTesting on OOD data...")
-    predictions_test = ood_model.predict(ood_test_data, cfg.batch_size)
+    predictions_test = ood_model.predict(ood_test_data)
     scores_test = ood_model.score_samples(ood_test_data)
 
-    print(f"Scores test OOD: {scores_test.mean().item():.3f}")
-    print(f"Scores test ID: {scores_test_in_dist.mean().item():.3f}")
+    print(f"Scores test OOD: {scores_test.mean():.3f}")
+    print(f"Scores test ID: {scores_test_in_dist.mean():.3f}")
     anomaly_count = (np.array(predictions_test) == -1).sum()
-    print(f"Max density score: {scores_test.max().item():.3f}")
-    print(f"Min density score: {scores_test.min().item():.3f}")
+    print(f"Max density score: {scores_test.max():.3f}")
+    print(f"Min density score: {scores_test.min():.3f}")
     print(f"OOD data anomalies detected: {anomaly_count}/{len(ood_test_data)} ({(anomaly_count/len(ood_test_data)):.1%})")
 
     # Evaluate OOD detection with ROC curve using the real OOD test data
@@ -769,8 +726,7 @@ if __name__ == "__main__":
         normal_data=test_data[:n_normal],
         anomaly_data=ood_test_data[:n_normal],
         plot=cfg.plot_results,
-        save_path=os.path.join(cfg.save_dir, "neural_ode_roc_curve.png"),
-        batch_size=cfg.batch_size
+        save_path=os.path.join(cfg.save_dir, "neural_ode_roc_curve.png")
     )
 
     print(f"\nROC Evaluation Results:")
@@ -788,8 +744,7 @@ if __name__ == "__main__":
             train_data=train_data,
             val_data=val_data,
             ood_data=ood_test_data,
-            save_dir=cfg.save_dir,
-            batch_size=cfg.batch_size
+            save_dir=cfg.save_dir
         )
 
     # Save model if requested
