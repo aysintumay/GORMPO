@@ -192,17 +192,39 @@ class ContinuousNormalizingFlow(nn.Module):
         )
         return z_t[-1], logp_t[-1]
 
-    def score_samples(self, x: torch.Tensor, device: Optional[str]) -> torch.Tensor:
+    def log_prob(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Compute log probability of data points.
+
+        Args:
+            x: Input tensor of shape (batch_size, dim)
+
+        Returns:
+            Log probabilities for each sample
+        """
         if not isinstance(x, torch.Tensor):
-            x = torch.tensor(x, dtype=torch.float32, device=device, requires_grad=True)
-        torch.set_grad_enabled(True) #hot fix
-        # with torch.no_grad():
+            x = torch.tensor(x, dtype=torch.float32, device=self.integration_times.device)
+        torch.set_grad_enabled(True)  # Required for divergence computation
         logp0 = torch.zeros(x.size(0), device=x.device)
         z1, logp1 = self._odeint(x, logp0, reverse=False)
         logpz = -0.5 * (
             z1.pow(2).sum(dim=1) + z1.size(1) * math.log(2 * math.pi)
         )
         return logpz - logp1
+
+    def score_samples(self, x: torch.Tensor, device: str = 'cuda') -> torch.Tensor:
+        """
+        Compute log probability of data points (alias for log_prob for compatibility).
+
+        Args:
+            x: Input tensor of shape (batch_size, dim)
+            device: Device to use (ignored, uses model's device)
+
+        Returns:
+            Log probabilities as numpy array
+        """
+        log_probs = self.log_prob(x)
+        return log_probs.detach().cpu().numpy()
 
     def sample(self, num_samples: int, device: str) -> torch.Tensor:
         z = torch.randn(num_samples, self.func.dim, device=device)
@@ -264,7 +286,7 @@ def train(cfg: TrainConfig) -> None:
         epoch_loss = 0.0
         for batch in loader:
             x = batch.to(cfg.device)
-            log_px = flow.score_samples(x)
+            log_px = flow.log_prob(x)
             loss = -log_px.mean()
 
             optimizer.zero_grad(set_to_none=True)
