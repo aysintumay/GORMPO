@@ -300,7 +300,7 @@ def train(env, run, logger, seed, args):
     )
     #load world model
 
-    dynamics_model.load_model(args.task) 
+    # dynamics_model.load_model(args.task) 
 
    
     # create trainer

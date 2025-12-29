@@ -193,7 +193,7 @@ class PercentileThresholdKDE:
                 self.index.train(X)
 
         # Move to GPU if available
-        if self.use_gpu:
+        if self.use_gpu and hasattr(faiss, 'index_cpu_to_gpu'):
             try:
                 gpu_resources = faiss.StandardGpuResources()
                 self.index = faiss.index_cpu_to_gpu(
@@ -205,6 +205,10 @@ class PercentileThresholdKDE:
                 if verbose:
                     print(f"GPU failed, using CPU: {e}")
                 self.use_gpu = False
+        else:
+            if verbose and self.use_gpu:
+                print("GPU functions not available in faiss-cpu, using CPU")
+            self.use_gpu = False
 
         self.index.add(X)
 
@@ -306,9 +310,13 @@ class PercentileThresholdKDE:
 
     def save_model(self, base_path):
         """Save FAISS index and metadata separately."""
-        print("Transferring from GPU to CPU for saving...")
-        index_cpu = faiss.index_gpu_to_cpu(self.index)
-        faiss.write_index(index_cpu, f"{base_path}.faiss")
+        if self.use_gpu and hasattr(faiss, 'index_gpu_to_cpu'):
+            print("Transferring from GPU to CPU for saving...")
+            index_cpu = faiss.index_gpu_to_cpu(self.index)
+            faiss.write_index(index_cpu, f"{base_path}.faiss")
+        else:
+            print("Saving CPU index...")
+            faiss.write_index(self.index, f"{base_path}.faiss")
 
         # Save metadata
         metadata = {
@@ -367,7 +375,7 @@ class PercentileThresholdKDE:
         model.pca = metadata.get("pca", None)
 
         # Move to GPU if requested
-        if use_gpu and faiss.get_num_gpus() > 0:
+        if use_gpu and hasattr(faiss, 'get_num_gpus') and faiss.get_num_gpus() > 0:
             try:
                 gpu_resources = faiss.StandardGpuResources()
                 model.index = faiss.index_cpu_to_gpu(gpu_resources, devid, model.index)
@@ -591,7 +599,7 @@ def find_optimal_percentile(
 def main():
     print("Running", __file__)
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", type=str, default="")
+    parser.add_argument("--config", type=str, default="configs/kde/walker2d_medium_expert.yaml")
     args, remaining_argv = parser.parse_known_args()
 
     if args.config:
@@ -682,30 +690,7 @@ def main():
     )
     parser.add_argument("--env", type=str, default="")
 
-    # ============ abiomed environment arguments ============
-    parser.add_argument("--model_name", type=str, default="10min_1hr_all_data")
-    parser.add_argument("--model_path", type=str, default=None)
-    parser.add_argument("--data_path_wm", type=str, default=None)
-    parser.add_argument("--max_steps", type=int, default=6)
-    parser.add_argument("--gamma1", type=float, default=0.2)
-    parser.add_argument("--gamma2", type=float, default=0.5)
-    parser.add_argument("--gamma3", type=float, default=1)
-    parser.add_argument(
-        "--action_space_type",
-        type=str,
-        default="continuous",
-        choices=["continuous", "discrete"],
-        help="Type of action space for the environment",
-    )
-    parser.add_argument(
-        "--noise_rate",
-        type=float,
-        help="Portion of data to be noisy with probability",
-        default=0.0,
-    )
-    parser.add_argument(
-        "--noise_scale", type=float, help="magnitude of noise", default=0.0
-    )
+    parser.add_argument("--fig_save_path", type=str, default="figures", help="Path to save figures")
 
     parser.set_defaults(**config)
     args = parser.parse_args(remaining_argv)
@@ -804,16 +789,16 @@ def main():
     # print(f"Test anomaly rate: {(test_preds == -1).mean():.2%}")
     # print(f"Synthetic OOD anomaly rate: {(anomaly_preds == -1).mean():.2%}")
 
-    plot_likelihood_distributions(
-                        model,
-                        X_train,
-                        X_val,
-                        ood_data=X_test,
-                        thr = model.threshold,
-                        title="Likelihood Distribution",
-                        savepath=None,
-                        bins=50
-                    )
+    # plot_likelihood_distributions(
+    #                     model,
+    #                     X_train,
+    #                     X_val,
+    #                     ood_data=X_test,
+    #                     thr = model.threshold,
+    #                     title="Likelihood Distribution",
+    #                     savepath=args.fig_save_path,
+    #                     bins=50
+    #                 )
     
     if config.get('model_save_path', False):
         save_path = config.get('model_save_path', 'saved_models/vae')

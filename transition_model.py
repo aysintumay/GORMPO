@@ -305,19 +305,33 @@ class TransitionModel:
         # util.logger.log_path = '/home/ubuntu/mopo/log/Abiomed-v0/mopo/seed_5_0331_161040-Abiomed_v0_mopo'
         # util.logger.log_path = '/home/ubuntu/mopo/log/halfcheetah-medium-replay-v0/mopo/seed_5_0403_215901-halfcheetah_medium_replay_v0_mopo'
         # model_save_dir = os.path.join(util.logger_model.log_path, info)
-        if "hopper" in info.lower():
+        if  info.lower()=="hopper-medium-v2":
             # model_save_dir = "/public/gormpo/models/rl/hopper/realnvp/seed_1_1110_000546_Hopper_gormpo/dynamics_model"
-            model_save_dir = "/public/gormpo/models/rl/hopper-medium-v2/realnvp/seed_1_1113_195812_hopper_medium_v2_gormpo/dynamics_model"
+            model_save_dir = "/public/gormpo/models/rl/hopper-medium-v2/realnvp/seed_1_1223_133358_hopper_medium_v2_gormpo/dynamics_model"
             print('loaded hopper model from ', model_save_dir)
-        elif "halfcheetah" in info.lower():
+        elif  info.lower()=="halfcheetah-medium-v2":
             # model_save_dir = '/public/gormpo/models/rl/halfcheetah/realnvp/seed_1_1110_000453_HalfCheetah_gormpo/dynamics_model'
-            model_save_dir = '/public/gormpo/models/rl/halfcheetah-medium-v2/realnvp/seed_1_1113_064452_halfcheetah_medium_v2_mopo/dynamics_model'
+            model_save_dir = '/public/gormpo/models/rl/halfcheetah-medium-v2/realnvp/seed_1_1223_133252_halfcheetah_medium_v2_gormpo/dynamics_model'
             print('loaded halfcheetah model from ', model_save_dir)
-        elif "walker2d" in info.lower():
+        elif info.lower()=="walker2d-medium-v2":
             # model_save_dir = "/public/gormpo/models/rl/walker2d/realnvp/seed_1_1110_000607_Walker2d_gormpo/dynamics_model"
-            model_save_dir = "/public/gormpo/models/rl/walker2d-medium-v2/realnvp/seed_1_1113_195725_walker2d_medium_v2_gormpo/dynamics_model"
+            model_save_dir = "/public/gormpo/models/rl/walker2d-medium-v2/realnvp/seed_1_1223_133416_walker2d_medium_v2_gormpo/dynamics_model"
             print('loaded walker2d model from ', model_save_dir)
         # model_save_dir = '/home/ubuntu/mopo/saved_models/walker2d-random-v0/mopo/seed_1_0415_200911-walker2d_random_v0_mopo/dynamics_model'
+        elif  info.lower()=="halfcheetah-medium-expert-v2":
+            # model_save_dir = '/public/gormpo/models/rl/halfcheetah/realnvp/seed_1_1110_000453_HalfCheetah_gormpo/dynamics_model'
+            model_save_dir = '/public/gormpo/models/rl/halfcheetah-medium-expert-v2/kde/seed_1_1226_083730_halfcheetah_medium_expert_v2_mbpo/dynamics_model'
+            print('loaded halfcheetah model from ', model_save_dir)
+
+        elif  info.lower()=="hopper-medium-expert-v2":
+            # model_save_dir = '/public/gormpo/models/rl/halfcheetah/realnvp/seed_1_1110_000453_HalfCheetah_gormpo/dynamics_model'
+            model_save_dir = '/public/gormpo/models/rl/hopper-medium-expert-v2/realnvp/seed_1_1226_161304_hopper_medium_expert_v2_gormpo/dynamics_model'
+            print('loaded hopper model from ', model_save_dir)
+        elif  info.lower()=="walker2d-medium-expert-v2":
+            # model_save_dir = '/public/gormpo/models/rl/halfcheetah/realnvp/seed_1_1110_000453_HalfCheetah_gormpo/dynamics_model'
+            model_save_dir = '/public/gormpo/models/rl/walker2d-medium-expert-v2/kde/seed_1_1226_151328_walker2d_medium_expert_v2_mbpo/dynamics_model'
+            print('loaded walker2d model from ', model_save_dir)
+        
         for network_name, network in self.networks.items():
             load_path = os.path.join(model_save_dir, network_name + ".pt")
             state_dict = torch.load(load_path, map_location='cuda')
