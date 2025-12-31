@@ -9,6 +9,8 @@ tensorboard==2.10.1
 gym==0.23.0        # Version compatible with stable-baselines3 and newer setuptools
 gymnasium>=0.29.1,<1.1.0  # Compatible with stable-baselines3
 shimmy>=2.0
+git+https://github.com/Farama-Foundation/d4rl@master#egg=d4rl  # D4RL offline RL datasets (includes mjrl)
+pyyaml>=5.4.0      # YAML configuration file support
 
 
 # Scientific Computing
@@ -18,6 +20,8 @@ pandas>=1.3.0
 
 # Machine Learning
 scikit-learn>=1.0.0
+faiss-cpu>=1.7.0   # For KDE module (use faiss-gpu if GPU support needed)
+protobuf>=3.19.0,<3.21.0  # Compatibility with tensorboard
 
 # Visualization
 matplotlib>=3.4.0

@@ -407,8 +407,10 @@ def plot_likelihood_distributions(
     plt.title(title, fontsize=16, fontweight='bold')
     plt.legend(fontsize=12)
     plt.tight_layout(pad=2.0)
-    plt.savefig("figures/train_distribution.png", dpi=300, bbox_inches="tight")
-    print("Saved figure at figures/train_distribution.png")
+    os.makedirs(savepath, exist_ok=True)
+
+    plt.savefig(f"{savepath}/train_distribution.png", dpi=300, bbox_inches="tight")
+    print(f"Saved figure at {savepath}/train_distribution.png")
     plt.close()
 
     # Plot OOD distribution if provided
@@ -422,8 +424,8 @@ def plot_likelihood_distributions(
         plt.title(title, fontsize=16, fontweight='bold')
         plt.legend(fontsize=12)
         plt.tight_layout(pad=2.0)
-        plt.savefig("figures/ood_distribution.png", dpi=300, bbox_inches="tight")
-        print("Saved figure at figures/ood_distribution.png")
+        plt.savefig(f"{savepath}/ood_distribution.png", dpi=300, bbox_inches="tight")
+        print(f"Saved figure at {savepath}/ood_distribution.png")
         plt.close()
 
 

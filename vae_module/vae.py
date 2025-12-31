@@ -338,7 +338,9 @@ class VAE(nn.Module):
             scores = self.score_samples(val_data.to(self.device))
 
         # Set threshold as percentile of validation scores
-        self.threshold = torch.quantile(scores, anomaly_fraction).item()
+        # Convert numpy array to tensor for torch.quantile
+        scores_tensor = torch.from_numpy(scores) if isinstance(scores, np.ndarray) else scores
+        self.threshold = torch.quantile(scores_tensor, anomaly_fraction).item()
 
         print(f'Threshold set to {self.threshold:.4f} '
               f'(marking {anomaly_fraction*100:.1f}% of validation data as anomalies)')
@@ -465,13 +467,21 @@ class VAE(nn.Module):
             train_scores = self.score_samples(train_data.to(self.device))
 
         # Save metadata (threshold and config)
+        # Handle both numpy arrays and tensors
+        if isinstance(train_scores, np.ndarray):
+            mean_score = float(np.mean(train_scores))
+            std_score = float(np.std(train_scores))
+        else:
+            mean_score = train_scores.cpu().mean().item()
+            std_score = train_scores.cpu().std().item()
+
         metadata = {
             'threshold': self.threshold,
             'input_dim': self.input_dim,
             'latent_dim': self.latent_dim,
             'device': self.device,
-            "mean": train_scores.cpu().mean().item(),
-            "std": train_scores.cpu().std().item()
+            "mean": mean_score,
+            "std": std_score
         }
 
         with open(f"{save_path}_meta_data.pkl", 'wb') as f:
@@ -621,7 +631,8 @@ def parse_args():
                         help='Action dimension (default: 3 for Hopper)')
     parser.add_argument('--model_save_path', type=str, default=None,
                         help='Path to save or load model')
-
+    parser.add_argument('--fig_save_path', type=str, default=None,
+                        help='Path to save figures')
     parser.set_defaults(**config)
     args = parser.parse_args(remaining_argv)
     args.config = config
@@ -725,40 +736,40 @@ if __name__ == "__main__":
     ).to(device)
 
     # print("Training VAE model...")
-    # history = model.fit(
-    #     train_data=train_data,
-    #     val_data=val_data,
-    #     test_data=test_data,
-    #     epochs=config.get('epochs', 100),
-    #     batch_size=config.get('batch_size', 128),
-    #     lr=config.get('lr', 1e-3),
-    #     beta=config.get('beta', 1.0),
-    #     patience=config.get('patience', 15),
-    #     verbose=config.get('verbose', True)
-    # )
+    history = model.fit(
+        train_data=train_data,
+        val_data=val_data,
+        test_data=test_data,
+        epochs=config.get('epochs', 100),
+        batch_size=config.get('batch_size', 128),
+        lr=config.get('lr', 1e-3),
+        beta=config.get('beta', 1.0),
+        patience=config.get('patience', 15),
+        verbose=config.get('verbose', True)
+    )
 
     # Plot training curves
-    # plot_training_curves(history, save_path=f"figures/{args.task}/vae_training.png")
+    plot_training_curves(history, save_path=f"figures/{args.task}/vae_training.png")
 
     # Save model if requested
-    # if config.get('model_save_path', False):
-    #     save_path = config.get('model_save_path', 'saved_models/vae')
-    #     os.makedirs(os.path.dirname(save_path), exist_ok=True)
-    #     model.save_model(save_path, train_data)
-    #     print(f"Model saved to: {save_path}_model.pth")
-    dict_model = model.load_model(args.model_save_path, hidden_dims=config.get('hidden_dims', [256, 256]))
-    model = dict_model['model'].to(device)
-    print(dict_model['mean'])
+    if config.get('model_save_path', False):
+        save_path = config.get('model_save_path', 'saved_models/vae')
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        model.save_model(save_path, train_data)
+        print(f"Model saved to: {save_path}_model.pth")
+    # dict_model = model.load_model(args.model_save_path, hidden_dims=config.get('hidden_dims', [256, 256]))
+    # model = dict_model['model'].to(device)
+    # print(dict_model['mean'])
     # Evaluate on test data
 
     plot_likelihood_distributions(
                         model,
-                        train_data,
-                        val_data,
-                        ood_data=test_data,
+                        train_data.to(device),
+                        val_data.to(device),
+                        ood_data=test_data.to(device),
                         thr = model.threshold,
                         title="Likelihood Distribution",
-                        savepath=None,
+                        savepath=args.fig_save_path,
                         bins=50
                     )
     print("\nEvaluating VAE on test set...")
