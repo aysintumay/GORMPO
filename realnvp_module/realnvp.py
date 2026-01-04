@@ -125,6 +125,7 @@ class RealNVP(nn.Module):
 
         self.input_dim = input_dim
         self.num_layers = num_layers
+        self.hidden_dims = hidden_dims
         self.device = device
 
         # Create alternating masks
@@ -188,8 +189,8 @@ class RealNVP(nn.Module):
 
         return z, log_det_total
 
-    def score_samples(self, x: torch.Tensor, device='cuda') -> torch.Tensor:
-        """Compute log probability of data points."""
+    def _log_prob_tensor(self, x: torch.Tensor) -> torch.Tensor:
+        """Compute log probability and return as tensor (for training)."""
         z, log_det = self.forward(x, reverse=False)
 
         # Log probability under prior (standard normal)
@@ -197,9 +198,21 @@ class RealNVP(nn.Module):
             z.pow(2).sum(dim=1) +
             self.input_dim * np.log(2 * np.pi)
         )
-        # print(log_det.max().item(), np.exp(log_det.max().item()))
 
-        return (log_prior + log_det).cpu()
+        return log_prior + log_det
+
+    def score_samples(self, x: torch.Tensor, device='cuda') -> np.ndarray:
+        """Compute log probability of data points."""
+        # Convert to tensor if numpy
+        if not isinstance(x, torch.Tensor):
+            x = torch.FloatTensor(x)
+
+        # Move to model's device
+        model_device = next(self.parameters()).device
+        x = x.to(model_device)
+
+        log_prob = self._log_prob_tensor(x)
+        return log_prob.detach().cpu().numpy()
 
     def sample(self, num_samples: int) -> torch.Tensor:
         """Generate samples from the model."""
@@ -266,7 +279,7 @@ class RealNVP(nn.Module):
                 optimizer.zero_grad()
 
                 # Compute negative log likelihood
-                log_prob = self.score_samples(batch_data)
+                log_prob = self._log_prob_tensor(batch_data)
                 loss = -log_prob.mean()
 
                 loss.backward()
@@ -329,7 +342,7 @@ class RealNVP(nn.Module):
             log_probs = self.score_samples(val_data.to(self.device))
 
         # Set threshold as percentile of validation log probabilities
-        self.threshold = torch.quantile(log_probs, anomaly_fraction).item()
+        self.threshold = np.quantile(log_probs, anomaly_fraction)
 
         print(f'Threshold set to {self.threshold:.4f} '
               f'(marking {anomaly_fraction*100:.1f}% of validation data as anomalies)')
@@ -435,32 +448,47 @@ class RealNVP(nn.Module):
 
         return results
 
-    def save_model(self, save_path: str):
+    def save_model(self, save_path: str, train_data: torch.Tensor = None):
         """
         Save the RealNVP model and metadata.
 
         Args:
             save_path: Base path for saving (without extension)
+            train_data: Training data for computing statistics (optional)
         """
         # Create directory if it doesn't exist
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
         # Save model state dict
         torch.save(self.state_dict(), f"{save_path}_model.pth")
-        #calculate the logprobs in training data
-        self.eval()
-        with torch.no_grad():
-            train_log_probs = self.score_samples(train_data.to(self.device))
+
+        # Calculate the logprobs in training data if provided
+        if train_data is not None:
+            self.eval()
+            with torch.no_grad():
+                # Ensure train_data is a tensor
+                if not isinstance(train_data, torch.Tensor):
+                    train_data = torch.FloatTensor(train_data)
+
+                # Move to model's device
+                model_device = next(self.parameters()).device
+                train_data = train_data.to(model_device)
+
+                train_log_probs = self.score_samples(train_data)
+        else:
+            train_log_probs = None
         # Save metadata (threshold and config)
         metadata = {
             'threshold': self.threshold,
             'input_dim': self.input_dim,
             'num_layers': self.num_layers,
-            'device': self.device,
-            "mean":train_log_probs.cpu().mean().item(),
-            "std":train_log_probs.cpu().std().item()
-
+            'hidden_dims': self.hidden_dims,
+            'device': str(next(self.parameters()).device),
         }
+
+        if train_log_probs is not None:
+            metadata["mean"] = float(train_log_probs.mean())
+            metadata["std"] = float(train_log_probs.std())
 
         with open(f"{save_path}_meta_data.pkl", 'wb') as f:
             pickle.dump(metadata, f)

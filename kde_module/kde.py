@@ -132,7 +132,8 @@ class PercentileThresholdKDE:
     ):
         self.bandwidth = bandwidth
         self.n_neighbors = n_neighbors
-        self.use_gpu = use_gpu and faiss.get_num_gpus() > 0
+        # Check if GPU is available and faiss has GPU support
+        self.use_gpu = use_gpu and hasattr(faiss, 'get_num_gpus') and faiss.get_num_gpus() > 0
         self.normalize = normalize
         self.percentile = percentile 
 
@@ -192,7 +193,7 @@ class PercentileThresholdKDE:
             if hasattr(self.index, "train"):
                 self.index.train(X)
 
-        # Move to GPU if available
+        # Move to GPU if available and GPU functions exist
         if self.use_gpu and hasattr(faiss, 'index_cpu_to_gpu'):
             try:
                 gpu_resources = faiss.StandardGpuResources()
@@ -206,8 +207,8 @@ class PercentileThresholdKDE:
                     print(f"GPU failed, using CPU: {e}")
                 self.use_gpu = False
         else:
-            if verbose and self.use_gpu:
-                print("GPU functions not available in faiss-cpu, using CPU")
+            if self.use_gpu and verbose:
+                print("GPU functions not available (using faiss-cpu), training on CPU")
             self.use_gpu = False
 
         self.index.add(X)
@@ -310,13 +311,15 @@ class PercentileThresholdKDE:
 
     def save_model(self, base_path):
         """Save FAISS index and metadata separately."""
+        # Transfer from GPU to CPU if needed
         if self.use_gpu and hasattr(faiss, 'index_gpu_to_cpu'):
             print("Transferring from GPU to CPU for saving...")
             index_cpu = faiss.index_gpu_to_cpu(self.index)
-            faiss.write_index(index_cpu, f"{base_path}.faiss")
         else:
-            print("Saving CPU index...")
-            faiss.write_index(self.index, f"{base_path}.faiss")
+            # Already on CPU or using CPU-only faiss
+            index_cpu = self.index
+
+        faiss.write_index(index_cpu, f"{base_path}.faiss")
 
         # Save metadata
         metadata = {
@@ -374,7 +377,7 @@ class PercentileThresholdKDE:
         model.is_fitted = metadata["is_fitted"]
         model.pca = metadata.get("pca", None)
 
-        # Move to GPU if requested
+        # Move to GPU if requested and GPU functions available
         if use_gpu and hasattr(faiss, 'get_num_gpus') and faiss.get_num_gpus() > 0:
             try:
                 gpu_resources = faiss.StandardGpuResources()
@@ -386,6 +389,8 @@ class PercentileThresholdKDE:
                 model.use_gpu = False
         else:
             model.use_gpu = False
+            if use_gpu:
+                print("GPU not available, using CPU")
 
         model_dict = {
             "model": model,

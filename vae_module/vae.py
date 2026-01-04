@@ -86,6 +86,7 @@ class VAE(nn.Module):
 
         self.input_dim = input_dim
         self.latent_dim = latent_dim
+        self.hidden_dims = hidden_dims
         self.device = device
 
         # Create encoder and decoder
@@ -164,7 +165,12 @@ class VAE(nn.Module):
         Uses negative reconstruction error as the score.
         """
         if isinstance(x, np.ndarray):
-            x = torch.FloatTensor(x).to(self.device)
+            x = torch.FloatTensor(x)
+
+        # Move to model's device
+        model_device = next(self.parameters()).device
+        x = x.to(model_device)
+
         self.eval()
         with torch.no_grad():
             recon, mu, logvar = self.forward(x)
@@ -338,9 +344,7 @@ class VAE(nn.Module):
             scores = self.score_samples(val_data.to(self.device))
 
         # Set threshold as percentile of validation scores
-        # Convert numpy array to tensor for torch.quantile
-        scores_tensor = torch.from_numpy(scores) if isinstance(scores, np.ndarray) else scores
-        self.threshold = torch.quantile(scores_tensor, anomaly_fraction).item()
+        self.threshold = np.quantile(scores, anomaly_fraction)
 
         print(f'Threshold set to {self.threshold:.4f} '
               f'(marking {anomaly_fraction*100:.1f}% of validation data as anomalies)')
@@ -464,7 +468,15 @@ class VAE(nn.Module):
         # Calculate the scores on training data
         self.eval()
         with torch.no_grad():
-            train_scores = self.score_samples(train_data.to(self.device))
+            # Ensure train_data is a tensor
+            if not isinstance(train_data, torch.Tensor):
+                train_data = torch.FloatTensor(train_data)
+
+            # Move to model's device
+            model_device = next(self.parameters()).device
+            train_data = train_data.to(model_device)
+
+            train_scores = self.score_samples(train_data)
 
         # Save metadata (threshold and config)
         # Handle both numpy arrays and tensors
@@ -479,9 +491,10 @@ class VAE(nn.Module):
             'threshold': self.threshold,
             'input_dim': self.input_dim,
             'latent_dim': self.latent_dim,
-            'device': self.device,
-            "mean": mean_score,
-            "std": std_score
+            'hidden_dims': self.hidden_dims,
+            'device': str(next(self.parameters()).device),
+            "mean": float(train_scores.mean()),
+            "std": float(train_scores.std())
         }
 
         with open(f"{save_path}_meta_data.pkl", 'wb') as f:
