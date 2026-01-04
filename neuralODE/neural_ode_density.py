@@ -212,19 +212,42 @@ class ContinuousNormalizingFlow(nn.Module):
         )
         return logpz - logp1
 
-    def score_samples(self, x: torch.Tensor, device: str = 'cuda') -> torch.Tensor:
+    def score_samples(self, x: torch.Tensor, device: str = 'cuda', batch_size: int = 100) -> np.ndarray:
         """
         Compute log probability of data points (alias for log_prob for compatibility).
 
         Args:
             x: Input tensor of shape (batch_size, dim)
             device: Device to use (ignored, uses model's device)
+            batch_size: Batch size for processing to avoid OOM (default: 100)
 
         Returns:
             Log probabilities as numpy array
         """
-        log_probs = self.log_prob(x)
-        return log_probs.detach().cpu().numpy()
+        # Ensure x is a tensor on the correct device
+        if not isinstance(x, torch.Tensor):
+            x = torch.tensor(x, dtype=torch.float32)
+
+        # Move to model's device
+        model_device = self.integration_times.device
+        x = x.to(model_device)
+
+        # Process in batches to avoid OOM during ODE integration
+        n_samples = x.shape[0]
+        log_probs_list = []
+
+        for i in range(0, n_samples, batch_size):
+            batch = x[i:i+batch_size]
+            with torch.no_grad():
+                batch_log_probs = self.log_prob(batch)
+                log_probs_list.append(batch_log_probs.detach().cpu())
+
+            # Clear GPU cache after each batch
+            if model_device.type == 'cuda':
+                torch.cuda.empty_cache()
+
+        log_probs = torch.cat(log_probs_list, dim=0)
+        return log_probs.numpy()
 
     def sample(self, num_samples: int, device: str) -> torch.Tensor:
         z = torch.randn(num_samples, self.func.dim, device=device)
