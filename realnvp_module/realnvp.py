@@ -199,7 +199,7 @@ class RealNVP(nn.Module):
         )
         # print(log_det.max().item(), np.exp(log_det.max().item()))
 
-        return (log_prior + log_det).cpu().numpy()
+        return (log_prior + log_det).cpu()
 
     def sample(self, num_samples: int) -> torch.Tensor:
         """Generate samples from the model."""
@@ -661,7 +661,9 @@ def parse_args():
                         help='Observation shape (default: [17] for HalfCheetah)')
     parser.add_argument('--action_dim', type=int, default=3,
                         help='Action dimension (default: 6 for HalfCheetah)')
+    parser.add_argument('--fig_save_path', type=str, default='figures/',)
     parser.set_defaults(**config)
+
     args = parser.parse_args(remaining_argv)
     args.config = config
    
@@ -1243,142 +1245,6 @@ def plot_tsne(tsne_data1, preds, title):
     plt.savefig(f"figures/{title.replace(' ', '_')}.png", dpi=300, bbox_inches="tight")
 
 
-def compare_noise_levels(results_by_noise, test_id_score=None, save_dir="figures"):
-    """
-    Create comprehensive comparison plots for different noise levels.
-
-    Args:
-        results_by_noise: dict[noise_std] -> {'data_dict': ..., 'res_dict': ...}
-        test_id_score: Optional mean score for pure ID test data (0% OOD)
-        save_dir: Directory to save figures
-    """
-    os.makedirs(save_dir, exist_ok=True)
-
-    noise_levels = sorted(results_by_noise.keys())
-    colors = plt.cm.viridis(np.linspace(0, 0.9, len(noise_levels)))
-
-    # Create figure with 2x2 subplots
-    fig, axes = plt.subplots(2, 2, figsize=(16, 12))
-    fig.suptitle('Comparison of OOD Detection Across Different Noise Levels',
-                 fontsize=18, fontweight='bold', y=0.995)
-
-    # Get percentages from first noise level results
-    first_noise = noise_levels[0]
-    percentages = sorted(results_by_noise[first_noise]['res_dict'].keys())
-
-    # ============ Plot 1: Mean Log-Likelihood vs OOD Ratio for Different Noise Levels ============
-    ax1 = axes[0, 0]
-    for idx, noise_std in enumerate(noise_levels):
-        res_dict = results_by_noise[noise_std]['res_dict']
-        mean_scores = [res_dict[perc]['mean_score'] for perc in percentages]
-        ax1.plot([p * 100 for p in percentages], mean_scores, 'o-',
-                linewidth=2, markersize=8, color=colors[idx],
-                label=f'Noise σ={noise_std}')
-
-    ax1.set_xlabel('OOD Percentage (%)', fontsize=14)
-    ax1.set_ylabel('Mean Log-Likelihood', fontsize=14)
-    ax1.set_title('Log-Likelihood vs OOD Ratio', fontsize=15, fontweight='bold')
-    ax1.grid(True, alpha=0.3)
-    ax1.legend(loc='best', fontsize=12)
-    ax1.set_xticks([p * 100 for p in percentages])
-    ax1.tick_params(labelsize=12)
-
-    # ============ Plot 2: Overall Accuracy vs OOD Ratio ============
-    ax2 = axes[0, 1]
-    for idx, noise_std in enumerate(noise_levels):
-        res_dict = results_by_noise[noise_std]['res_dict']
-        accuracies = [res_dict[perc]['accuracy'] for perc in percentages]
-        ax2.plot([p * 100 for p in percentages], accuracies, 'o-',
-                linewidth=2, markersize=8, color=colors[idx],
-                label=f'Noise σ={noise_std}')
-
-    ax2.set_xlabel('OOD Percentage (%)', fontsize=14)
-    ax2.set_ylabel('Overall Accuracy', fontsize=14)
-    ax2.set_title('Overall Accuracy vs OOD Ratio', fontsize=15, fontweight='bold')
-    ax2.set_ylim([0, 1.05])
-    ax2.grid(True, alpha=0.3)
-    ax2.legend(loc='best', fontsize=12)
-    ax2.set_xticks([p * 100 for p in percentages])
-    ax2.tick_params(labelsize=12)
-
-    # ============ Plot 3: ROC AUC vs OOD Ratio ============
-    ax3 = axes[1, 0]
-    for idx, noise_std in enumerate(noise_levels):
-        res_dict = results_by_noise[noise_std]['res_dict']
-        roc_aucs = [res_dict[perc]['roc_auc'] for perc in percentages if res_dict[perc]['roc_auc'] is not None]
-        valid_percentages = [perc for perc in percentages if res_dict[perc]['roc_auc'] is not None]
-
-        if roc_aucs:
-            ax3.plot([p * 100 for p in valid_percentages], roc_aucs, 'o-',
-                    linewidth=2, markersize=8, color=colors[idx],
-                    label=f'Noise σ={noise_std}')
-
-    ax3.axhline(y=0.5, color='r', linestyle='--', label='Random Classifier', alpha=0.7)
-    ax3.set_xlabel('OOD Percentage (%)', fontsize=14)
-    ax3.set_ylabel('ROC AUC', fontsize=14)
-    ax3.set_title('ROC AUC vs OOD Ratio', fontsize=15, fontweight='bold')
-    ax3.set_ylim([0, 1.05])
-    ax3.grid(True, alpha=0.3)
-    ax3.legend(loc='best', fontsize=12)
-    ax3.tick_params(labelsize=12)
-
-    # ============ Plot 4: ID Accuracy and OOD Accuracy Comparison ============
-    ax4 = axes[1, 1]
-
-    # Plot ID accuracy for each noise level
-    for idx, noise_std in enumerate(noise_levels):
-        res_dict = results_by_noise[noise_std]['res_dict']
-        id_accuracies = [res_dict[perc]['id_accuracy'] for perc in percentages]
-        ax4.plot([p * 100 for p in percentages], id_accuracies, 's-',
-                linewidth=2, markersize=8, color=colors[idx], alpha=0.7,
-                label=f'ID Acc (σ={noise_std})')
-
-    # Plot OOD accuracy for each noise level with dashed lines
-    for idx, noise_std in enumerate(noise_levels):
-        res_dict = results_by_noise[noise_std]['res_dict']
-        ood_accuracies = [res_dict[perc]['ood_accuracy'] for perc in percentages]
-        ax4.plot([p * 100 for p in percentages], ood_accuracies, 'o--',
-                linewidth=2, markersize=8, color=colors[idx], alpha=0.7,
-                label=f'OOD Acc (σ={noise_std})')
-
-    ax4.set_xlabel('OOD Percentage (%)', fontsize=14)
-    ax4.set_ylabel('Accuracy', fontsize=14)
-    ax4.set_title('ID and OOD Accuracy Comparison', fontsize=15, fontweight='bold')
-    ax4.set_ylim([0, 1.05])
-    ax4.grid(True, alpha=0.3)
-    ax4.legend(loc='best', fontsize=10, ncol=2)
-    ax4.set_xticks([p * 100 for p in percentages])
-    ax4.tick_params(labelsize=12)
-
-    plt.tight_layout(pad=2.5)
-    save_path = os.path.join(save_dir, 'noise_level_comparison.png')
-    plt.savefig(save_path, dpi=300, bbox_inches='tight')
-    print(f"\nSaved noise level comparison plot to: {save_path}")
-    plt.close()
-
-    # ============ Create a detailed summary table ============
-    print("\n" + "="*120)
-    print("Detailed Comparison Across Noise Levels:")
-    print("="*120)
-
-    for noise_std in noise_levels:
-        print(f"\nNoise Level σ = {noise_std}")
-        print("-" * 120)
-        print(f"{'OOD %':>8} | {'Mean Score':>12} | {'ROC AUC':>10} | {'Accuracy':>10} | {'ID Acc':>10} | {'OOD Acc':>10}")
-        print("-" * 120)
-
-        res_dict = results_by_noise[noise_std]['res_dict']
-        for perc in percentages:
-            metrics = res_dict[perc]
-            roc_str = f"{metrics['roc_auc']:.4f}" if metrics['roc_auc'] is not None else "N/A"
-            acc_str = f"{metrics['accuracy']:.4f}" if metrics['accuracy'] is not None else "N/A"
-            id_acc_str = f"{metrics['id_accuracy']:.4f}" if metrics['id_accuracy'] is not None else "N/A"
-            ood_acc_str = f"{metrics['ood_accuracy']:.4f}" if metrics['ood_accuracy'] is not None else "N/A"
-
-            print(f"{perc:>7.1%} | {metrics['mean_score']:>12.4f} | {roc_str:>10} | {acc_str:>10} | {id_acc_str:>10} | {ood_acc_str:>10}")
-
-    print("="*120 + "\n")
-
 
 if __name__ == "__main__":
     # Parse command line arguments
@@ -1493,22 +1359,22 @@ if __name__ == "__main__":
         device=device
     ).to(device)
 
-    # print("Training RealNVP model...")
-    # history = model.fit(
-    #     train_data=train_data,
-    #     val_data=val_data,
-    #     epochs=config.get('epochs', 100),
-    #     batch_size=config.get('batch_size', 128),
-    #     lr=config.get('lr', 1e-3),
-    #     patience=config.get('patience', 15),
-    #     verbose=config.get('verbose', True)
-    # )
+    print("Training RealNVP model...")
+    history = model.fit(
+        train_data=train_data,
+        val_data=val_data,
+        epochs=config.get('epochs', 100),
+        batch_size=config.get('batch_size', 128),
+        lr=config.get('lr', 1e-3),
+        patience=config.get('patience', 15),
+        verbose=config.get('verbose', True)
+    )
     # Save model if requested
-    # if config.get('model_save_path', False):
-    #     save_path = config.get('model_save_path', 'saved_models/realnvp')
-    #     os.makedirs(os.path.dirname(save_path), exist_ok=True)
-    #     model.save_model(save_path)
-    #     print(f"Model saved to: {save_path}_model.pth")
+    if config.get('model_save_path', False):
+        save_path = config.get('model_save_path', 'saved_models/realnvp')
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        model.save_model(save_path)
+        print(f"Model saved to: {save_path}_model.pth")
     #load pretrained model
     model_dict = RealNVP.load_model(save_path=args.model_save_path)
     model = model_dict['model']
@@ -1541,18 +1407,18 @@ if __name__ == "__main__":
     # noisy_train = small_train + np.random.normal(0, 0.1, small_train.shape)
     # normal_data = torch.FloatTensor(np.concatenate([small_train, noisy_train], axis=0)).to(model.device)
 
-    print("\n" + "="*80)
-    print("OOD Test Results with Different Noise Levels:")
-    print("="*80)
+    # print("\n" + "="*80)
+    # print("OOD Test Results with Different Noise Levels:")
+    # print("="*80)
 
-    # Test with 3 different noise levels
-    noise_levels = [0.05, 0.1, 0.5]  # Low, Medium, High noise
-    results_by_noise = create_ood_test_multiple_noise_levels(
-        data=train_data,
-        model=model,
-        percentage=[0.1, 0.3, 0.5, 0.7, 0.9],
-        noise_levels=noise_levels
-    )
+    # # Test with 3 different noise levels
+    # noise_levels = [0.05, 0.1, 0.5]  # Low, Medium, High noise
+    # results_by_noise = create_ood_test_multiple_noise_levels(
+    #     data=train_data,
+    #     model=model,
+    #     percentage=[0.1, 0.3, 0.5, 0.7, 0.9],
+    #     noise_levels=noise_levels
+    # )
 
   
     # Plot validation vs test ID distribution
@@ -1570,51 +1436,51 @@ if __name__ == "__main__":
     )
 
     # Generate comprehensive plots
-    print("\n" + "="*80)
-    print("Generating Visualization Plots...")
-    print("="*80 + "\n")
+    # print("\n" + "="*80)
+    # print("Generating Visualization Plots...")
+    # print("="*80 + "\n")
 
     # Plot comparison across all noise levels
-    compare_noise_levels(
-        results_by_noise=results_by_noise,
-        test_id_score=scores_test_in_dist.mean().item(),
-        save_dir=f"figures/{args.task}"
-    )
+    # compare_noise_levels(
+    #     results_by_noise=results_by_noise,
+    #     test_id_score=scores_test_in_dist.mean().item(),
+    #     save_dir=f"figures/{args.task}"
+    # )
 
     # Generate individual plots for each noise level
-    for noise_std in noise_levels:
-        print(f"\nGenerating plots for noise level σ={noise_std}...")
-        test_ood_dict = results_by_noise[noise_std]['data_dict']
-        res_ood_dict = results_by_noise[noise_std]['res_dict']
+    # for noise_std in noise_levels:
+    #     print(f"\nGenerating plots for noise level σ={noise_std}...")
+    #     test_ood_dict = results_by_noise[noise_std]['data_dict']
+    #     res_ood_dict = results_by_noise[noise_std]['res_dict']
 
-        # Create subdirectory for this noise level
-        noise_dir = f"figures/{args.task}/noise_{noise_std}"
-        os.makedirs(noise_dir, exist_ok=True)
+    #     # Create subdirectory for this noise level
+    #     noise_dir = f"figures/{args.task}/noise_{noise_std}"
+    #     os.makedirs(noise_dir, exist_ok=True)
 
-        # Plot 1: Comprehensive metrics summary (likelihood, accuracy, AUC)
-        plot_ood_metrics(
-            res_dict=res_ood_dict,
-            test_id_score=scores_test_in_dist.mean().item(),
-            save_dir=noise_dir
-        )
+    #     # Plot 1: Comprehensive metrics summary (likelihood, accuracy, AUC)
+    #     plot_ood_metrics(
+    #         res_dict=res_ood_dict,
+    #         test_id_score=scores_test_in_dist.mean().item(),
+    #         save_dir=noise_dir
+    #     )
 
-        # Plot 2: ROC curves comparison
-        plot_roc_curves(
-            model=model,
-            test_ood_dict=test_ood_dict,
-            res_ood_dict=res_ood_dict,
-            save_dir=noise_dir
-        )
+    #     # Plot 2: ROC curves comparison
+    #     plot_roc_curves(
+    #         model=model,
+    #         test_ood_dict=test_ood_dict,
+    #         res_ood_dict=res_ood_dict,
+    #         save_dir=noise_dir
+    #     )
 
-        # Plot 3: Likelihood histograms for all OOD ratios
-        plot_likelihood_histograms(
-            model=model,
-            test_ood_dict=test_ood_dict,
-            test_id_data=test_data,
-            save_dir=noise_dir
-        )
+    #     # Plot 3: Likelihood histograms for all OOD ratios
+    #     plot_likelihood_histograms(
+    #         model=model,
+    #         test_ood_dict=test_ood_dict,
+    #         test_id_data=test_data,
+    #         save_dir=noise_dir
+    #     )
 
-    # Original likelihood distribution plot
+    # # Original likelihood distribution plot
     # plot_likelihood_distributions(
     #     model,
     #     train_data,
@@ -1622,17 +1488,17 @@ if __name__ == "__main__":
     #     ood_data=normal_data,
     #     thr=model.threshold,
     #     title="Likelihood Distribution",
-    #     savepath=None,
+    #     savepath=args.fig_save_path,
     #     bins=50
     # )
 
-    print("\n" + "="*80)
-    print("All plots saved to 'figures/' directory")
-    print("="*80)
-    # print(f"ROC AUC: {results['roc_auc']:.3f}")
-    # print(f"Accuracy: {results['accuracy']:.3f}")
-    # print(f"Normal data log prob: {results['normal_log_prob_mean']:.3f} ± {results['normal_log_prob_std']:.3f}")
-    # print(f"Anomaly data log prob: {results['anomaly_log_prob_mean']:.3f} ± {results['anomaly_log_prob_std']:.3f}")
+    # print("\n" + "="*80)
+    # print("All plots saved to 'figures/' directory")
+    # print("="*80)
+    # # print(f"ROC AUC: {results['roc_auc']:.3f}")
+    # # print(f"Accuracy: {results['accuracy']:.3f}")
+    # # print(f"Normal data log prob: {results['normal_log_prob_mean']:.3f} ± {results['normal_log_prob_std']:.3f}")
+    # # print(f"Anomaly data log prob: {results['anomaly_log_prob_mean']:.3f} ± {results['anomaly_log_prob_std']:.3f}")
 
 
     
