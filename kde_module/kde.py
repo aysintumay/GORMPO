@@ -193,7 +193,7 @@ class PercentileThresholdKDE:
             if hasattr(self.index, "train"):
                 self.index.train(X)
 
-        # Move to GPU if available
+        # Move to GPU if available and GPU functions exist
         if self.use_gpu and hasattr(faiss, 'index_cpu_to_gpu'):
             try:
                 gpu_resources = faiss.StandardGpuResources()
