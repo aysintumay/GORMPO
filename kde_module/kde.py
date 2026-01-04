@@ -132,7 +132,8 @@ class PercentileThresholdKDE:
     ):
         self.bandwidth = bandwidth
         self.n_neighbors = n_neighbors
-        self.use_gpu = use_gpu and faiss.get_num_gpus() > 0
+        # Check if GPU is available and faiss has GPU support
+        self.use_gpu = use_gpu and hasattr(faiss, 'get_num_gpus') and faiss.get_num_gpus() > 0
         self.normalize = normalize
         self.percentile = percentile 
 
@@ -386,6 +387,8 @@ class PercentileThresholdKDE:
                 model.use_gpu = False
         else:
             model.use_gpu = False
+            if use_gpu:
+                print("GPU not available, using CPU")
 
         model_dict = {
             "model": model,
