@@ -1,7 +1,7 @@
 # VAE Configuration for HalfCheetah-Medium-v2
 
 # Task and data
-task: halfcheetah-medium-v2
+task: halfcheetah-medium-expert-v2
 use_rl_data: true
 data_path: null  # Use D4RL dataset
 
@@ -31,7 +31,7 @@ seed: 42
 verbose: true
 
 # Model saving
-model_save_path: /public/gormpo/models/halfcheetah_normal/vae
+model_save_path: /public/gormpo/models/halfcheetah_medium_expert/vae
 
 # Anomaly detection
 anomaly_fraction: 0.01

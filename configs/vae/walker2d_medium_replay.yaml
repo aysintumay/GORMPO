@@ -1,0 +1,38 @@
+# VAE Configuration for Walker2d-Medium-Replay-v2
+
+# Task and data
+task: walker2d-medium-replay-v2
+use_rl_data: true
+data_path: null  # Use D4RL dataset
+
+# Model architecture
+input_dim: 23  # 17 (obs) + 6 (action)
+latent_dim: 8
+hidden_dims: [256, 128]
+
+# Training parameters
+epochs: 100
+batch_size: 256
+lr: 0.001
+beta: 1.0  # Weight for KL divergence term
+patience: 15
+
+# Data splits
+val_ratio: 0.2
+test_ratio: 0.2
+
+# Device
+device: cuda
+
+# Random seed
+seed: 42
+
+# Logging
+verbose: true
+
+# Model saving
+model_save_path: /public/gormpo/models/walker2d_medium_replay/vae
+fig_save_path: figures/walker2d_medium_replay/vae
+
+# Anomaly detection
+anomaly_fraction: 0.01  # Threshold percentile
