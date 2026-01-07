@@ -143,8 +143,8 @@ def evaluate_ood_at_distance(model, dataset_name, distance, base_path='/public/d
         log_probs = model.score_samples(test_data_tensor)
 
     # Calculate overall metrics
-    mean_log_likelihood = log_probs.mean()
-    std_log_likelihood = log_probs.std()
+    mean_log_likelihood = log_probs.mean().item()
+    std_log_likelihood = log_probs.std().item()
 
     # Calculate metrics for ID and OOD separately
     id_mask = labels == 0
@@ -153,14 +153,14 @@ def evaluate_ood_at_distance(model, dataset_name, distance, base_path='/public/d
     id_log_probs = log_probs[id_mask]
     ood_log_probs = log_probs[ood_mask]
 
-    mean_id = id_log_probs.mean()
-    std_id = id_log_probs.std()
-    mean_ood = ood_log_probs.mean()
-    std_ood = ood_log_probs.std()
+    mean_id = id_log_probs.mean().item()
+    std_id = id_log_probs.std().item()
+    mean_ood = ood_log_probs.mean().item()
+    std_ood = ood_log_probs.std().item()
 
     # Calculate ROC AUC (higher anomaly score for lower log prob)
     # For OOD detection: ID should have higher log prob (normal), OOD should have lower log prob (anomaly)
-    anomaly_scores = -log_probs
+    anomaly_scores = -log_probs.cpu().numpy()
     roc_auc = roc_auc_score(labels, anomaly_scores)
 
     # Calculate ROC curve for plotting
@@ -169,7 +169,7 @@ def evaluate_ood_at_distance(model, dataset_name, distance, base_path='/public/d
     # Calculate accuracy if threshold is available
     if model.threshold is not None:
         # Predict OOD if log_prob < threshold
-        predictions = (log_probs < model.threshold).astype(int)
+        predictions = (log_probs < model.threshold).cpu().numpy().astype(int)
         accuracy = accuracy_score(labels, predictions)
     else:
         accuracy = None
@@ -184,7 +184,7 @@ def evaluate_ood_at_distance(model, dataset_name, distance, base_path='/public/d
         'std_ood_log_likelihood': std_ood,
         'roc_auc': roc_auc,
         'accuracy': accuracy,
-        'log_probs': log_probs,
+        'log_probs': log_probs.cpu().numpy(),
         'labels': labels,
         'fpr': fpr,
         'tpr': tpr,

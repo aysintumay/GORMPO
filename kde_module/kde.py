@@ -29,14 +29,29 @@ def get_d4rl_data(args, val=None):
     Load environment and dataset for D4RL tasks.
 
     Args:
-        args: Arguments containing task name
+        args: Arguments containing task name and optional data_path
         val: Whether to return validation data
 
     Returns:
         env, dataset, [dataset_val]: Environment and datasets
     """
     env = gym.make(args.task)
-    dataset = d4rl.qlearning_dataset(env)
+
+    # Check if a custom data_path is provided (e.g., for sparse datasets)
+    if hasattr(args, 'data_path') and args.data_path is not None:
+        print(f"Loading D4RL dataset from custom path: {args.data_path}")
+        try:
+            with open(args.data_path, "rb") as f:
+                dataset = pickle.load(f)
+            print(f"Successfully loaded pickle file: {args.data_path}")
+            print(f"  Dataset keys: {dataset.keys()}")
+        except Exception as e:
+            print(f"Error loading pickle file: {e}")
+            print("Falling back to standard D4RL dataset...")
+            dataset = d4rl.qlearning_dataset(env)
+    else:
+        # Standard D4RL dataset loading
+        dataset = d4rl.qlearning_dataset(env)
 
     if val:
         return env, dataset, None
