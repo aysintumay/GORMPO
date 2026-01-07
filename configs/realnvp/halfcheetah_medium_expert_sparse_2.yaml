@@ -1,0 +1,51 @@
+# RealNVP Normalizing Flow Configuration for HalfCheetah-Medium-Expert-v2 (Sparse Dataset)
+# Configuration file for density estimation and anomaly detection
+
+# Data mode selection
+use_rl_data: true  # Set to false for synthetic data
+
+# Synthetic data parameters (used when use_rl_data: false)
+n_samples: 2000
+input_dim: 23  # Will be auto-calculated for RL data (obs_dim + action_dim)
+anomaly_type: "outlier"  # Options: "outlier" or "uniform"
+
+# RL dataset path
+data_path: "/public/d4rl/sparse_datasets/halfcheetah_medium_expert_sparse_57.5.pkl"  # Path to sparse dataset
+task: halfcheetah-medium-expert-v2
+
+# RL data parameters (used when use_rl_data: true)
+obs_dim: 17  # Observation dimension for HalfCheetah
+action_dim: 6  # Action dimension for HalfCheetah
+
+# Data splitting
+train_ratio: 0.6
+val_ratio: 0.2
+test_ratio: 0.2
+
+# Model architecture
+num_layers: 6
+hidden_dims: [256, 256]
+
+# Training parameters
+epochs: 100
+batch_size: 256
+lr: 0.001
+patience: 15
+
+# Validation and evaluation
+anomaly_fraction: 0.01  # Fraction of validation data to classify as anomalies for threshold
+
+# Hardware and performance
+device: "cuda"  # Options: "cuda" or "cpu"
+
+# Output and visualization
+verbose: true
+plot_results: false
+save_model: true
+model_save_path: "/public/gormpo/models/halfcheetah_medium_expert_sparse_2/realnvp"
+
+# Logging
+log_freq: 10  # Log every N epochs
+
+# Random seed for reproducibility
+seed: 42
