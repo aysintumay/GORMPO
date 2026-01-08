@@ -286,14 +286,14 @@ def create_toy_datasets(
     # Level 1: Easy - Far outliers (uniform)
     ood_easy = ood_gen.generate_uniform_outliers(n_ood, scale=5.0)
 
-    # Level 2: Medium - Shifted distribution
-    ood_medium = ood_gen.generate_shifted_gaussian(n_ood, shift_scale=3.0)
+    # Level 2: Medium - Far outliers (uniform)
+    ood_medium = ood_gen.generate_uniform_outliers(n_ood, scale=10.0)
 
     # Level 3: Hard - Sparse regions between modes
-    ood_hard = ood_gen.generate_sparse_regions(n_ood)
+    ood_hard = ood_gen.generate_uniform_outliers(n_ood, scale=15.0)
 
     # Level 4: Very Hard - Adversarial near-boundary samples
-    ood_very_hard = ood_gen.generate_adversarial(n_ood, epsilon=1.0)
+    ood_very_hard = ood_gen.generate_uniform_outliers(n_ood, scale=20.0)
 
     # Compute true log probs for OOD data
     ood_easy_log_probs = mog.log_prob(ood_easy)
