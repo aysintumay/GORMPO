@@ -1,0 +1,43 @@
+# Neural ODE OOD Detection Configuration
+# Configuration file for out-of-distribution detection using trained Neural ODE models
+
+# Model path
+model_path: "/public/gormpo/models/halfcheetah/neuralODE/model.pt"  # Path to trained Neural ODE model
+
+# Data configuration
+npz_path: ""  # Leave empty to use RL data, or provide path to NPZ file
+data_path: "/public/d4rl/halfcheetah-medium-v2.pkl"  # Path to RL dataset
+task: "halfcheetah-medium-v2"
+
+# RL data parameters
+obs_dim: [17]  # Observation dimension for HalfCheetah
+action_dim: 6  # Action dimension for HalfCheetah
+
+# Data splitting
+val_ratio: 0.2
+test_ratio: 0.2
+
+# OOD detection parameters
+anomaly_fraction: 0.01  # Fraction of validation data to use for threshold (1% = lower percentile)
+batch_size: 64
+
+# Model architecture (must match the trained model)
+hidden_dims: [512, 512]
+activation: "silu"  # Options: "silu" or "tanh"
+time_dependent: true
+solver: "dopri5"
+t0: 0.0
+t1: 1.0
+rtol: 1.0e-5
+atol: 1.0e-5
+
+# Hardware
+device: "cuda"  # Options: "cuda" or "cpu"
+
+# Output and visualization
+plot_results: true
+save_dir: "figures/neuralODE_ood/halfcheetah"
+save_model_path: "neuralODE/halfcheetah_ood"  # Optional: save OOD model with threshold
+
+# Example usage:
+# python neuralODE/neural_ode_ood.py --config configs/neuralODE/halfcheetah_ood.yaml

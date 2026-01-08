@@ -1,18 +1,22 @@
 import argparse
+import json
 import os
-from typing import Tuple
+from typing import Tuple, Optional
 
 import numpy as np
 import torch
 from torch import nn
 import matplotlib.pyplot as plt
+from scipy.stats import gaussian_kde
 
 try:
     from tqdm import tqdm
 except ImportError:
     def tqdm(iterable, desc=None):
         return iterable
-
+#change the path
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),'..')))
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 from diffusers.schedulers.scheduling_ddim import DDIMScheduler
 
@@ -27,7 +31,7 @@ except Exception:
     joblib = None
 
 
-from ddim_training_unconditional import (
+from diffusion.ddim_training_unconditional import (
     UnconditionalEpsilonMLP,
     UnconditionalEpsilonTransformer,
     log_prob_elbo,
@@ -74,7 +78,7 @@ def ddpm_stochastic_sample(
     target_dim: int,
     num_inference_steps: int = 1000,
     device: str = "cpu",
-    generator: torch.Generator | None = None,
+    generator: Optional[torch.Generator] = None,
 ) -> torch.Tensor:
     """
     DDPM stochastic sampling for unconditional generation with optional generator for reproducibility.
@@ -107,7 +111,7 @@ def ddim_deterministic_sample(
     target_dim: int,
     num_inference_steps: int = 50,
     device: str = "cpu",
-    generator: torch.Generator | None = None,
+    generator: Optional[torch.Generator] = None,
 ) -> torch.Tensor:
     """
     DDIM deterministic sampling (eta=0) with optional generator for initial noise.
@@ -256,7 +260,9 @@ def ddim_deterministic_sample_batch(
     return x
 
 
-def inverse_scale_target(x_norm: torch.Tensor, mean_arr: np.ndarray | None, std_arr: np.ndarray | None) -> torch.Tensor:
+def inverse_scale_target(x_norm: torch.Tensor,
+    mean_arr: Optional[np.ndarray],
+    std_arr: Optional[np.ndarray]) -> torch.Tensor:
     if mean_arr is None or std_arr is None:
         return x_norm
     mean_t = torch.as_tensor(mean_arr, dtype=x_norm.dtype, device=x_norm.device).view(1, -1)
@@ -362,7 +368,7 @@ def plot_distributions(
     samples: np.ndarray,
     target: np.ndarray,
     output_path: str,
-    num_dims_to_plot: int | None = None,
+    num_dims_to_plot: Optional[int] = None,
 ):
     """
     Plot distribution of Monte Carlo samples.
@@ -459,6 +465,73 @@ def plot_distributions(
     plt.close()
 
 
+def plot_logp_distribution(
+    logp_values: np.ndarray,
+    percentile_value: Optional[float],
+    percentile: float,
+    save_path: str,
+    title: str = "ELBO Log-Likelihood Distribution",
+) -> None:
+    """
+    Plot histogram with KDE overlay and optional threshold line for log probability distribution.
+    Similar to neuralODE's plot_logp_distribution function.
+    
+    Args:
+        logp_values: Array of log probability values (ELBO log probabilities)
+        percentile_value: The threshold value at the specified percentile (None to skip threshold line)
+        percentile: The percentile used (e.g., 1.0 for 1%)
+        save_path: Path to save the figure
+        title: Title for the plot
+    """
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    # Create histogram
+    n, bins, patches = ax.hist(
+        logp_values,
+        bins=50,
+        density=False,
+        alpha=0.7,
+        color='lightblue',
+        edgecolor='blue',
+        linewidth=1.2,
+        label='Test samples'
+    )
+    
+    # Compute and plot KDE
+    try:
+        kde = gaussian_kde(logp_values)
+        x_kde = np.linspace(logp_values.min(), logp_values.max(), 200)
+        y_kde = kde(x_kde)
+        # Scale KDE to match histogram scale (multiply by number of samples and bin width)
+        bin_width = bins[1] - bins[0]
+        y_kde_scaled = y_kde * len(logp_values) * bin_width
+        ax.plot(x_kde, y_kde_scaled, 'b-', linewidth=2, label='KDE')
+    except Exception as e:
+        print(f"[Plot] Warning: Could not compute KDE: {e}")
+    
+    # Draw threshold line if provided
+    if percentile_value is not None:
+        ax.axvline(
+            x=percentile_value,
+            color='red',
+            linestyle='--',
+            linewidth=2,
+            label=f'Threshold ({percentile}% percentile)'
+        )
+    
+    ax.set_xlabel('Log-likelihood (ELBO)', fontsize=12)
+    ax.set_ylabel('Frequency', fontsize=12)
+    ax.set_title(title, fontsize=14, fontweight='bold')
+    ax.legend(loc='upper center', fontsize=10)
+    ax.grid(alpha=0.3)
+    
+    plt.tight_layout()
+    os.makedirs(os.path.dirname(save_path) if os.path.dirname(save_path) else '.', exist_ok=True)
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    plt.close(fig)
+    print(f"[Plot] Saved likelihood distribution plot to {save_path}")
+
+
 def main():
     # Stage 1: parse only --config
     config_only = argparse.ArgumentParser(add_help=False)
@@ -496,6 +569,7 @@ def main():
     parser.add_argument("--num-dims-to-plot", type=int, default=dget("num_dims_to_plot", None), help="Number of dimensions to plot histograms for (None = plot all dimensions)")
     parser.add_argument("--bin-width", type=float, default=dget("bin_width", 0.1), help="Bin width for NLL calculation (only used if --test-npz is provided)")
     parser.add_argument("--max-test-samples", type=int, default=dget("max_test_samples", None), help="Maximum number of test samples to evaluate NLL on (None = use all samples)")
+    parser.add_argument("--percentile", type=float, default=dget("percentile", 1.0), help="Percentile to compute for threshold line in likelihood plot (e.g., 1.0 for 1% percentile)")
 
     args = parser.parse_args()
 
@@ -733,6 +807,40 @@ def main():
         print(f"  Median NLL per sample: {np.median(nll_elbo_all):.6f}")
         print(f"  Mean Log probability per sample: {log_prob_elbo_all.mean():.6f} ± {log_prob_elbo_all.std():.6f}")
         print(f"  First 10 NLL values per sample (per dimension): {nll_elbo_all[:10]}")
+        
+        # Compute percentile threshold for likelihood distribution plot
+        percentile_logp = None
+        elbo_mean = log_prob_elbo_all.mean()
+        if len(log_prob_elbo_all) > 0:
+            percentile_logp = np.percentile(log_prob_elbo_all, args.percentile)
+            print(f"  {args.percentile}% percentile log-likelihood: {percentile_logp:.6f}")
+        
+        # Save ELBO mean and threshold to JSON file
+        metrics = {
+            "num_samples": int(len(log_prob_elbo_all)),
+            "elbo_mean": float(elbo_mean),
+            "elbo_std": float(log_prob_elbo_all.std()),
+            "nll_mean": float(nll_elbo_mean),
+            "nll_std": float(nll_elbo_std),
+        }
+        if percentile_logp is not None:
+            metrics[f"percentile_{args.percentile}_logp"] = float(percentile_logp)
+            metrics["threshold"] = float(percentile_logp)  # Also store as "threshold" for easy access
+        
+        metrics_path = os.path.join(args.output_dir, "elbo_metrics.json")
+        with open(metrics_path, "w", encoding="utf-8") as f:
+            json.dump(metrics, f, indent=2)
+        print(f"Saved ELBO metrics to {metrics_path}")
+        
+        # Plot likelihood distribution (similar to neuralODE)
+        likelihood_plot_path = os.path.join(args.output_dir, "likelihood_distribution.png")
+        plot_logp_distribution(
+            logp_values=log_prob_elbo_all,
+            percentile_value=percentile_logp,
+            percentile=args.percentile,
+            save_path=likelihood_plot_path,
+            title="ELBO Log-Likelihood Distribution"
+        )
         
         # Calculate NLL using binning (for comparison)
         print(f"\nCalculating NLL with binning (bin width={args.bin_width})...")

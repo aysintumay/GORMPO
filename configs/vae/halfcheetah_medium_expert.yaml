@@ -1,0 +1,38 @@
+# VAE Configuration for HalfCheetah-Medium-v2
+
+# Task and data
+task: halfcheetah-medium-expert-v2
+use_rl_data: true
+data_path: null  # Use D4RL dataset
+
+# Model architecture
+input_dim: 23  # 17 (obs) + 6 (action)
+latent_dim: 10
+hidden_dims: [256, 128]
+
+# Training parameters
+epochs: 100
+batch_size: 256
+lr: 0.001
+beta: 1.0
+patience: 15
+
+# Data splits
+val_ratio: 0.2
+test_ratio: 0.2
+
+# Device
+device: cuda
+
+# Random seed
+seed: 42
+
+# Logging
+verbose: true
+
+# Model saving
+model_save_path: /public/gormpo/models/halfcheetah_medium_expert/vae
+fig_save_path: figures/halfcheetah_medium_expert/vae
+
+# Anomaly detection
+anomaly_fraction: 0.01

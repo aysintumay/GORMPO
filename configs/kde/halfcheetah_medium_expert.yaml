@@ -1,4 +1,4 @@
-task: walker2d-medium-v2
+task: halfcheetah-medium-expert-v2
 env: ""
 
 # KDE model hyperparameters
@@ -18,6 +18,7 @@ pca: false
 
 # Output
 plot: true
-model_save_path: /public/gormpo/models/walker2d_normal/kde
+model_save_path: /public/gormpo/models/halfcheetah_medium_expert/kde
+fig_save_path: figures/halfcheetah_medium_expert/kde
 devid: 0
 seed: 42
