@@ -22,13 +22,68 @@ from common import util
 from realnvp_module.realnvp import RealNVP 
 from vae_module.vae import VAE
 from kde_module.kde import PercentileThresholdKDE
-from neuralODE.neural_ode_density import ContinuousNormalizingFlow
-from neuralODE import neural_ode_inference as neural_ode_inference
+from neuralODE.neural_ode_density import ContinuousNormalizingFlow, ODEFunc
+from neuralODE.neural_ode_ood import NeuralODEOOD
+from diffusion.monte_carlo_sampling_unconditional import build_model_from_ckpt
+from diffusion.ddim_training_unconditional import log_prob_elbo
+from diffusers.schedulers.scheduling_ddim import DDIMScheduler
+from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 import d4rl
+from typing import Tuple
+import torch
+from torch import nn
+from diffusion.ddim_training_unconditional import (
+    UnconditionalEpsilonMLP,
+    UnconditionalEpsilonTransformer,
+)
+
+
+class DiffusionDensityWrapper:
+    """Wrapper for diffusion model to provide score_samples interface."""
+
+    def __init__(self, model, scheduler, target_dim, device):
+        self.model = model
+        self.scheduler = scheduler
+        self.target_dim = target_dim
+        self.device = device
+
+    @torch.no_grad()
+    def score_samples(self, x, device=None):
+        """
+        Compute log probability using ELBO from unconditional diffusion model.
+
+        Args:
+            x: Input samples (numpy array or tensor) of shape (batch_size, target_dim)
+            device: Device to use (optional)
+
+        Returns:
+            Log probabilities normalized by target dimension
+        """
+        if device is None:
+            device = self.device
+
+        # Convert to tensor if needed
+        if isinstance(x, np.ndarray):
+            x = torch.from_numpy(x).float()
+
+        x = x.to(device)
+
+        # Compute log probability using ELBO
+        log_probs = log_prob_elbo(
+            model=self.model,
+            scheduler=self.scheduler,
+            x0=x,
+            device=device,
+        )
+
+        # Normalize by target dimension for consistency
+        log_probs_per_dim = log_probs
+
+        return log_probs_per_dim
 
 
 def train(env, run, logger, seed, args):
-
+    print('rollout_batch_size:', args.rollout_batch_size)
     
     if args.data_path != None:
         try:
@@ -122,6 +177,7 @@ def train(env, run, logger, seed, args):
             device=util.device
         ).to(util.device)
         classifier_dict = classifier.load_model(args.classifier_model_name)
+        print("vae laoded")
     elif "realnvp" in args.classifier_model_name:
         classifier = RealNVP(
         device=util.device
@@ -134,28 +190,68 @@ def train(env, run, logger, seed, args):
         classifier_dict = classifier.load_model(args.classifier_model_name)
     elif "neuralODE" in args.classifier_model_name:
         print("Loading Neural ODE based classifier... for task:", args.task)
-        # Load model
-        cfg = neural_ode_inference.EvalConfig(
-        npz_path= '',
-        model_path=args.classifier_model_name,
-        hidden_dims= [512, 512],
-        activation="silu",
-        time_dependent=True,
-        device=f"cuda:{args.devid}" if torch.cuda.is_available() else "cpu",
-        t0=0.0,
-        t1=1.0,
-        solver="dopri5",
-        rtol=1e-5,
-        atol=1e-5,
-            )   
-        flow = neural_ode_inference.load_flow(cfg, args.target_dim)
-        #load the json file
-        thr_path = f"neuralODE/test/{args.task.lower().split('_')[0].split('-')[0]}_metrics.json"
-        #load json
-        with open(thr_path, 'r') as f:
-            metrics = json.load(f)
-        thr = metrics["percentile_1.0_logp"]
-        classifier_dict = {'model': flow, 'thr': thr}
+        # Use the new NeuralODEOOD.load_model interface
+        device = f"cuda:{args.devid}" if torch.cuda.is_available() else "cpu"
+
+        # Load model using NeuralODEOOD wrapper
+        classifier_dict = NeuralODEOOD.load_model(
+            save_path=args.classifier_model_name.replace('_model.pt', ''),
+            target_dim=args.target_dim,
+            hidden_dims=(512, 512),
+            activation="silu",
+            time_dependent=True,
+            solver="dopri5",
+            t0=0.0,
+            t1=1.0,
+            rtol=1e-5,
+            atol=1e-5,
+            device=device
+        )
+        # classifier_dict now contains: {'model': ood_model, 'threshold': ..., 'mean': ..., 'std': ...}
+        # Rename 'threshold' to 'thr' for compatibility with transition_model
+        classifier_dict['thr'] = classifier_dict['threshold']
+    elif "diffusion" in args.classifier_model_name:
+        print("Loading Diffusion based classifier... for task:", args.task)
+        # Load model using build_model_from_ckpt from monte_carlo_sampling_unconditional
+        device = f"cuda:{args.devid}" if torch.cuda.is_available() else "cpu"
+        ckpt_path = args.classifier_model_name
+        sched_dir = f"/public/gormpo/models/{args.task.lower().split('_')[0].split('-')[0]}/diffusion/scheduler/scheduler_config.json"
+
+        # Build model
+        model, cfg = build_model_from_ckpt(ckpt_path, device)
+
+        # Get target dimension
+        ckpt = torch.load(ckpt_path, map_location=device)
+        target_dim = ckpt.get("target_dim")
+
+        # Load scheduler
+        try:
+            scheduler = DDIMScheduler.from_pretrained(sched_dir)
+        except Exception:
+            try:
+                scheduler = DDPMScheduler.from_pretrained(sched_dir)
+            except Exception as e:
+                print(f"Warning: Could not load scheduler: {e}")
+                scheduler = DDIMScheduler(
+                    num_train_timesteps=1000,
+                    beta_schedule="linear",
+                    prediction_type="epsilon",
+                )
+
+        # Wrap in our interface
+        diffusion_wrapper = DiffusionDensityWrapper(model, scheduler, target_dim, device)
+
+        # Load threshold from metrics if available
+        thr_path = f"diffusion/monte_carlo_results/{args.task.lower().split('_')[0].split('-')[0]}_unconditional_ddpm/elbo_metrics.json"
+        if os.path.exists(thr_path):
+            with open(thr_path, 'r') as f:
+                metrics = json.load(f)
+            thr = metrics.get("percentile_1.0_logp", 0.0)
+        else:
+            print(f"Warning: Threshold file not found at {thr_path}, using default threshold 0.0")
+            thr = 0.0
+
+        classifier_dict = {'model': diffusion_wrapper, 'thr': thr}
     # create dynamics model
     dynamics_model = TransitionModel(obs_space=env.observation_space,
                                      action_space=env.action_space,
@@ -222,8 +318,8 @@ def train(env, run, logger, seed, args):
     )
 
     # pretrain dynamics model on the whole dataset
-    # trainer.train_dynamics()
-    
+    trainer.train_dynamics()
+    # 
 
     # policy_state_dict = torch.load(os.path.join(util.logger_model.log_path, f"policy_{args.task}.pth"))
     # sac_policy.load_state_dict(policy_state_dict)

@@ -1,9 +1,9 @@
 task: walker2d-medium-v2
 algo-name: gormpo
-reward-penalty-coef: 1
+reward-penalty-coef: 0.5
 seed: 1
 # data_path: "/public/sparse_d4rl/walker2d-medium-v2.pkl"
-epoch: 100
+epoch: 1000
 penalty_type: 'tanh'
 classifier_model_name: "/public/gormpo/models/walker2d_normal/kde"
 density_model: kde

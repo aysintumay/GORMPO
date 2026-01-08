@@ -1,0 +1,25 @@
+task: walker2d-medium-replay-v2
+env: ""
+
+# KDE model hyperparameters
+bandwidth: 1.0
+k_neighbors: 100
+percentile: 5.0
+
+# Data splitting
+test_size: 0.2
+val_size: 0.2
+temporal_split: false
+
+# Training options
+optimize_percentile: false
+optimization_metric: density_range
+pca: false
+
+# Output
+plot: true
+model_save_path: /public/gormpo/models/walker2d_medium_replay/kde
+fig_save_path: figures/walker2d_medium_replay/kde
+
+devid: 0
+seed: 42

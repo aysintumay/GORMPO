@@ -132,7 +132,8 @@ class PercentileThresholdKDE:
     ):
         self.bandwidth = bandwidth
         self.n_neighbors = n_neighbors
-        self.use_gpu = use_gpu and faiss.get_num_gpus() > 0
+        # Check if GPU is available and faiss has GPU support
+        self.use_gpu = use_gpu and hasattr(faiss, 'get_num_gpus') and faiss.get_num_gpus() > 0
         self.normalize = normalize
         self.percentile = percentile 
 
@@ -192,8 +193,8 @@ class PercentileThresholdKDE:
             if hasattr(self.index, "train"):
                 self.index.train(X)
 
-        # Move to GPU if available
-        if self.use_gpu:
+        # Move to GPU if available and GPU functions exist
+        if self.use_gpu and hasattr(faiss, 'index_cpu_to_gpu'):
             try:
                 gpu_resources = faiss.StandardGpuResources()
                 self.index = faiss.index_cpu_to_gpu(
@@ -205,6 +206,10 @@ class PercentileThresholdKDE:
                 if verbose:
                     print(f"GPU failed, using CPU: {e}")
                 self.use_gpu = False
+        else:
+            if self.use_gpu and verbose:
+                print("GPU functions not available (using faiss-cpu), training on CPU")
+            self.use_gpu = False
 
         self.index.add(X)
 
@@ -239,7 +244,7 @@ class PercentileThresholdKDE:
 
         return log_density
 
-    def score_samples(self, X):
+    def score_samples(self, X, device='cuda'):
         """
         Compute log-density estimates for new data
 
@@ -306,8 +311,14 @@ class PercentileThresholdKDE:
 
     def save_model(self, base_path):
         """Save FAISS index and metadata separately."""
-        print("Transferring from GPU to CPU for saving...")
-        index_cpu = faiss.index_gpu_to_cpu(self.index)
+        # Transfer from GPU to CPU if needed
+        if self.use_gpu and hasattr(faiss, 'index_gpu_to_cpu'):
+            print("Transferring from GPU to CPU for saving...")
+            index_cpu = faiss.index_gpu_to_cpu(self.index)
+        else:
+            # Already on CPU or using CPU-only faiss
+            index_cpu = self.index
+
         faiss.write_index(index_cpu, f"{base_path}.faiss")
 
         # Save metadata
@@ -366,8 +377,8 @@ class PercentileThresholdKDE:
         model.is_fitted = metadata["is_fitted"]
         model.pca = metadata.get("pca", None)
 
-        # Move to GPU if requested
-        if use_gpu and faiss.get_num_gpus() > 0:
+        # Move to GPU if requested and GPU functions available
+        if use_gpu and hasattr(faiss, 'get_num_gpus') and faiss.get_num_gpus() > 0:
             try:
                 gpu_resources = faiss.StandardGpuResources()
                 model.index = faiss.index_cpu_to_gpu(gpu_resources, devid, model.index)
@@ -378,6 +389,8 @@ class PercentileThresholdKDE:
                 model.use_gpu = False
         else:
             model.use_gpu = False
+            if use_gpu:
+                print("GPU not available, using CPU")
 
         model_dict = {
             "model": model,
@@ -591,7 +604,7 @@ def find_optimal_percentile(
 def main():
     print("Running", __file__)
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", type=str, default="")
+    parser.add_argument("--config", type=str, default="configs/kde/walker2d_medium_expert.yaml")
     args, remaining_argv = parser.parse_known_args()
 
     if args.config:
@@ -682,30 +695,7 @@ def main():
     )
     parser.add_argument("--env", type=str, default="")
 
-    # ============ abiomed environment arguments ============
-    parser.add_argument("--model_name", type=str, default="10min_1hr_all_data")
-    parser.add_argument("--model_path", type=str, default=None)
-    parser.add_argument("--data_path_wm", type=str, default=None)
-    parser.add_argument("--max_steps", type=int, default=6)
-    parser.add_argument("--gamma1", type=float, default=0.2)
-    parser.add_argument("--gamma2", type=float, default=0.5)
-    parser.add_argument("--gamma3", type=float, default=1)
-    parser.add_argument(
-        "--action_space_type",
-        type=str,
-        default="continuous",
-        choices=["continuous", "discrete"],
-        help="Type of action space for the environment",
-    )
-    parser.add_argument(
-        "--noise_rate",
-        type=float,
-        help="Portion of data to be noisy with probability",
-        default=0.0,
-    )
-    parser.add_argument(
-        "--noise_scale", type=float, help="magnitude of noise", default=0.0
-    )
+    parser.add_argument("--fig_save_path", type=str, default="figures", help="Path to save figures")
 
     parser.set_defaults(**config)
     args = parser.parse_args(remaining_argv)
@@ -769,49 +759,49 @@ def main():
     # model.load_model(args.model_save_path, use_gpu=not args.no_gpu, devid=args.devid)
     # print(f"Training completed in {fit_time:.2f} seconds")
     print("Creating synthetic data...")
-    normal_data, anomaly_data = create_synthetic_data(
-        n_samples=X_test.shape[0],
-        dim=X_test.shape[1],
-        anomaly_type='outlier'
-    )
+    # normal_data, anomaly_data = create_synthetic_data(
+    #     n_samples=X_test.shape[0],
+    #     dim=X_test.shape[1],
+    #     anomaly_type='outlier'
+    # )
 
     # evaluate_and_plot_density(model, X_val, X_train, X_test)
 
     # Print train and test scores
-    print(f"\n=== Density Scores ===")
-    train_scores = model.score_samples(X_train)
-    val_scores = model.score_samples(X_val)
-    test_scores = model.score_samples(X_test)
+    # print(f"\n=== Density Scores ===")
+    # train_scores = model.score_samples(X_train)
+    # val_scores = model.score_samples(X_val)
+    # test_scores = model.score_samples(X_test)
 
-    print(f"Train scores - Mean: {train_scores.mean():.4f}, Std: {train_scores.std():.4f}, Min: {train_scores.min():.4f}, Max: {train_scores.max():.4f}")
-    print(f"Validation scores - Mean: {val_scores.mean():.4f}, Std: {val_scores.std():.4f}, Min: {val_scores.min():.4f}, Max: {val_scores.max():.4f}")
-    print(f"Test scores - Mean: {test_scores.mean():.4f}, Std: {test_scores.std():.4f}, Min: {test_scores.min():.4f}, Max: {test_scores.max():.4f}")
+    # print(f"Train scores - Mean: {train_scores.mean():.4f}, Std: {train_scores.std():.4f}, Min: {train_scores.min():.4f}, Max: {train_scores.max():.4f}")
+    # print(f"Validation scores - Mean: {val_scores.mean():.4f}, Std: {val_scores.std():.4f}, Min: {val_scores.min():.4f}, Max: {val_scores.max():.4f}")
+    # print(f"Test scores - Mean: {test_scores.mean():.4f}, Std: {test_scores.std():.4f}, Min: {test_scores.min():.4f}, Max: {test_scores.max():.4f}")
 
-    # Print anomaly test scores (synthetic OOD data)
-    anomaly_scores = model.score_samples(anomaly_data)
-    print(f"\n=== Anomaly Test Scores (Synthetic OOD) ===")
-    print(f"Anomaly scores - Mean: {anomaly_scores.mean():.4f}, Std: {anomaly_scores.std():.4f}, Min: {anomaly_scores.min():.4f}, Max: {anomaly_scores.max():.4f}")
+    # # Print anomaly test scores (synthetic OOD data)
+    # anomaly_scores = model.score_samples(anomaly_data)
+    # print(f"\n=== Anomaly Test Scores (Synthetic OOD) ===")
+    # print(f"Anomaly scores - Mean: {anomaly_scores.mean():.4f}, Std: {anomaly_scores.std():.4f}, Min: {anomaly_scores.min():.4f}, Max: {anomaly_scores.max():.4f}")
 
-    # Print detection rates
-    train_preds = model.predict(X_train)
-    val_preds = model.predict(X_val)
-    test_preds = model.predict(X_test)
-    anomaly_preds = model.predict(anomaly_data)
+    # # Print detection rates
+    # train_preds = model.predict(X_train)
+    # val_preds = model.predict(X_val)
+    # test_preds = model.predict(X_test)
+    # anomaly_preds = model.predict(anomaly_data)
 
-    print(f"\n=== Detection Rates ===")
-    print(f"Train anomaly rate: {(train_preds == -1).mean():.2%}")
-    print(f"Validation anomaly rate: {(val_preds == -1).mean():.2%}")
-    print(f"Test anomaly rate: {(test_preds == -1).mean():.2%}")
-    print(f"Synthetic OOD anomaly rate: {(anomaly_preds == -1).mean():.2%}")
+    # print(f"\n=== Detection Rates ===")
+    # print(f"Train anomaly rate: {(train_preds == -1).mean():.2%}")
+    # print(f"Validation anomaly rate: {(val_preds == -1).mean():.2%}")
+    # print(f"Test anomaly rate: {(test_preds == -1).mean():.2%}")
+    # print(f"Synthetic OOD anomaly rate: {(anomaly_preds == -1).mean():.2%}")
 
     # plot_likelihood_distributions(
     #                     model,
     #                     X_train,
     #                     X_val,
-    #                     ood_data=normal_data,
+    #                     ood_data=X_test,
     #                     thr = model.threshold,
     #                     title="Likelihood Distribution",
-    #                     savepath=None,
+    #                     savepath=args.fig_save_path,
     #                     bins=50
     #                 )
     
