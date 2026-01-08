@@ -296,9 +296,10 @@ def train(env, run, logger, seed, args):
         logger=logger,
         **config["mopo_params"]
     )
-    #load world model
-
-    # dynamics_model.load_model(args.task) 
+    #load world model   
+    print(len([args.task, args.data_path]))
+    print(args.data_path)
+    dynamics_model.load_model([args.task, args.data_path]) 
 
    
     # create trainer
@@ -318,7 +319,7 @@ def train(env, run, logger, seed, args):
     )
 
     # pretrain dynamics model on the whole dataset
-    trainer.train_dynamics()
+    # trainer.train_dynamics()
     # 
 
     # policy_state_dict = torch.load(os.path.join(util.logger_model.log_path, f"policy_{args.task}.pth"))

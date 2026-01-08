@@ -122,6 +122,7 @@ def main(args):
                 )
     results = []
     for seed in args.seeds:
+        print(f"Running with {args.reward_penalty_coef} penalty coef")
         args.seed = seed
         random.seed(seed)
         np.random.seed(seed)

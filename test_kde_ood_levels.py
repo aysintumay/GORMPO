@@ -34,7 +34,7 @@ def load_ood_test_data(dataset_name, distance, base_path='/public/d4rl/ood_test'
     Returns:
         Numpy array of test data where first half is ID and second half is OOD
     """
-    file_path = os.path.join(base_path, dataset_name, f'ood-distance-{distance}.pkl')
+    file_path = os.path.join(base_path, dataset_name, f'ood-distance-{int(distance)}.pkl')
 
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Test data file not found: {file_path}")
@@ -373,7 +373,7 @@ def main():
                        help='List of OOD distance values to test')
     parser.add_argument('--base_path', type=str, default='/public/d4rl/ood_test',
                        help='Base directory containing OOD test datasets')
-    parser.add_argument('--device', type=str, default='cpu',
+    parser.add_argument('--device', type=str, default='cuda:2',
                        help='Device to use (cpu/cuda)')
     parser.add_argument('--save_dir', type=str, default='figures/kde_ood_distance_tests',
                        help='Directory to save results')
