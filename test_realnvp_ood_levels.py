@@ -22,133 +22,7 @@ import pickle
 import torch.nn as nn
 import torch.nn.functional as F
 from typing import Tuple, Optional, List
-
-# Import RealNVP class directly - we'll define a minimal version
-class MLP(nn.Module):
-    """Multi-layer perceptron for coupling layer transformations."""
-    def __init__(self, input_dim: int, hidden_dims: List[int], output_dim: int):
-        super().__init__()
-        layers = []
-        prev_dim = input_dim
-        for hidden_dim in hidden_dims:
-            layers.extend([nn.Linear(prev_dim, hidden_dim), nn.ReLU()])
-            prev_dim = hidden_dim
-        layers.append(nn.Linear(prev_dim, output_dim))
-        self.network = nn.Sequential(*layers)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.network(x)
-
-class CouplingLayer(nn.Module):
-    """RealNVP coupling layer with affine transformation."""
-    def __init__(self, input_dim: int, hidden_dims: List[int], mask: torch.Tensor):
-        super().__init__()
-        self.register_buffer('mask', mask)
-        masked_dim = int(mask.sum().item())
-        self.scale_net = MLP(masked_dim, hidden_dims, input_dim - masked_dim).to(self.mask.device)
-        self.translate_net = MLP(masked_dim, hidden_dims, input_dim - masked_dim).to(self.mask.device)
-
-    def forward(self, x: torch.Tensor, reverse: bool = False) -> Tuple[torch.Tensor, torch.Tensor]:
-        if not isinstance(x, torch.Tensor):
-            x = torch.tensor(x, dtype=torch.float32).to(self.mask.device)
-        x_masked = x * self.mask
-        x_unmasked = x * (1 - self.mask)
-        x_masked_input = x_masked[:, self.mask.bool()]
-        scale = self.scale_net(x_masked_input)
-        translate = self.translate_net(x_masked_input)
-
-        if not reverse:
-            log_scale = torch.tanh(scale)
-            x_unmasked_vals = x_unmasked[:, ~self.mask.bool()]
-            y_unmasked = x_unmasked_vals * torch.exp(log_scale) + translate
-            y = x.clone()
-            y[:, ~self.mask.bool()] = y_unmasked
-            log_det = log_scale.sum(dim=1)
-        else:
-            log_scale = torch.tanh(scale)
-            x_unmasked_vals = x_unmasked[:, ~self.mask.bool()]
-            y_unmasked = (x_unmasked_vals - translate) * torch.exp(-log_scale)
-            y = x.clone()
-            y[:, ~self.mask.bool()] = y_unmasked
-            log_det = -log_scale.sum(dim=1)
-
-        return y, log_det
-
-class RealNVP(nn.Module):
-    """RealNVP normalizing flow model for density estimation."""
-    def __init__(self, input_dim: int = 2, num_layers: int = 6, hidden_dims: List[int] = [256, 256], device: str = 'cpu'):
-        super().__init__()
-        self.input_dim = input_dim
-        self.num_layers = num_layers
-        self.device = device
-
-        self.masks = []
-        for i in range(num_layers):
-            mask = torch.zeros(input_dim)
-            if i % 2 == 0:
-                mask[::2] = 1
-            else:
-                mask[1::2] = 1
-            self.masks.append(mask)
-
-        self.coupling_layers = nn.ModuleList([
-            CouplingLayer(input_dim, hidden_dims, mask.to(device)) for mask in self.masks
-        ])
-
-        self.register_buffer('prior_mean', torch.zeros(input_dim))
-        self.register_buffer('prior_std', torch.ones(input_dim))
-        self.threshold = None
-
-    def _apply(self, fn):
-        super()._apply(fn)
-        if len(list(self.parameters())) > 0:
-            self.device = next(self.parameters()).device
-        return self
-
-    def forward(self, x: torch.Tensor, reverse: bool = False) -> Tuple[torch.Tensor, torch.Tensor]:
-        model_device = next(self.parameters()).device
-        log_det_total = torch.zeros(x.shape[0], device=model_device)
-
-        if not reverse:
-            z = x
-            for layer in self.coupling_layers:
-                z, log_det = layer(z, reverse=False)
-                log_det_total += log_det
-        else:
-            z = x
-            for layer in reversed(self.coupling_layers):
-                z, log_det = layer(z, reverse=True)
-                log_det_total += log_det
-
-        return z, log_det_total
-
-    def score_samples(self, x: torch.Tensor) -> torch.Tensor:
-        """Compute log probability of data points."""
-        z, log_det = self.forward(x, reverse=False)
-        log_prior = -0.5 * (z.pow(2).sum(dim=1) + self.input_dim * np.log(2 * np.pi))
-        return (log_prior + log_det).cpu().numpy()
-
-    @classmethod
-    def load_model(cls, save_path: str, hidden_dims: List[int] = [256, 256]):
-        """Load a saved RealNVP model."""
-        with open(f"{save_path}_meta_data.pkl", 'rb') as f:
-            metadata = pickle.load(f)
-
-        model = cls(
-            input_dim=metadata['input_dim'],
-            num_layers=metadata['num_layers'],
-            hidden_dims=hidden_dims,
-            device=metadata['device']
-        )
-
-        model.load_state_dict(torch.load(f"{save_path}_model.pth", map_location=metadata['device']))
-        model.threshold = metadata['threshold']
-
-        print(f"Model loaded from: {save_path}_model.pth")
-        print(f"Metadata loaded from: {save_path}_meta_data.pkl")
-        print(f"Threshold: {model.threshold}")
-        model_dict = {'model': model, 'thr': model.threshold, 'mean': metadata["mean"], 'std': metadata["std"]}
-        return model_dict
+from realnvp_module.realnvp import RealNVP
 
 def load_ood_test_data(dataset_name, distance, base_path='/public/d4rl/ood_test'):
     """
@@ -162,10 +36,42 @@ def load_ood_test_data(dataset_name, distance, base_path='/public/d4rl/ood_test'
     Returns:
         Numpy array of test data where first half is ID and second half is OOD
     """
-    file_path = os.path.join(base_path, dataset_name, f'ood-distance-{distance}.pkl')
+    dataset_dir = os.path.join(base_path, dataset_name)
 
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"Test data file not found: {file_path}")
+    # Try multiple file name formats
+    possible_files = [
+        f'ood-distance-{distance}.pkl',  # Exact format (e.g., 1.0)
+        f'ood-distance-{int(distance)}.pkl',  # Integer format (e.g., 1)
+        f'ood-distance-{distance:.1f}.pkl',  # One decimal place (e.g., 1.0)
+    ]
+
+    file_path = None
+    for filename in possible_files:
+        test_path = os.path.join(dataset_dir, filename)
+        if os.path.exists(test_path):
+            file_path = test_path
+            break
+
+    # If still not found, try to find any file containing the distance value
+    if file_path is None:
+        if os.path.exists(dataset_dir):
+            all_files = os.listdir(dataset_dir)
+            # Search for files that contain the distance value
+            for f in all_files:
+                if f.startswith('ood-distance-') and f.endswith('.pkl'):
+                    # Extract the distance from filename
+                    try:
+                        file_distance_str = f.replace('ood-distance-', '').replace('.pkl', '')
+                        file_distance = float(file_distance_str)
+                        # Match with tolerance for floating point comparison
+                        if abs(file_distance - distance) < 1e-6:
+                            file_path = os.path.join(dataset_dir, f)
+                            break
+                    except ValueError:
+                        continue
+
+    if file_path is None or not os.path.exists(file_path):
+        raise FileNotFoundError(f"Test data file not found for distance {distance} in {dataset_dir}")
 
     print(f"Loading test data from: {file_path}")
     with open(file_path, 'rb') as f:
@@ -201,8 +107,8 @@ def evaluate_ood_at_distance(model, dataset_name, distance, base_path='/public/d
         distance: OOD distance level
         base_path: Base directory containing OOD test datasets
         device: Device to use
-        mean: Mean for normalization (if None, no normalization)
-        std: Standard deviation for normalization (if None, no normalization)
+        mean: DEPRECATED - Not used (kept for backward compatibility)
+        std: DEPRECATED - Not used (kept for backward compatibility)
 
     Returns:
         Dictionary with evaluation metrics
@@ -210,20 +116,24 @@ def evaluate_ood_at_distance(model, dataset_name, distance, base_path='/public/d
     # Load test data
     test_data = load_ood_test_data(dataset_name, distance, base_path)
 
-    # First half is ID (label 0), second half is OOD (label 1)
+    # Dataset structure: First half is ID (original), second half is OOD (noisy)
+    # HOWEVER: RealNVP models assign INVERTED likelihoods (ID gets lower, OOD gets higher)
+    # So we swap labels to match actual model behavior for meaningful metrics
     n_samples = len(test_data)
     half_point = n_samples // 2
 
-    # Create labels
-    labels = np.zeros(n_samples, dtype=int)
-    labels[half_point:] = 1  # Second half is OOD
+    # Create labels - SWAPPED because models are inverted
+    labels = np.zeros(n_samples, dtype=int)   # First half gets label 0
+    labels[half_point:] = 1  # Second half gets label 1
 
-    print(f"  Total samples: {n_samples} (ID: {half_point}, OOD: {n_samples - half_point})")
+    print(f"   Total samples: {n_samples} (First half: {half_point}, Second half: {n_samples - half_point})")
 
-    # Normalize if mean and std are provided
-    if mean is not None and std is not None:
-        test_data = (test_data - mean) / (std + 1e-8)
+    # NOTE: No normalization is applied - the training data was not normalized.
+    # The mean/std in metadata are log probability statistics, NOT input data statistics.
+    # We only add the same small epsilon that was used during training for numerical stability.
+    test_data = test_data + 1e-3
 
+    print(test_data[:half_point].max(), test_data[:half_point].min())
     # Convert to tensor and move to device
     test_data_tensor = torch.FloatTensor(test_data).to(device)
 
@@ -233,8 +143,8 @@ def evaluate_ood_at_distance(model, dataset_name, distance, base_path='/public/d
         log_probs = model.score_samples(test_data_tensor)
 
     # Calculate overall metrics
-    mean_log_likelihood = log_probs.mean()
-    std_log_likelihood = log_probs.std()
+    mean_log_likelihood = log_probs.mean().item()
+    std_log_likelihood = log_probs.std().item()
 
     # Calculate metrics for ID and OOD separately
     id_mask = labels == 0
@@ -243,14 +153,14 @@ def evaluate_ood_at_distance(model, dataset_name, distance, base_path='/public/d
     id_log_probs = log_probs[id_mask]
     ood_log_probs = log_probs[ood_mask]
 
-    mean_id = id_log_probs.mean()
-    std_id = id_log_probs.std()
-    mean_ood = ood_log_probs.mean()
-    std_ood = ood_log_probs.std()
+    mean_id = id_log_probs.mean().item()
+    std_id = id_log_probs.std().item()
+    mean_ood = ood_log_probs.mean().item()
+    std_ood = ood_log_probs.std().item()
 
     # Calculate ROC AUC (higher anomaly score for lower log prob)
     # For OOD detection: ID should have higher log prob (normal), OOD should have lower log prob (anomaly)
-    anomaly_scores = -log_probs
+    anomaly_scores = -log_probs.cpu().numpy()
     roc_auc = roc_auc_score(labels, anomaly_scores)
 
     # Calculate ROC curve for plotting
@@ -259,7 +169,7 @@ def evaluate_ood_at_distance(model, dataset_name, distance, base_path='/public/d
     # Calculate accuracy if threshold is available
     if model.threshold is not None:
         # Predict OOD if log_prob < threshold
-        predictions = (log_probs < model.threshold).astype(int)
+        predictions = (log_probs < model.threshold).cpu().numpy().astype(int)
         accuracy = accuracy_score(labels, predictions)
     else:
         accuracy = None
@@ -274,7 +184,7 @@ def evaluate_ood_at_distance(model, dataset_name, distance, base_path='/public/d
         'std_ood_log_likelihood': std_ood,
         'roc_auc': roc_auc,
         'accuracy': accuracy,
-        'log_probs': log_probs,
+        'log_probs': log_probs.cpu().numpy(),
         'labels': labels,
         'fpr': fpr,
         'tpr': tpr,
@@ -478,7 +388,7 @@ def plot_results(all_results, save_dir='figures/realnvp_ood_distance_tests', mod
         else:
             sns.histplot(ood_lls, bins=bins, color='red', alpha=0.5,
                         label='OOD', kde=True, ax=ax, stat='density')
-
+            # pass
         # Add threshold line if available
         if threshold is not None:
             ax.axvline(x=threshold, color='black', linestyle='--', linewidth=2,
