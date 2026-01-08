@@ -999,37 +999,76 @@ class DensityModelTrainer:
         plt.close()
 
     def _plot_score_distributions(self):
-        """Plot score distributions for each model."""
+        """Plot score distributions for each model in separate figures."""
         model_names = list(self.results.keys())
-        n_models = len(model_names)
 
-        fig, axes = plt.subplots(n_models, 1, figsize=(14, 5 * n_models))
-        if n_models == 1:
-            axes = [axes]
+        # Define splits and their display names
+        splits_info = [
+            ('test', 'Test (In-Distribution)', 'blue'),
+            ('ood_easy', 'OOD Easy', 'green'),
+            ('ood_medium', 'OOD Medium', 'orange'),
+            ('ood_hard', 'OOD Hard', 'purple'),
+            ('ood_very_hard', 'OOD Very Hard', 'red')
+        ]
 
-        for idx, model_name in enumerate(model_names):
-            ax = axes[idx]
+        for model_name in model_names:
+            # Create figure with subplots for each dataset
+            fig, axes = plt.subplots(2, 3, figsize=(18, 10))
+            axes = axes.flatten()
 
-            # Plot distributions
-            splits = ['test', 'ood_easy', 'ood_medium', 'ood_hard', 'ood_very_hard']
-            colors = ['blue', 'green', 'orange', 'purple', 'red', 'brown']
-
-            for split_name, color in zip(splits, colors):
-                scores = self.results[model_name]['scores'].get(split_name)
+            # Collect all scores to determine common bin range
+            all_scores = []
+            for split_key, _, _ in splits_info:
+                scores = self.results[model_name]['scores'].get(split_key)
                 if scores is not None:
-                    ax.hist(scores, bins=50, alpha=0.5, label=split_name, color=color, density=True)
+                    all_scores.append(scores)
 
-            ax.set_xlabel('Score', fontsize=12)
-            ax.set_ylabel('Density', fontsize=12)
-            ax.set_title(f'{model_name.upper()} - Score Distributions', fontsize=14, fontweight='bold')
-            ax.legend()
-            ax.grid(alpha=0.3)
+            if all_scores:
+                # Determine common bin range for all distributions
+                all_combined = np.concatenate(all_scores)
+                score_min, score_max = all_combined.min(), all_combined.max()
+                bins = np.linspace(score_min, score_max, 50)
 
-        plt.tight_layout()
-        save_path = self.save_dir / "score_distributions.png"
-        plt.savefig(save_path, dpi=150, bbox_inches='tight')
-        print(f"Saved: {save_path}")
-        plt.close()
+                # Plot each split in its own subplot
+                for idx, (split_key, split_label, color) in enumerate(splits_info):
+                    ax = axes[idx]
+                    scores = self.results[model_name]['scores'].get(split_key)
+
+                    if scores is not None:
+                        # Check if distribution has near-zero variance
+                        if scores.std() < 1e-6:
+                            # Plot as vertical line for degenerate distribution
+                            ax.axvline(x=scores.mean(), color=color, linestyle='-',
+                                      linewidth=3, alpha=0.7)
+                            ax.set_ylim([0, 1])
+                        else:
+                            # Use seaborn histplot for better visualization
+                            sns.histplot(scores, bins=bins, color=color, alpha=0.6,
+                                       kde=True, ax=ax, stat='density', linewidth=0)
+
+                        # Add statistics
+                        stats_text = f'Mean: {scores.mean():.3f}\nStd: {scores.std():.3f}\nN: {len(scores)}'
+                        ax.text(0.02, 0.98, stats_text, transform=ax.transAxes,
+                               verticalalignment='top', fontsize=9,
+                               bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+
+                    ax.set_xlabel('Score', fontsize=11)
+                    ax.set_ylabel('Density', fontsize=11)
+                    ax.set_title(split_label, fontsize=12, fontweight='bold')
+                    ax.grid(alpha=0.3)
+
+                # Remove extra subplot
+                fig.delaxes(axes[5])
+
+                # Add overall title
+                fig.suptitle(f'{model_name.upper()} - Score Distributions',
+                           fontsize=16, fontweight='bold', y=0.995)
+
+            plt.tight_layout(rect=[0, 0, 1, 0.99])
+            save_path = self.save_dir / f"score_distributions_{model_name}.png"
+            plt.savefig(save_path, dpi=150, bbox_inches='tight')
+            print(f"Saved: {save_path}")
+            plt.close()
 
 
 if __name__ == "__main__":
