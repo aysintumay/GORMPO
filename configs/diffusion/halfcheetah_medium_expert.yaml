@@ -1,0 +1,10 @@
+classifier_model_name: /public/gormpo/models/halfcheetah_medium_expert/diffusion/checkpoint.pt
+density_model: diffusion
+
+task: halfcheetah-medium-expert-v2
+algo-name: gormpo
+reward-penalty-coef: 0.5
+seed: 1
+# data_path: "/public/sparse_d4rl/hopper-medium-v2.pkl"
+epoch: 1000
+penalty_type: 'tanh'

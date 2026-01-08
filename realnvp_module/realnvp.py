@@ -602,8 +602,23 @@ def load_rl_data_for_kde(args, env=None, val_split_ratio=0.2, test_split_ratio=0
 
     # print(f"Loaded dataset with {buffer_len} total samples")
 
+    # Handle size mismatch between next_observations and other arrays
+    # Some datasets have one fewer next_observation (last state has no next state)
+    for dataset_split in [train_dataset, val_dataset, test_dataset]:
+        min_len = min(
+            len(dataset_split['observations']),
+            len(dataset_split['next_observations']),
+            len(dataset_split['actions']),
+            len(dataset_split['rewards']),
+            len(dataset_split['terminals'])
+        )
+        # Truncate all arrays to the minimum length to ensure consistency
+        for key in ['observations', 'next_observations', 'actions', 'rewards', 'terminals']:
+            if key in dataset_split:
+                dataset_split[key] = dataset_split[key][:min_len]
+
     # Initialize ReplayBuffer
-   
+
     offline_buffer = ReplayBuffer(
             buffer_size=len(train_dataset["observations"]),
             obs_shape=args.obs_dim,
@@ -627,11 +642,11 @@ def load_rl_data_for_kde(args, env=None, val_split_ratio=0.2, test_split_ratio=0
     # Concatenate next_observations and actions for training data
     train_kde_input = torch.cat([train_next_obs, train_actions], dim=1)
 
-   
+
     val_next_obs = torch.FloatTensor(val_dataset['next_observations'])
     val_actions = torch.FloatTensor(val_dataset['actions'])
 
- 
+
     test_next_obs = torch.FloatTensor(test_dataset['next_observations'])
     test_actions = torch.FloatTensor(test_dataset['actions'])
     # Concatenate next_observations and actions for validation data
