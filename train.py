@@ -73,6 +73,7 @@ class DiffusionDensityWrapper:
             model=self.model,
             scheduler=self.scheduler,
             x0=x,
+            num_inference_steps=50,
             device=device,
         )
 
@@ -297,8 +298,6 @@ def train(env, run, logger, seed, args):
         **config["mopo_params"]
     )
     #load world model   
-    print(len([args.task, args.data_path]))
-    print(args.data_path)
     dynamics_model.load_model([args.task, args.data_path]) 
 
    
