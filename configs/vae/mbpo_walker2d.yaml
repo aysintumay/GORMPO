@@ -1,6 +1,6 @@
 task: walker2d-medium-v2
 algo-name: gormpo
-reward-penalty-coef: 0.5
+reward-penalty-coef: 0.3
 seed: 1
 # data_path: "/public/sparse_d4rl/walker2d-medium-v2.pkl"
 epoch: 1000

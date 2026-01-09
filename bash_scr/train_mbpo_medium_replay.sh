@@ -10,9 +10,9 @@ echo "============================================"
 echo ""
 
 
-echo ">>> Training GORMPO on HalfCheetah-Medium-Replay-v2..."
-python mopo.py --config configs/kde/mbpo_halfcheetah_medium_replay.yaml --reward-penalty-coef 0.0 --algo-name mbpo --devid 4
-echo "✓ HalfCheetah MBPO training complete"
+# echo ">>> Training GORMPO on HalfCheetah-Medium-Replay-v2..."
+# python mopo.py --config configs/kde/mbpo_halfcheetah_medium_replay.yaml --reward-penalty-coef 0.0 --algo-name mbpo --devid 4
+# echo "✓ HalfCheetah MBPO training complete"
 echo ""
 echo ">>> Training GORMPO on Hopper-Medium-Replay-v2..."
 python mopo.py --config configs/kde/mbpo_hopper_medium_replay.yaml --reward-penalty-coef 0.0 --algo-name mbpo --devid 4
