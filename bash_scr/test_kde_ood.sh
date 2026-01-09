@@ -11,12 +11,11 @@
 #  python test_vae_ood_levels.py --model_path /public/gormpo/models/halfcheetah_normal/vae  --dataset_name halfcheetah-medium-v2  --device cuda:0  --distances 1 5 10 15 --base_path /public/d4rl/ood_test --save_dir figures/vae_ood_distance_tests
 #  python test_vae_ood_levels.py --model_path /public/gormpo/models/walker2d_normal/vae  --dataset_name walker2d-medium-v2  --device cuda:0  --distances 1 5 10 15 --base_path /public/d4rl/ood_test --save_dir figures/vae_ood_distance_tests
 
-# python test_neuralode_ood_levels.py --model_path neuralODE/hopper_ood --dataset_name hopper-medium-v2 --target_dim 14 --device cuda:0 --distances 1 5 10 15 --save_dir figures/neuralODE_OOD
-# python test_neuralode_ood_levels.py --model_path neuralODE/halfcheetah_ood --dataset_name halfcheetah-medium-v2 --target_dim 23 --device cuda:0 --distances 1 5 10 15 --save_dir figures/neuralODE_OOD
-# python test_neuralode_ood_levels.py --model_path neuralODE/walker2d_ood --dataset_name walker2d-medium-v2 --target_dim 23 --device cuda:0 --distances 1 5 10 15 --save_dir figures/neuralODE_OOD
-
 conda deactivate
 source venv/bin/activate
+python test_neuralode_ood_levels.py --model_path neuralODE/hopper_ood --dataset_name hopper-medium-v2 --target_dim 14 --device cuda:0 --distances 1 5 10 15 --save_dir figures/neuralODE_OOD
+python test_neuralode_ood_levels.py --model_path neuralODE/halfcheetah_ood --dataset_name halfcheetah-medium-v2 --target_dim 23 --device cuda:0 --distances 1 5 10 15 --save_dir figures/neuralODE_OOD
+python test_neuralode_ood_levels.py --model_path neuralODE/walker2d_ood --dataset_name walker2d-medium-v2 --target_dim 23 --device cuda:0 --distances 1 5 10 15 --save_dir figures/neuralODE_OOD
 
 python test_diffusion_ood_levels.py --model_path /public/gormpo/models/hopper/diffusion/checkpoint.pt --scheduler_dir /public/gormpo/models/hopper/diffusion/scheduler --dataset_name hopper-medium-v2 --device cuda:0 --distances 1 5 10 15 --num_inference_steps 20 --save_dir figures/diffusion_ood_distance_tests
 python test_diffusion_ood_levels.py --model_path /public/gormpo/models/halfcheetah/diffusion/checkpoint.pt --scheduler_dir /public/gormpo/models/halfcheetah/diffusion/scheduler --dataset_name halfcheetah-medium-v2 --device cuda:0 --distances 1 5 10 15 --num_inference_steps 20 --save_dir figures/diffusion_ood_distance_tests

@@ -245,10 +245,12 @@ def _create_train_val_split_dict(
     if dataset is None:
         raise ValueError("Dataset is empty")
 
-    # Get dataset size from first key
+    # Get dataset size - use minimum size across all keys to handle inconsistent array lengths
+    # (e.g., observations may have one more element than next_observations)
     first_key = list(dataset.keys())[0]
     # print(first_key)
-    total_size = len(dataset[first_key])
+    sizes = [len(v) for v in dataset.values() if isinstance(v, (np.ndarray, list))]
+    total_size = min(sizes) if sizes else len(dataset[first_key])
     # print(total_size)
 
     # Calculate split indices for temporal split
