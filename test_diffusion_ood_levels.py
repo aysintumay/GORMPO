@@ -101,9 +101,8 @@ def evaluate_ood_at_distance(model, dataset_name, distance, ood_test_dir='/publi
 
     print(f"  Total samples: {n_samples} (ID: {half_point}, OOD: {n_samples - half_point})")
 
-    # Normalize if mean and std are provided
-    if mean is not None and std is not None:
-        test_data = (test_data - mean) / (std + 1e-8)
+    # NOTE: OOD test data is already pre-normalized, so we do NOT normalize again here
+    # (normalizing twice causes ID/OOD label flipping!)
 
     # Convert to tensor and move to device
     test_data_tensor = torch.FloatTensor(test_data).to(device)

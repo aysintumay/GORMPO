@@ -1,0 +1,25 @@
+task: halfcheetah-medium-expert-v2
+env: ""
+
+# KDE model hyperparameters
+bandwidth: 1.0
+k_neighbors: 100
+percentile: 5.0
+
+# Data splitting
+test_size: 0.2
+val_size: 0.2
+temporal_split: false
+
+# Training options
+optimize_percentile: false
+optimization_metric: density_range
+pca: false
+
+# Output
+plot: true
+model_save_path: /public/gormpo/models/halfcheetah_medium_expert_sparse/kde
+fig_save_path: figures/halfcheetah_medium_expert_sparse/kde
+devid: 0
+seed: 42
+data_path: /public/d4rl/sparse_datasets/halfcheetah_medium_expert_sparse.pkl

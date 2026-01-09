@@ -1,12 +1,12 @@
 npz: /data/gormpo/diffusion_processed/halfcheetah_medium_expert-v2_train.npz
-out: /data/sparse_d4rl/pretrained/neural_ode/halfcheetah_medium_expert_v2
+out: /data/sparse_d4rl/pretrained/neural_ode/halfcheetah_medium_expert_v2_256
 
 epochs: 10
-batch: 512
+batch: 2048
 lr: 1.0e-3
 wd: 0.0
 
-hidden_dims: [512, 512]
+hidden_dims: [256, 256]
 activation: silu
 time_dependent: true
 solver: dopri5

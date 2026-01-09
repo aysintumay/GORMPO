@@ -76,8 +76,8 @@ def evaluate_ood_at_distance(model, dataset_name, distance, base_path='/public/d
         distance: OOD distance level
         base_path: Base directory containing OOD test datasets
         device: Device to use
-        mean: Mean for normalization (if None, no normalization)
-        std: Standard deviation for normalization (if None, no normalization)
+        mean: DEPRECATED - Not used (kept for backward compatibility)
+        std: DEPRECATED - Not used (kept for backward compatibility)
 
     Returns:
         Dictionary with evaluation metrics
@@ -95,9 +95,8 @@ def evaluate_ood_at_distance(model, dataset_name, distance, base_path='/public/d
 
     print(f"  Total samples: {n_samples} (ID: {half_point}, OOD: {n_samples - half_point})")
 
-    # Normalize if mean and std are provided
-    if mean is not None and std is not None:
-        test_data = (test_data - mean) / (std + 1e-8)
+    # NOTE: No normalization is applied - the training data was not normalized.
+    # The mean/std in metadata are reconstruction error statistics, NOT input data statistics.
 
     # Convert to tensor and move to device
     test_data_tensor = torch.FloatTensor(test_data).to(device)

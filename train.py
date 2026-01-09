@@ -22,8 +22,8 @@ from common import util
 from realnvp_module.realnvp import RealNVP 
 from vae_module.vae import VAE
 from kde_module.kde import PercentileThresholdKDE
-from neuralODE.neural_ode_density import ContinuousNormalizingFlow
-from neuralODE import neural_ode_inference as neural_ode_inference
+from neuralODE.neural_ode_density import ContinuousNormalizingFlow, ODEFunc
+from neuralODE.neural_ode_ood import NeuralODEOOD
 from diffusion.monte_carlo_sampling_unconditional import build_model_from_ckpt
 from diffusion.ddim_training_unconditional import log_prob_elbo
 from diffusers.schedulers.scheduling_ddim import DDIMScheduler
@@ -73,6 +73,7 @@ class DiffusionDensityWrapper:
             model=self.model,
             scheduler=self.scheduler,
             x0=x,
+            num_inference_steps=50,
             num_inference_steps=50,
             device=device,
         )
@@ -191,28 +192,26 @@ def train(env, run, logger, seed, args):
         classifier_dict = classifier.load_model(args.classifier_model_name, devid=args.devid)
     elif "neuralODE" in args.classifier_model_name:
         print("Loading Neural ODE based classifier... for task:", args.task)
-        # Load model
-        cfg = neural_ode_inference.EvalConfig(
-        npz_path= '',
-        model_path=args.classifier_model_name,
-        hidden_dims= [512, 512],
-        activation="silu",
-        time_dependent=True,
-        device=f"cuda:{args.devid}" if torch.cuda.is_available() else "cpu",
-        t0=0.0,
-        t1=1.0,
-        solver="dopri5",
-        rtol=1e-5,
-        atol=1e-5,
-            )   
-        flow = neural_ode_inference.load_flow(cfg, args.target_dim)
-        #load the json file
-        thr_path = f"neuralODE/test/{args.task.lower().split('_')[0].split('-')[0]}_metrics.json"
-        #load json
-        with open(thr_path, 'r') as f:
-            metrics = json.load(f)
-        thr = metrics["percentile_1.0_logp"]
-        classifier_dict = {'model': flow, 'thr': thr}
+        # Use the new NeuralODEOOD.load_model interface
+        device = f"cuda:{args.devid}" if torch.cuda.is_available() else "cpu"
+
+        # Load model using NeuralODEOOD wrapper
+        classifier_dict = NeuralODEOOD.load_model(
+            save_path=args.classifier_model_name.replace('_model.pt', ''),
+            target_dim=args.target_dim,
+            hidden_dims=(512, 512),
+            activation="silu",
+            time_dependent=True,
+            solver="dopri5",
+            t0=0.0,
+            t1=1.0,
+            rtol=1e-5,
+            atol=1e-5,
+            device=device
+        )
+        # classifier_dict now contains: {'model': ood_model, 'threshold': ..., 'mean': ..., 'std': ...}
+        # Rename 'threshold' to 'thr' for compatibility with transition_model
+        classifier_dict['thr'] = classifier_dict['threshold']
     elif "diffusion" in args.classifier_model_name:
         print("Loading Diffusion based classifier... for task:", args.task)
         # Load model using build_model_from_ckpt from monte_carlo_sampling_unconditional
@@ -321,6 +320,7 @@ def train(env, run, logger, seed, args):
     )
 
     # pretrain dynamics model on the whole dataset
+    # trainer.train_dynamics()
     # trainer.train_dynamics()
     # 
 
