@@ -120,12 +120,15 @@ class EnsembleModel(nn.Module):
         self.to(device)
 
     def predict(self, input):
-        # convert input to tensors
-        if type(input) != torch.Tensor:
+        # convert input to tensors and ensure float32 dtype
+        if not torch.is_tensor(input):
             if len(input.shape) == 1:
                 input = torch.FloatTensor([input]).to(util.device)
             else:
                 input = torch.FloatTensor(input).to(util.device)
+        else:
+            # Ensure tensor is float32 and on correct device
+            input = input.float().to(util.device)
         # predict
         if len(input.shape) == 3:
             model_outputs = [net(ip) for ip, net in zip(torch.unbind(input), self.ensemble_models)]

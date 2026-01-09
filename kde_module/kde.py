@@ -231,17 +231,39 @@ class PercentileThresholdKDE:
 
         return self
 
-    def _score_samples_internal(self, X):
-        """Internal method to compute density scores."""
+    def _score_samples_internal(self, X, batch_size=5000):
+        """Internal method to compute density scores with batching for large queries."""
         k = min(self.n_neighbors, self.training_data.shape[0])
-        distances, _ = self.index.search(X, k)
 
-        # Gaussian kernel
-        kernel_values = np.exp(-0.5 * distances / (self.bandwidth**2))
-        density = np.mean(kernel_values, axis=1)
-        log_density = np.log(density + 1e-10)
+        # Process in batches if dataset is large or if using GPU with large training data
+        n_samples = X.shape[0]
+        # Use smaller batches for GPU when training data is large
+        if self.use_gpu and self.training_data.shape[0] > 50000:
+            batch_size = min(batch_size, 1000)
 
-        return log_density
+        if n_samples > batch_size:
+            log_densities = []
+            for i in range(0, n_samples, batch_size):
+                batch_end = min(i + batch_size, n_samples)
+                X_batch = X[i:batch_end]
+                distances, _ = self.index.search(X_batch, k)
+
+                # Gaussian kernel
+                kernel_values = np.exp(-0.5 * distances / (self.bandwidth**2))
+                density = np.mean(kernel_values, axis=1)
+                log_density = np.log(density + 1e-10)
+                log_densities.append(log_density)
+
+            return np.concatenate(log_densities)
+        else:
+            distances, _ = self.index.search(X, k)
+
+            # Gaussian kernel
+            kernel_values = np.exp(-0.5 * distances / (self.bandwidth**2))
+            density = np.mean(kernel_values, axis=1)
+            log_density = np.log(density + 1e-10)
+
+            return log_density
 
     def score_samples(self, X, device='cuda'):
         """
@@ -374,16 +396,21 @@ class PercentileThresholdKDE:
         model.is_fitted = metadata["is_fitted"]
         model.pca = metadata.get("pca", None)
 
-        # Move to GPU if requested
+        # Move to GPU if requested and training data is not too large
         if use_gpu and hasattr(faiss, 'get_num_gpus') and faiss.get_num_gpus() > 0:
-            try:
-                gpu_resources = faiss.StandardGpuResources()
-                model.index = faiss.index_cpu_to_gpu(gpu_resources, devid, model.index)
-                model.use_gpu = True
-                print(f"Model loaded and moved to GPU {devid}")
-            except Exception as e:
-                print(f"Could not move to GPU: {e}, using CPU")
+            # Skip GPU for very large training datasets to avoid CUBLAS errors
+            if model.training_data.shape[0] > 100000:
+                print(f"Training data too large ({model.training_data.shape[0]} samples), using CPU for stability")
                 model.use_gpu = False
+            else:
+                try:
+                    gpu_resources = faiss.StandardGpuResources()
+                    model.index = faiss.index_cpu_to_gpu(gpu_resources, devid, model.index)
+                    model.use_gpu = True
+                    print(f"Model loaded and moved to GPU {devid}")
+                except Exception as e:
+                    print(f"Could not move to GPU: {e}, using CPU")
+                    model.use_gpu = False
         else:
             model.use_gpu = False
 
