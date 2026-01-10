@@ -2,29 +2,38 @@
 
 This directory contains all KDE-related components for the MOPO project, including density estimation models, enhanced MBPO-KDE algorithms, dataset utilities, and configuration files.
 
-## Directory Structure
+## Quick GORMPO training with trained density estimators
+
+KDE
 
 ```
-KDE/
-├── README.md                     # This file
-├── realnvp.py                   # RealNVP normalizing flow for density estimation
-├── mopo.py                      # Enhanced MOPO with KDE-based world models
-├── train.py                     # Training script for MBPO-KDE
-├── transition_model.py          # KDE-enhanced transition models
-├── test_dataset_loader.py       # Tests for dataset loading utilities
-├── example_usage.py             # Usage examples for dataset loading
-├── configs/                     # KDE-specific configuration files
-│   ├── mbpo_kde.yaml
-│   ├── mbpo_kde_acp.yaml
-│   ├── mbpo_kde_ws.yaml
-│   ├── mbpo_kde_ws_exp.yaml
-│   ├── mbpo_kde_ws_inverse.yaml
-│   └── mbpo_kde_ws_soft.yaml
-└── scripts/                     # Bash scripts for running KDE experiments
-    ├── run_mbpo_kde.sh
-    ├── run_mbpo_kde_shaped.sh
-    └── run_synthetic*_kde*.sh
+python mopo.py --config configs/kde/gormpo_halfcheetah_medium_expert_sparse.yaml --devid 0
 ```
+
+VAE:
+
+```
+python mopo.py --config configs/vae/gormpo_halfcheetah_medium_expert_sparse.yaml --devid 0
+```
+
+RealNVP:
+
+```
+python mopo.py --config configs/realnvp/gormpo_halfcheetah_medium_expert_sparse.yaml --devid 0
+```
+
+Diffusion: 
+```
+python mopo.py --config configs/diffusion/halfcheetah_medium_expert_sparse.yaml --devid 0
+```
+
+NeuralODE
+```
+python mopo.py --config configs/neuralODE/halfcheetah_medium_expert_sparse.yaml --devid 0
+```
+
+Configs *must* include classifier_model_name, task, data_path (for sparse saved datasets), algo-name, reward-penalty-coef, penalty_type parameters.
+
 
 ## Core Components
 
