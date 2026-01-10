@@ -199,19 +199,28 @@ class PercentileThresholdKDE:
             print(f"Bandwidth: {self.bandwidth}, K-neighbors: {self.n_neighbors}")
 
         # Build FAISS index
-        if n_features <= 64 and n_samples < 1000000:
-            self.index = faiss.IndexFlatL2(n_features)
-        else:
+        # Use IVF for GPU with large datasets to avoid CUBLAS matrix size issues
+        use_ivf = (n_samples >= 1000000) or (self.use_gpu and n_samples > 50000)
+
+        if use_ivf:
             nlist = min(int(np.sqrt(n_samples)), 4096)
             quantizer = faiss.IndexFlatL2(n_features)
             self.index = faiss.IndexIVFFlat(quantizer, n_features, nlist)
             if hasattr(self.index, "train"):
                 self.index.train(X)
+            if verbose:
+                print(f"Using IndexIVFFlat with {nlist} clusters for efficient GPU search")
+        else:
+            self.index = faiss.IndexFlatL2(n_features)
+            if verbose:
+                print(f"Using IndexFlatL2 for exact search")
 
         # Move to GPU if available and GPU functions exist
         if self.use_gpu and hasattr(faiss, 'index_cpu_to_gpu'):
             try:
                 gpu_resources = faiss.StandardGpuResources()
+                # Set temp memory to avoid CUBLAS issues
+                gpu_resources.setTempMemory(256 * 1024 * 1024)  # 256MB temp memory
                 self.index = faiss.index_cpu_to_gpu(
                     gpu_resources, self.devid, self.index
                 )
@@ -227,6 +236,15 @@ class PercentileThresholdKDE:
             self.use_gpu = False
 
         self.index.add(X)
+
+        # Configure IVF search parameters for better recall
+        if use_ivf:
+            # nprobe controls how many clusters to search (higher = more accurate but slower)
+            nprobe = min(max(int(nlist * 0.1), 10), nlist)  # Search 10% of clusters, min 10
+            if hasattr(self.index, 'nprobe'):
+                self.index.nprobe = nprobe
+                if verbose:
+                    print(f"Set nprobe={nprobe} for IVF search quality")
 
         # Compute density scores on validation data to find threshold
         if verbose:
@@ -253,9 +271,13 @@ class PercentileThresholdKDE:
 
         # Process in batches if dataset is large or if using GPU with large training data
         n_samples = X.shape[0]
-        # Use smaller batches for GPU when training data is large
-        if self.use_gpu and self.training_data.shape[0] > 50000:
-            batch_size = min(batch_size, 1000)
+        # Use smaller batches for GPU when training data is large to avoid CUBLAS errors
+        if self.use_gpu:
+            if self.training_data.shape[0] > 100000:
+                # Very large datasets need tiny batches to avoid CUBLAS matrix size limits
+                batch_size = min(batch_size, 100)
+            elif self.training_data.shape[0] > 50000:
+                batch_size = min(batch_size, 200)
 
         if n_samples > batch_size:
             log_densities = []
@@ -414,21 +436,18 @@ class PercentileThresholdKDE:
         model.is_fitted = metadata["is_fitted"]
         model.pca = metadata.get("pca", None)
 
-        # Move to GPU if requested and training data is not too large
+        # Move to GPU if requested
         if use_gpu and hasattr(faiss, 'get_num_gpus') and faiss.get_num_gpus() > 0:
-            # Skip GPU for very large training datasets to avoid CUBLAS errors
-            if model.training_data.shape[0] > 100000:
-                print(f"Training data too large ({model.training_data.shape[0]} samples), using CPU for stability")
+            try:
+                gpu_resources = faiss.StandardGpuResources()
+                # Set temp memory to avoid CUBLAS issues
+                gpu_resources.setTempMemory(256 * 1024 * 1024)  # 256MB temp memory
+                model.index = faiss.index_cpu_to_gpu(gpu_resources, devid, model.index)
+                model.use_gpu = True
+                print(f"Model loaded and moved to GPU {devid}")
+            except Exception as e:
+                print(f"Could not move to GPU: {e}, using CPU")
                 model.use_gpu = False
-            else:
-                try:
-                    gpu_resources = faiss.StandardGpuResources()
-                    model.index = faiss.index_cpu_to_gpu(gpu_resources, devid, model.index)
-                    model.use_gpu = True
-                    print(f"Model loaded and moved to GPU {devid}")
-                except Exception as e:
-                    print(f"Could not move to GPU: {e}, using CPU")
-                    model.use_gpu = False
         else:
             model.use_gpu = False
             if use_gpu:
