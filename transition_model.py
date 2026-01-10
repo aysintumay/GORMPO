@@ -321,16 +321,13 @@ class TransitionModel:
         # util.logger.log_path = '/home/ubuntu/mopo/log/halfcheetah-medium-replay-v0/mopo/seed_5_0403_215901-halfcheetah_medium_replay_v0_mopo'
         # model_save_dir = os.path.join(util.logger_model.log_path, info)
         if  info[0].lower()=="hopper-medium-v2":
-        if  info[0].lower()=="hopper-medium-v2":
             # model_save_dir = "/public/gormpo/models/rl/hopper/realnvp/seed_1_1110_000546_Hopper_gormpo/dynamics_model"
             model_save_dir = "/public/gormpo/models/rl/hopper-medium-v2/realnvp/seed_1_1223_133358_hopper_medium_v2_gormpo/dynamics_model"
             print('loaded hopper model from ', model_save_dir)
         elif  info[0].lower()=="halfcheetah-medium-v2":
-        elif  info[0].lower()=="halfcheetah-medium-v2":
             # model_save_dir = '/public/gormpo/models/rl/halfcheetah/realnvp/seed_1_1110_000453_HalfCheetah_gormpo/dynamics_model'
             model_save_dir = '/public/gormpo/models/rl/halfcheetah-medium-v2/realnvp/seed_1_1223_133252_halfcheetah_medium_v2_gormpo/dynamics_model'
             print('loaded halfcheetah model from ', model_save_dir)
-        elif info[0].lower()=="walker2d-medium-v2":
         elif info[0].lower()=="walker2d-medium-v2":
             # model_save_dir = "/public/gormpo/models/rl/walker2d/realnvp/seed_1_1110_000607_Walker2d_gormpo/dynamics_model"
             model_save_dir = "/public/gormpo/models/rl/walker2d-medium-v2/realnvp/seed_1_1223_133416_walker2d_medium_v2_gormpo/dynamics_model"
@@ -352,10 +349,7 @@ class TransitionModel:
         elif  info[0].lower()=="hopper-medium-expert-v2":
             model_save_dir = '/public/gormpo/models/rl/hopper-medium-expert-v2/realnvp/seed_1_1226_161304_hopper_medium_expert_v2_gormpo/dynamics_model'
             print('loaded hopper model from ', model_save_dir)
-        elif  info[0].lower()=="walker2d-medium-expert-v2":
-        
-        elif  info[0].lower()=="walker2d-medium-expert-v2":
-        
+        elif  info[0].lower()=="walker2d-medium-expert-v2":        
             model_save_dir = '/public/gormpo/models/rl/walker2d-medium-expert-v2/kde/seed_1_1226_151328_walker2d_medium_expert_v2_mbpo/dynamics_model'
             print('loaded walker2d model from ', model_save_dir)
 
