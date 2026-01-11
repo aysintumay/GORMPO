@@ -4,6 +4,7 @@ reward-penalty-coef: 0.8
 seed: 1
 # data_path: "/public/sparse_d4rl/walker2d-medium-v2.pkl"
 epoch: 1000
+rollout-length: 5
 penalty_type: 'tanh'
 classifier_model_name: "/public/gormpo/models/walker2d_normal/kde"
 density_model: kde
