@@ -35,6 +35,13 @@ python mopo.py --config configs/neuralODE/halfcheetah_medium_expert_sparse.yaml 
 Configs *must* include classifier_model_name, task, data_path (for sparse saved datasets), algo-name, reward-penalty-coef, penalty_type parameters.
 
 
+For hyperparameter search, create a bash script like 'bash_scr/halfcheetah_medium_expert_v2_gormpo_kde_sparse3.sh' by specifying the *config*. Then run as follows:
+
+```
+chmod +x /bash_scr/halfcheetah_medium_expert_v2_gormpo_kde_sparse3.sh 
+./bash_scr/halfcheetah_medium_expert_v2_gormpo_kde_sparse3.sh
+```
+
 ## Core Components
 
 ### 1. RealNVP Normalizing Flow (`realnvp.py`)
