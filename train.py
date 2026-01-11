@@ -299,7 +299,7 @@ def train(env, run, logger, seed, args):
     )
     #load world model
 
-    # dynamics_model.load_model([args.task, args.data_path]) 
+    dynamics_model.load_model([args.task, args.data_path]) 
 
    
     # create trainer
@@ -319,7 +319,7 @@ def train(env, run, logger, seed, args):
     )
 
     # pretrain dynamics model on the whole dataset
-    trainer.train_dynamics()
+    # trainer.train_dynamics()
     # trainer.train_dynamics()
     # 
 

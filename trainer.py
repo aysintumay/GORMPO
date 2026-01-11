@@ -167,7 +167,7 @@ class Trainer:
             plot_p_loss(np.array(critic_loss2).reshape(-1,1), 'Critic2')
             plot_p_loss(np.array(actor_loss).reshape(-1,1), 'Actor')
             plot_p_loss(np.array(entropy).reshape(-1,1), 'Entropy')
-            plot_p_loss(np.array(alpha_loss).reshape(-1,1), 'Alpha')
+            # plot_p_loss(np.array(alpha_loss).reshape(-1,1), 'Alpha')
 
             plot_accuracy(np.array(reward_l), np.array(reward_std_l), 'Average Return')
 
