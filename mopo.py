@@ -119,14 +119,15 @@ def get_args():
     parser.add_argument("--dynamics-model-dir", type=str, default=None)
     parser.add_argument("--penalty_type", type=str, default="linear", choices=["linear", "inverse", "exponential", "softplus"])
 
-    parser.add_argument("--epoch", type=int, default=1) 
-    parser.add_argument("--step-per-epoch", type=int, default=1000) 
+    parser.add_argument("--epoch", type=int, default=1)
+    parser.add_argument("--step-per-epoch", type=int, default=1000)
     parser.add_argument("--eval_episodes", type=int, default=100)
     parser.add_argument("--batch-size", type=int, default=256)
-    parser.add_argument("--terminal_counter", type=int, default=1) 
+    parser.add_argument("--terminal_counter", type=int, default=1)
     parser.add_argument("--logdir", type=str, default="log")
     parser.add_argument("--log-freq", type=int, default=1000)
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument("--results_output", type=str, default=None, help="Optional: Path to shared CSV file for accumulating results across multiple runs")
     
     parser.add_argument("--density_model", type=str, default="realnvp")
     parser.add_argument("--classifier_model_name", type=str, default="neuralode")
@@ -220,13 +221,32 @@ def main(args):
         results.append(eval_res)
         
 
-        
+
     # Save results to CSV
-    os.makedirs(os.path.join('results',args.task.lower() + variant_suffix, args.density_model), exist_ok=True)
-    results_df = pd.DataFrame(results)
-    results_path = os.path.join('results',args.task.lower() + variant_suffix, args.density_model, f"results_{t0}.csv")
-    results_df.to_csv(results_path, index=False)
-    print(f"Results saved to {results_path}")
+    if args.results_output:
+        # Use specified output path for shared results across multiple runs
+        results_path = args.results_output
+        os.makedirs(os.path.dirname(results_path), exist_ok=True)
+
+        # Append to existing file if it exists, otherwise create new
+        results_df = pd.DataFrame(results)
+        if os.path.exists(results_path):
+            # Read existing results and append new ones
+            existing_df = pd.read_csv(results_path)
+            combined_df = pd.concat([existing_df, results_df], ignore_index=True)
+            combined_df.to_csv(results_path, index=False)
+            print(f"Results appended to {results_path}")
+        else:
+            results_df.to_csv(results_path, index=False)
+            print(f"Results saved to {results_path}")
+    else:
+        # Default behavior: save with timestamp
+        os.makedirs(os.path.join('results',args.task.lower() + variant_suffix, args.density_model), exist_ok=True)
+        results_df = pd.DataFrame(results)
+        results_path = os.path.join('results',args.task.lower() + variant_suffix, args.density_model, f"results_{t0}.csv")
+        results_df.to_csv(results_path, index=False)
+        print(f"Results saved to {results_path}")
+
     wandb.finish()
 
 if __name__ == "__main__":

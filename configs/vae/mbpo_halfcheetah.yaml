@@ -4,6 +4,7 @@ reward-penalty-coef: 0.05
 seed: 1
 # data_path: "/public/sparse_d4rl/halfcheetah-medium-v2.pkl"
 epoch: 1000
+rollout-length: 1
 penalty_type: 'tanh'
 classifier_model_name: "/public/gormpo/models/halfcheetah_normal/vae"
 density_model: vae
