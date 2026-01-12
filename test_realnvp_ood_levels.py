@@ -12,6 +12,7 @@ import seaborn as sns
 import argparse
 import os
 import sys
+import json
 from sklearn.metrics import roc_auc_score, accuracy_score, roc_curve
 
 # Add parent directory to path for imports
@@ -30,48 +31,18 @@ def load_ood_test_data(dataset_name, distance, base_path='/public/d4rl/ood_test'
 
     Args:
         dataset_name: Name of the dataset (e.g., 'halfcheetah-medium-v2')
-        distance: OOD distance level (e.g., 0.1, 0.3, 0.5, 0.7, 1)
+        distance: OOD distance level (int or float, e.g., 0.1, 0.3, 0.5, 0.7, 1)
         base_path: Base directory containing OOD test datasets
 
     Returns:
         Numpy array of test data where first half is ID and second half is OOD
     """
-    dataset_dir = os.path.join(base_path, dataset_name)
+    # Format distance value - preserve int/float type
+    distance_str = str(int(distance)) if isinstance(distance, int) else str(distance)
+    file_path = os.path.join(base_path, dataset_name, f'ood-distance-{distance_str}.pkl')
 
-    # Try multiple file name formats
-    possible_files = [
-        f'ood-distance-{distance}.pkl',  # Exact format (e.g., 1.0)
-        f'ood-distance-{int(distance)}.pkl',  # Integer format (e.g., 1)
-        f'ood-distance-{distance:.1f}.pkl',  # One decimal place (e.g., 1.0)
-    ]
-
-    file_path = None
-    for filename in possible_files:
-        test_path = os.path.join(dataset_dir, filename)
-        if os.path.exists(test_path):
-            file_path = test_path
-            break
-
-    # If still not found, try to find any file containing the distance value
-    if file_path is None:
-        if os.path.exists(dataset_dir):
-            all_files = os.listdir(dataset_dir)
-            # Search for files that contain the distance value
-            for f in all_files:
-                if f.startswith('ood-distance-') and f.endswith('.pkl'):
-                    # Extract the distance from filename
-                    try:
-                        file_distance_str = f.replace('ood-distance-', '').replace('.pkl', '')
-                        file_distance = float(file_distance_str)
-                        # Match with tolerance for floating point comparison
-                        if abs(file_distance - distance) < 1e-6:
-                            file_path = os.path.join(dataset_dir, f)
-                            break
-                    except ValueError:
-                        continue
-
-    if file_path is None or not os.path.exists(file_path):
-        raise FileNotFoundError(f"Test data file not found for distance {distance} in {dataset_dir}")
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Test data file not found: {file_path}")
 
     print(f"Loading test data from: {file_path}")
     with open(file_path, 'rb') as f:
@@ -141,6 +112,10 @@ def evaluate_ood_at_distance(model, dataset_name, distance, base_path='/public/d
     model.eval()
     with torch.no_grad():
         log_probs = model.score_samples(test_data_tensor)
+
+    # Convert to tensor if it's a numpy array
+    if isinstance(log_probs, np.ndarray):
+        log_probs = torch.from_numpy(log_probs).to(device)
 
     # Calculate overall metrics
     mean_log_likelihood = log_probs.mean().item()
@@ -313,10 +288,13 @@ def plot_results(all_results, save_dir='figures/realnvp_ood_distance_tests', mod
     fig.suptitle(f'{model_name} ROC Curves for Different OOD Distance Levels',
                  fontsize=16, fontweight='bold')
 
-    if n_distances > 1:
+    # Always convert to list for consistent indexing
+    if n_rows == 1 and n_cols == 1:
+        axes = [axes]
+    elif n_rows == 1 or n_cols == 1:
         axes = axes.flatten()
     else:
-        axes = [axes]
+        axes = axes.flatten()
 
     for idx, r in enumerate(all_results):
         ax = axes[idx]
@@ -348,10 +326,13 @@ def plot_results(all_results, save_dir='figures/realnvp_ood_distance_tests', mod
     fig.suptitle(f'{model_name} Log-Likelihood Distributions for Different OOD Distance Levels',
                  fontsize=16, fontweight='bold')
 
-    if n_distances > 1:
+    # Always convert to list for consistent indexing
+    if n_rows == 1 and n_cols == 1:
+        axes = [axes]
+    elif n_rows == 1 or n_cols == 1:
         axes = axes.flatten()
     else:
-        axes = [axes]
+        axes = axes.flatten()
 
     for idx, r in enumerate(all_results):
         ax = axes[idx]
@@ -412,14 +393,29 @@ def plot_results(all_results, save_dir='figures/realnvp_ood_distance_tests', mod
     plt.close()
 
 
+def parse_number(value):
+    """Parse a number as int or float based on its representation."""
+    try:
+        # Try to parse as int first
+        if '.' not in value:
+            return int(value)
+        else:
+            return float(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"Invalid number: {value}")
+
+
 def main():
     parser = argparse.ArgumentParser(description='Test RealNVP on different OOD distance levels')
     parser.add_argument('--model_path', type=str, required=True,
                        help='Path to saved RealNVP model (without extension)')
     parser.add_argument('--dataset_name', type=str, required=True,
                        help='Dataset name (e.g., halfcheetah-medium-v2, hopper-medium-v2)')
-    parser.add_argument('--distances', type=float, nargs='+', default=[0.1, 0.3, 0.5, 0.7, 1],
-                       help='List of OOD distance values to test')
+    parser.add_argument('--sparse_dataset_name', type=str, default=None,
+                       help='Sparse dataset name for figure directory (e.g., halfcheetah_medium_expert_sparse_72.5). '
+                            'If provided, figures will be saved to figures/realnvp_ood_distance_tests/{sparse_dataset_name}/')
+    parser.add_argument('--distances', type=parse_number, nargs='+', default=[1,2, 3, 4],
+                       help='List of OOD distance values to test (supports both int and float)')
     parser.add_argument('--base_path', type=str, default='/public/d4rl/ood_test',
                        help='Base directory containing OOD test datasets')
     parser.add_argument('--device', type=str, default='cpu',
@@ -492,7 +488,15 @@ def main():
         return
 
     # Create save directory with dataset name
-    save_dir = os.path.join(args.save_dir, args.dataset_name.replace('-', '_'))
+    # If sparse_dataset_name is provided, use that directly
+    if args.sparse_dataset_name:
+        dataset_name_for_dir = args.sparse_dataset_name.replace('-', '_')
+        print(f"Using sparse dataset name for directory: {dataset_name_for_dir}")
+    else:
+        # Fall back to default behavior
+        dataset_name_for_dir = args.dataset_name.replace('-', '_')
+
+    save_dir = os.path.join(args.save_dir, dataset_name_for_dir)
 
     # Plot results
     print("\n" + "="*80)
@@ -517,6 +521,23 @@ def main():
               f"{r['mean_id_log_likelihood']:<12.4f} "
               f"{r['mean_ood_log_likelihood']:<12.4f} {r['roc_auc']:<10.4f} {acc_str:<10}")
     print("-" * 80)
+
+    # Save results to JSON
+    json_results = []
+    for r in all_results:
+        json_results.append({
+            'distance': float(r['distance']),
+            'mean_log_likelihood': float(r['mean_log_likelihood']),
+            'id_log_likelihood': float(r['mean_id_log_likelihood']),
+            'ood_log_likelihood': float(r['mean_ood_log_likelihood']),
+            'roc_auc': float(r['roc_auc']),
+            'accuracy': float(r['accuracy']) if r['accuracy'] is not None else None
+        })
+
+    json_path = os.path.join(save_dir, 'results.json')
+    with open(json_path, 'w') as f:
+        json.dump(json_results, f, indent=2)
+    print(f"\nResults saved to JSON: {json_path}")
 
 
 if __name__ == "__main__":

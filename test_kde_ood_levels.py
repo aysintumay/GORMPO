@@ -13,6 +13,7 @@ import argparse
 import os
 import sys
 import pickle
+import json
 from sklearn.metrics import roc_auc_score, accuracy_score, roc_curve
 
 # Add parent directory to path for imports
@@ -92,6 +93,10 @@ def evaluate_ood_at_distance(model, dataset_name, distance, base_path='/public/d
 
     # Get log-likelihood scores for all samples
     log_probs = model.score_samples(test_data)
+
+    # Convert to numpy array if it's a torch tensor
+    if isinstance(log_probs, torch.Tensor):
+        log_probs = log_probs.cpu().numpy()
 
     # Calculate overall metrics
     mean_log_likelihood = log_probs.mean()
@@ -225,7 +230,7 @@ def plot_results(all_results, save_dir='figures/kde_ood_distance_tests', model_n
 
     for r in all_results:
         row = [
-            f"{r['distance']:.0f}",
+            f"{r['distance']:.1f}",
             f"{r['mean_log_likelihood']:.3f}",
             f"{r['mean_id_log_likelihood']:.3f}",
             f"{r['mean_ood_log_likelihood']:.3f}",
@@ -363,14 +368,29 @@ def plot_results(all_results, save_dir='figures/kde_ood_distance_tests', model_n
     plt.close()
 
 
+def parse_number(value):
+    """Parse a number as int or float based on its representation."""
+    try:
+        # Try to parse as int first
+        if '.' not in value:
+            return int(value)
+        else:
+            return float(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"Invalid number: {value}")
+
+
 def main():
     parser = argparse.ArgumentParser(description='Test KDE on different OOD distance levels')
     parser.add_argument('--model_path', type=str, required=True,
                        help='Path to saved KDE model (without extension)')
     parser.add_argument('--dataset_name', type=str, required=True,
                        help='Dataset name (e.g., halfcheetah-medium-v2, hopper-medium-v2)')
-    parser.add_argument('--distances', type=float, nargs='+', default=[1, 2, 3, 4, 5, 6],
-                       help='List of OOD distance values to test')
+    parser.add_argument('--sparse_dataset_name', type=str, default=None,
+                       help='Sparse dataset name for figure directory (e.g., halfcheetah_medium_expert_sparse_72.5). '
+                            'If provided, figures will be saved to figures/kde_ood_distance_tests/{sparse_dataset_name}/')
+    parser.add_argument('--distances', type=parse_number, nargs='+', default=[1, 2, 3, 4],
+                       help='List of OOD distance values to test (supports both int and float)')
     parser.add_argument('--base_path', type=str, default='/public/d4rl/ood_test',
                        help='Base directory containing OOD test datasets')
     parser.add_argument('--device', type=str, default='cuda:2',
@@ -439,7 +459,15 @@ def main():
         return
 
     # Create save directory with dataset name
-    save_dir = os.path.join(args.save_dir, args.dataset_name.replace('-', '_'))
+    # If sparse_dataset_name is provided, use that directly
+    if args.sparse_dataset_name:
+        dataset_name_for_dir = args.sparse_dataset_name.replace('-', '_')
+        print(f"Using sparse dataset name for directory: {dataset_name_for_dir}")
+    else:
+        # Fall back to default behavior
+        dataset_name_for_dir = args.dataset_name.replace('-', '_')
+
+    save_dir = os.path.join(args.save_dir, dataset_name_for_dir)
 
     # Plot results
     print("\n" + "="*80)
@@ -460,10 +488,27 @@ def main():
     print("-" * 80)
     for r in all_results:
         acc_str = f"{r['accuracy']:.4f}" if r['accuracy'] is not None else "N/A"
-        print(f"{r['distance']:<10.0f} {r['mean_log_likelihood']:<12.4f} "
+        print(f"{r['distance']:<10.1f} {r['mean_log_likelihood']:<12.4f} "
               f"{r['mean_id_log_likelihood']:<12.4f} "
               f"{r['mean_ood_log_likelihood']:<12.4f} {r['roc_auc']:<10.4f} {acc_str:<10}")
     print("-" * 80)
+
+    # Save results to JSON
+    json_results = []
+    for r in all_results:
+        json_results.append({
+            'distance': float(r['distance']),
+            'mean_log_likelihood': float(r['mean_log_likelihood']),
+            'id_log_likelihood': float(r['mean_id_log_likelihood']),
+            'ood_log_likelihood': float(r['mean_ood_log_likelihood']),
+            'roc_auc': float(r['roc_auc']),
+            'accuracy': float(r['accuracy']) if r['accuracy'] is not None else None
+        })
+
+    json_path = os.path.join(save_dir, 'results.json')
+    with open(json_path, 'w') as f:
+        json.dump(json_results, f, indent=2)
+    print(f"\nResults saved to JSON: {json_path}")
 
 
 if __name__ == "__main__":
