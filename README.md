@@ -41,7 +41,15 @@ For hyperparameter search, create a bash script like 'bash_scr/halfcheetah_mediu
 chmod +x /bash_scr/halfcheetah_medium_expert_v2_gormpo_kde_sparse3.sh 
 ./bash_scr/halfcheetah_medium_expert_v2_gormpo_kde_sparse3.sh
 ```
+OOD Tests
 
+```
+ python test_vae_ood_levels.py \
+    --model_path /public/gormpo/models/halfcheetah_medium_expert_sparse_3/vae \                                                                                                                
+    --dataset_name halfcheetah-medium-expert-v2 \
+    --sparse_dataset_name halfcheetah_medium_expert_sparse_72.5 \                                                                                                                                         
+    --distances 1 5 10 15 \
+    --device cuda
 ## Core Components
 
 ### 1. RealNVP Normalizing Flow (`realnvp.py`)
