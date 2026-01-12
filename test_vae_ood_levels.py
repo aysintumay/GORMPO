@@ -12,6 +12,7 @@ import seaborn as sns
 import argparse
 import os
 import sys
+import json
 from sklearn.metrics import roc_auc_score, accuracy_score, roc_curve
 
 # Add parent directory to path for imports
@@ -281,10 +282,13 @@ def plot_results(all_results, save_dir='figures/vae_ood_distance_tests', model_n
     fig.suptitle(f'{model_name} ROC Curves for Different OOD Distance Levels',
                  fontsize=16, fontweight='bold')
 
-    if n_distances > 1:
+    # Always convert to list for consistent indexing
+    if n_rows == 1 and n_cols == 1:
+        axes = [axes]
+    elif n_rows == 1 or n_cols == 1:
         axes = axes.flatten()
     else:
-        axes = [axes]
+        axes = axes.flatten()
 
     for idx, r in enumerate(all_results):
         ax = axes[idx]
@@ -316,10 +320,13 @@ def plot_results(all_results, save_dir='figures/vae_ood_distance_tests', model_n
     fig.suptitle(f'{model_name} Log-Likelihood Distributions for Different OOD Distance Levels',
                  fontsize=16, fontweight='bold')
 
-    if n_distances > 1:
+    # Always convert to list for consistent indexing
+    if n_rows == 1 and n_cols == 1:
+        axes = [axes]
+    elif n_rows == 1 or n_cols == 1:
         axes = axes.flatten()
     else:
-        axes = [axes]
+        axes = axes.flatten()
 
     for idx, r in enumerate(all_results):
         ax = axes[idx]
@@ -398,7 +405,10 @@ def main():
                        help='Path to saved VAE model (without extension)')
     parser.add_argument('--dataset_name', type=str, required=True,
                        help='Dataset name (e.g., halfcheetah-medium-v2, hopper-medium-v2)')
-    parser.add_argument('--distances', type=parse_number, nargs='+', default=[0.1, 0.3, 0.5, 0.7, 1],
+    parser.add_argument('--sparse_dataset_name', type=str, default=None,
+                       help='Sparse dataset name for figure directory (e.g., halfcheetah_medium_expert_sparse_72.5). '
+                            'If provided, figures will be saved to figures/vae_ood_distance_tests/{sparse_dataset_name}/')
+    parser.add_argument('--distances', type=parse_number, nargs='+', default=[1,2, 3, 4],
                        help='List of OOD distance values to test (supports both int and float)')
     parser.add_argument('--base_path', type=str, default='/public/d4rl/ood_test',
                        help='Base directory containing OOD test datasets')
@@ -472,7 +482,15 @@ def main():
         return
 
     # Create save directory with dataset name
-    save_dir = os.path.join(args.save_dir, args.dataset_name.replace('-', '_'))
+    # If sparse_dataset_name is provided, use that directly
+    if args.sparse_dataset_name:
+        dataset_name_for_dir = args.sparse_dataset_name.replace('-', '_')
+        print(f"Using sparse dataset name for directory: {dataset_name_for_dir}")
+    else:
+        # Fall back to default behavior
+        dataset_name_for_dir = args.dataset_name.replace('-', '_')
+
+    save_dir = os.path.join(args.save_dir, dataset_name_for_dir)
 
     # Plot results
     print("\n" + "="*80)
@@ -497,6 +515,23 @@ def main():
               f"{r['mean_id_log_likelihood']:<12.4f} "
               f"{r['mean_ood_log_likelihood']:<12.4f} {r['roc_auc']:<10.4f} {acc_str:<10}")
     print("-" * 80)
+
+    # Save results to JSON
+    json_results = []
+    for r in all_results:
+        json_results.append({
+            'distance': float(r['distance']),
+            'mean_log_likelihood': float(r['mean_log_likelihood']),
+            'id_log_likelihood': float(r['mean_id_log_likelihood']),
+            'ood_log_likelihood': float(r['mean_ood_log_likelihood']),
+            'roc_auc': float(r['roc_auc']),
+            'accuracy': float(r['accuracy']) if r['accuracy'] is not None else None
+        })
+
+    json_path = os.path.join(save_dir, 'results.json')
+    with open(json_path, 'w') as f:
+        json.dump(json_results, f, indent=2)
+    print(f"\nResults saved to JSON: {json_path}")
 
 
 if __name__ == "__main__":

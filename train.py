@@ -73,6 +73,7 @@ class DiffusionDensityWrapper:
             model=self.model,
             scheduler=self.scheduler,
             x0=x,
+            num_inference_steps=50,
             device=device,
         )
 
@@ -187,7 +188,7 @@ def train(env, run, logger, seed, args):
         classifier = PercentileThresholdKDE(
         devid=args.devid
         )
-        classifier_dict = classifier.load_model(args.classifier_model_name)
+        classifier_dict = classifier.load_model(args.classifier_model_name, devid=args.devid)
     elif "neuralODE" in args.classifier_model_name:
         print("Loading Neural ODE based classifier... for task:", args.task)
         # Use the new NeuralODEOOD.load_model interface
@@ -296,9 +297,8 @@ def train(env, run, logger, seed, args):
         logger=logger,
         **config["mopo_params"]
     )
-    #load world model   
-    print(len([args.task, args.data_path]))
-    print(args.data_path)
+    #load world model
+
     dynamics_model.load_model([args.task, args.data_path]) 
 
    
@@ -319,6 +319,7 @@ def train(env, run, logger, seed, args):
     )
 
     # pretrain dynamics model on the whole dataset
+    # trainer.train_dynamics()
     # trainer.train_dynamics()
     # 
 

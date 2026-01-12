@@ -11,19 +11,19 @@ echo ""
 
 # Train HalfCheetah VAE
 echo ">>> Training VAE on HalfCheetah-Medium-Replay-v2..."
-python vae_module/vae.py --config configs/vae/halfcheetah_medium_replay.yaml --device cuda:4
+python vae_module/vae.py --config configs/vae/halfcheetah_medium_replay.yaml --device cuda:3
 echo "✓ HalfCheetah VAE training complete"
 echo ""
 
 # Train Hopper VAE
 echo ">>> Training VAE on Hopper-Medium-Replay-v2..."
-python vae_module/vae.py --config configs/vae/hopper_medium_replay.yaml --device cuda:4
+python vae_module/vae.py --config configs/vae/hopper_medium_replay.yaml --device cuda:3
 echo "✓ Hopper VAE training complete"
 echo ""
 
 # Train Walker2d VAE
 echo ">>> Training VAE on Walker2d-Medium-Replay-v2..."
-python vae_module/vae.py --config configs/vae/walker2d_medium_replay.yaml --device cuda:4
+python vae_module/vae.py --config configs/vae/walker2d_medium_replay.yaml --device cuda:3
 echo "✓ Walker2d VAE training complete"
 echo ""
 

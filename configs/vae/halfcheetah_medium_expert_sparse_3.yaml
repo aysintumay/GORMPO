@@ -1,0 +1,44 @@
+# VAE Configuration for HalfCheetah-Medium-Expert-v2 (Sparse Dataset)
+
+# Task and data
+task: halfcheetah-medium-expert-v2
+use_rl_data: true
+data_path: /public/d4rl/sparse_datasets/halfcheetah_medium_expert_sparse_72.5.pkl
+
+# Observation and action dimensions
+obs_dim: [17]  # HalfCheetah observation dimension
+action_dim: 6  # HalfCheetah action dimension
+
+# Model architecture
+input_dim: 23  # 17 (obs) + 6 (action) - automatically determined from data
+latent_dim: 10
+hidden_dims: [256, 128]
+
+# Training parameters
+epochs: 100
+batch_size: 256
+lr: 0.001
+beta: 1.0  # Weight for KL divergence term
+patience: 15
+
+# Data splits
+val_ratio: 0.2
+test_ratio: 0.2
+
+# Device
+device: cuda
+
+# Random seed
+seed: 42
+
+# Logging
+verbose: true
+
+# Model saving
+model_save_path: /public/gormpo/models/halfcheetah_medium_expert_sparse_3/vae
+
+# Figure saving
+fig_save_path: figures/halfcheetah_medium_expert_sparse_3/vae
+
+# Anomaly detection
+anomaly_fraction: 0.01  # Threshold percentile

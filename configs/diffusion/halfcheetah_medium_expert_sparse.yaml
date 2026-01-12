@@ -10,3 +10,4 @@ seed: 1
 # data_path: "/public/sparse_d4rl/hopper-medium-v2.pkl"
 epoch: 1000
 penalty_type: 'tanh'
+rollout-length: 5

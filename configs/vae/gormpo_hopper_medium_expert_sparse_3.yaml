@@ -1,0 +1,14 @@
+# GORMPO Training Configuration for Hopper-Medium-Expert-Sparse with VAE
+# This config is used with mopo.py to train GORMPO using a pre-trained VAE density model
+
+task: hopper-medium-expert-v2
+algo-name: gormpo
+reward-penalty-coef: 0.05
+seed: 1
+data_path: /public/d4rl/sparse_datasets/hopper_medium_expert_sparse_78.pkl
+epoch: 1000
+rollout-length: 5
+penalty_type: tanh
+classifier_model_name: /public/gormpo/models/hopper_medium_expert_sparse_3/vae
+density_model: vae
+target_dim: 14  # 11 (obs) + 3 (action) for Hopper

@@ -17,4 +17,5 @@ reward-penalty-coef: 0.5
 seed: 1
 data_path: /public/d4rl/sparse_datasets/halfcheetah_medium_expert_sparse.pkl
 epoch: 1000
+rollout-length: 5
 penalty_type: 'tanh'

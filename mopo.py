@@ -27,6 +27,49 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
+def extract_dataset_variant(data_path):
+    """
+    Extract dataset variant identifier from data_path for model saving.
+
+    Examples:
+        '/path/to/halfcheetah_medium_expert_sparse_57.5.pkl' -> 'sparse_57.5'
+        '/path/to/halfcheetah_medium_expert_sparse_72.5.pkl' -> 'sparse_72.5'
+        '/path/to/halfcheetah_medium_expert_sparse.pkl' -> 'sparse'
+        '/path/to/halfcheetah_medium_expert.pkl' -> ''
+        None (D4RL default) -> ''
+
+    Args:
+        data_path: Path to dataset file or None
+
+    Returns:
+        Dataset variant string (e.g., 'sparse_57.5') or empty string for normal datasets
+    """
+    if data_path is None:
+        return ''
+
+    # Extract filename from path
+    filename = os.path.basename(data_path)
+    # Remove extension
+    name_without_ext = os.path.splitext(filename)[0]
+
+    # Look for 'sparse' keyword
+    if 'sparse' in name_without_ext.lower():
+        # Try to extract everything after the task name that includes 'sparse'
+        # Pattern: taskname_sparse or taskname_sparse_X or taskname_sparse_X.Y
+        parts = name_without_ext.split('_')
+
+        # Find where 'sparse' appears
+        try:
+            sparse_idx = [i for i, p in enumerate(parts) if 'sparse' in p.lower()][0]
+            # Join 'sparse' and everything after it
+            variant = '_'.join(parts[sparse_idx:])
+            return variant
+        except IndexError:
+            return 'sparse'
+
+    return ''
+
+
 
 def get_args():
     print("Running", __file__)
@@ -76,14 +119,15 @@ def get_args():
     parser.add_argument("--dynamics-model-dir", type=str, default=None)
     parser.add_argument("--penalty_type", type=str, default="linear", choices=["linear", "inverse", "exponential", "softplus"])
 
-    parser.add_argument("--epoch", type=int, default=1) 
-    parser.add_argument("--step-per-epoch", type=int, default=1000) 
+    parser.add_argument("--epoch", type=int, default=1)
+    parser.add_argument("--step-per-epoch", type=int, default=1000)
     parser.add_argument("--eval_episodes", type=int, default=100)
     parser.add_argument("--batch-size", type=int, default=256)
-    parser.add_argument("--terminal_counter", type=int, default=1) 
+    parser.add_argument("--terminal_counter", type=int, default=1)
     parser.add_argument("--logdir", type=str, default="log")
     parser.add_argument("--log-freq", type=int, default=1000)
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument("--results_output", type=str, default=None, help="Optional: Path to shared CSV file for accumulating results across multiple runs")
     
     parser.add_argument("--density_model", type=str, default="realnvp")
     parser.add_argument("--classifier_model_name", type=str, default="neuralode")
@@ -131,9 +175,14 @@ def main(args):
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
 
-    
+
         t0 = datetime.datetime.now().strftime("%m%d_%H%M%S")
-        log_file = f'seed_{seed}_{t0}_{args.task.replace("-", "_")}_{args.algo_name}'
+
+        # Extract dataset variant from data_path for model saving differentiation
+        dataset_variant = extract_dataset_variant(args.data_path)
+        variant_suffix = f'_{dataset_variant}' if dataset_variant else ''
+
+        log_file = f'seed_{seed}_{t0}_{args.task.replace("-", "_")}_{args.algo_name}{variant_suffix}'
         log_path = os.path.join(args.logdir, args.algo_name, args.density_model,log_file)
 
         model_path = os.path.join(args.model_path, args.task.lower(), args.density_model, log_file)
@@ -172,13 +221,32 @@ def main(args):
         results.append(eval_res)
         
 
-        
+
     # Save results to CSV
-    os.makedirs(os.path.join('results',args.task.lower(), args.density_model), exist_ok=True)
-    results_df = pd.DataFrame(results)
-    results_path = os.path.join('results',args.task.lower(), args.density_model, f"results_{t0}.csv")
-    results_df.to_csv(results_path, index=False)
-    print(f"Results saved to {results_path}")
+    if args.results_output:
+        # Use specified output path for shared results across multiple runs
+        results_path = args.results_output
+        os.makedirs(os.path.dirname(results_path), exist_ok=True)
+
+        # Append to existing file if it exists, otherwise create new
+        results_df = pd.DataFrame(results)
+        if os.path.exists(results_path):
+            # Read existing results and append new ones
+            existing_df = pd.read_csv(results_path)
+            combined_df = pd.concat([existing_df, results_df], ignore_index=True)
+            combined_df.to_csv(results_path, index=False)
+            print(f"Results appended to {results_path}")
+        else:
+            results_df.to_csv(results_path, index=False)
+            print(f"Results saved to {results_path}")
+    else:
+        # Default behavior: save with timestamp
+        os.makedirs(os.path.join('results',args.task.lower() + variant_suffix, args.density_model), exist_ok=True)
+        results_df = pd.DataFrame(results)
+        results_path = os.path.join('results',args.task.lower() + variant_suffix, args.density_model, f"results_{t0}.csv")
+        results_df.to_csv(results_path, index=False)
+        print(f"Results saved to {results_path}")
+
     wandb.finish()
 
 if __name__ == "__main__":

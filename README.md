@@ -2,197 +2,96 @@
 
 This directory contains all KDE-related components for the MOPO project, including density estimation models, enhanced MBPO-KDE algorithms, dataset utilities, and configuration files.
 
-## Directory Structure
+## Quick GORMPO training with trained density estimators
+
+KDE
 
 ```
-KDE/
-├── README.md                     # This file
-├── realnvp.py                   # RealNVP normalizing flow for density estimation
-├── mopo.py                      # Enhanced MOPO with KDE-based world models
-├── train.py                     # Training script for MBPO-KDE
-├── transition_model.py          # KDE-enhanced transition models
-├── test_dataset_loader.py       # Tests for dataset loading utilities
-├── example_usage.py             # Usage examples for dataset loading
-├── configs/                     # KDE-specific configuration files
-│   ├── mbpo_kde.yaml
-│   ├── mbpo_kde_acp.yaml
-│   ├── mbpo_kde_ws.yaml
-│   ├── mbpo_kde_ws_exp.yaml
-│   ├── mbpo_kde_ws_inverse.yaml
-│   └── mbpo_kde_ws_soft.yaml
-└── scripts/                     # Bash scripts for running KDE experiments
-    ├── run_mbpo_kde.sh
-    ├── run_mbpo_kde_shaped.sh
-    └── run_synthetic*_kde*.sh
+python mopo.py --config configs/kde/gormpo_halfcheetah_medium_expert_sparse.yaml --devid 0
 ```
 
-## Core Components
+VAE:
 
-### 1. RealNVP Normalizing Flow (`realnvp.py`)
-
-A complete implementation of the RealNVP normalizing flow model for density estimation:
-
-**Features:**
-- Invertible neural networks with coupling layers
-- Automatic threshold selection for anomaly detection
-- Comprehensive training with early stopping
-- Built-in evaluation metrics (ROC-AUC, accuracy)
-- Synthetic data generation for testing
-
-**Usage:**
-```python
-from KDE.realnvp import RealNVP
-import torch
-
-# Create model
-model = RealNVP(input_dim=10, num_layers=6, hidden_dims=[256, 256])
-
-# Train with automatic validation split
-history = model.fit(train_data, val_data, epochs=100)
-
-# Detect anomalies
-anomalies = model.predict_anomaly(test_data)
+```
+python mopo.py --config configs/vae/gormpo_halfcheetah_medium_expert_sparse.yaml --devid 0
 ```
 
-### 2. MBPO-KDE Training (`mopo.py`, `train.py`)
+RealNVP:
+
+```
+python mopo.py --config configs/realnvp/gormpo_halfcheetah_medium_expert_sparse.yaml --devid 0
+```
+
+Diffusion: 
+```
+python mopo.py --config configs/diffusion/halfcheetah_medium_expert_sparse.yaml --devid 0
+```
+
+NeuralODE
+```
+python mopo.py --config configs/neuralODE/halfcheetah_medium_expert_sparse.yaml --devid 0
+```
+
+Configs *must* include classifier_model_name, task, data_path (for sparse saved datasets), algo-name, reward-penalty-coef, penalty_type parameters.
+
+
+For hyperparameter search, create a bash script like 'bash_scr/halfcheetah_medium_expert_v2_gormpo_kde_sparse3.sh' by specifying the *config*. Then run as follows:
+
+```
+chmod +x /bash_scr/halfcheetah_medium_expert_v2_gormpo_kde_sparse3.sh 
+./bash_scr/halfcheetah_medium_expert_v2_gormpo_kde_sparse3.sh
+```
+## Multi-Seed Training
+
+Run training across multiple seeds using bash scripts in `bash_scr/mult_seed/`:
+
+```bash
+bash bash_scr/mult_seed/gormpo_kde_halfcheetah_medium_expert_sparse3.sh
+```
+
+Features:
+- Trains density estimator and GORMPO policy for each seed (42, 123, 456)
+- Saves all results to shared CSV file
+- Automatically computes normalized scores via `helpers/normalizer.py`
+
+## OOD Testing
+
+Evaluate density estimators on OOD datasets at different distance levels:
+
+```bash
+python test_kde_ood_levels.py \
+    --model_path /public/gormpo/models/halfcheetah_medium_expert_sparse_3/kde \
+    --dataset_name halfcheetah-medium-expert-v2 \
+    --sparse_dataset_name halfcheetah_medium_expert_sparse_72.5 \
+    --distances 1 2 3 4 \
+    --device cuda
+```
+
+**Outputs** (saved to `figures/{model}_ood_distance_tests/{dataset_name}/`):
+- `ood_distance_summary.png`: Log-likelihood, ROC AUC, and accuracy vs distance
+- `roc_curves.png`: ROC curves for each distance level
+- `log_likelihood_distributions.png`: ID vs OOD distributions
+- `results.json`: Numerical results for all metrics
+
+Available scripts: `test_kde_ood_levels.py`, `test_vae_ood_levels.py`, `test_realnvp_ood_levels.py`, `test_diffusion_ood_levels.py`, `test_neuralode_ood_levels.py`
+
+## Results Merging
+
+Combine OOD test results across density estimators using `notebooks/merge_results.ipynb`:
+- Reads `results.json` from multiple methods (VAE, KDE, RealNVP)
+- Generates comparison plots for each dataset
+- Saves merged plots to `figures/merged_results/{dataset_name}_comparison.png`
+
+Training (`mopo.py`, `train.py`)
 
 Enhanced model-based offline RL with KDE-based uncertainty estimation:
 
-**Key Improvements:**
-- KDE-based world model uncertainty quantification
-- Weighted sampling strategies for model rollouts
-- Advanced penalty mechanisms (linear, inverse, exponential, softplus)
-- Integration with Abiomed medical device environments
 
 **Configuration Options:**
 - `reward-penalty-coef`: Penalty coefficient for model uncertainty
 - `penalty_type`: Type of penalty function ("linear", "inverse", "exponential", "softplus")
 - `classifier_model_name`: Pre-trained KDE classifier for uncertainty estimation
-- `gamma1`, `gamma2`, `gamma3`: Environment-specific reward shaping parameters
 
-### 3. Dataset Loading Utilities
-
-Robust dataset loading with automatic validation split creation:
-
-**Test the utilities:**
-```bash
-cd KDE
-python test_dataset_loader.py    # Run comprehensive tests
-python example_usage.py          # See usage examples
-```
-
-**Features:**
-- Unified interface for pickle, npz, and environment datasets
-- Automatic train/validation splits when needed
-- Comprehensive error handling and validation
-- Support for Abiomed's pre-split datasets
-
-## Running Experiments
-
-### Quick Start
-
-1. **Basic MBPO-KDE training:**
-```bash
-python KDE/mopo.py --algo-name mbpo_kde --reward-penalty-coef 0.005 --epoch 100
-```
-
-2. **Using configuration files:**
-```bash
-python KDE/mopo.py --config KDE/configs/mbpo_kde_ws.yaml
-```
-
-3. **Running batch experiments:**
-```bash
-bash KDE/scripts/run_mbpo_kde.sh
-```
-
-### Configuration Files
-
-- `mbpo_kde.yaml` - Basic MBPO-KDE configuration
-- `mbpo_kde_acp.yaml` - With ACP (Action Conditional Penalty)
-- `mbpo_kde_ws.yaml` - With weighted sampling
-- `mbpo_kde_ws_exp.yaml` - Exponential penalty variant
-- `mbpo_kde_ws_inverse.yaml` - Inverse penalty variant
-- `mbpo_kde_ws_soft.yaml` - Softplus penalty variant
-
-### Key Parameters
-
-**Model Parameters:**
-- `n-ensembles`: Number of ensemble models (default: 7)
-- `n-elites`: Number of elite models (default: 5)
-- `rollout-length`: Length of model rollouts (default: 5)
-- `rollout-batch-size`: Batch size for rollouts (default: 10000)
-
-**KDE Parameters:**
-- `reward-penalty-coef`: Uncertainty penalty coefficient (0.0-1.0)
-- `penalty_type`: Penalty function type
-- `classifier_model_name`: Path to pre-trained KDE classifier
-
-**Environment Parameters:**
-- `gamma1`, `gamma2`, `gamma3`: Reward shaping coefficients
-- `noise_rate`, `noise_scale`: Environment noise parameters
-
-## Integration with Main Codebase
-
-The KDE module integrates with the main MOPO codebase through:
-
-1. **Common utilities** - Uses shared `common/util.py` for logging, device management
-2. **Model architectures** - Extends `models/` policy and transition models
-3. **Training infrastructure** - Built on shared `trainer.py` and `algo/` components
-4. **Environment support** - Compatible with existing environment wrappers
-
-## Testing and Validation
-
-### Dataset Loading Tests
-```bash
-cd KDE
-python test_dataset_loader.py
-```
-Tests cover:
-- Pickle and NPZ file loading
-- Environment dataset integration
-- Abiomed dataset handling
-- Validation split creation
-- Error handling and edge cases
-
-### Model Training Tests
-```bash
-cd KDE
-python realnvp.py  # Run built-in RealNVP tests
-```
-
-## Advanced Usage
-
-### Custom Density Models
-
-Extend the RealNVP implementation for specific use cases:
-
-```python
-# Custom coupling layer configuration
-model = RealNVP(
-    input_dim=state_action_dim,
-    num_layers=8,
-    hidden_dims=[512, 512, 256],
-    device='cuda'
-)
-
-# Train on combined state-action space
-combined_data = np.concatenate([observations, actions], axis=1)
-history = model.fit(train_data, val_data, epochs=200, lr=1e-4)
-
-# Use for uncertainty quantification in RL
-uncertainty_scores = -model.log_prob(new_data)
-```
-
-### Custom Penalty Functions
-
-Implement new penalty types in `transition_model.py`:
-
-```python
-def custom_penalty(uncertainty, coef):
-    """Custom uncertainty penalty function."""
-    return coef * torch.sigmoid(uncertainty - threshold)
-```
 
 ## Performance Notes
 
@@ -210,26 +109,3 @@ def custom_penalty(uncertainty, coef):
 3. **Convergence Issues**: Try adjusting `reward-penalty-coef` (start with 0.001-0.01)
 4. **Dataset Loading**: Verify file paths and format compatibility
 
-### Debug Mode
-
-Enable verbose logging:
-```bash
-python KDE/mopo.py --config KDE/configs/mbpo_kde.yaml --verbose
-```
-
-## Citation
-
-If you use this KDE implementation, please cite:
-
-- Dinh et al. (2017) "Density estimation using Real NVP"
-- Yu et al. (2020) "MOPO: Model-based Offline Policy Optimization"
-
-## Contributing
-
-When adding new KDE-related features:
-
-1. Place new models in the `KDE/` directory
-2. Add corresponding config files to `KDE/configs/`
-3. Update this README with usage examples
-4. Add tests to verify functionality
-5. Update import paths to work from the KDE directory

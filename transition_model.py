@@ -300,9 +300,24 @@ class TransitionModel:
             # Save the state_dict instead of the full model
             torch.save(network.state_dict(), save_path)
 
+        # Save normalizers
+        normalizer_path = os.path.join(model_save_dir, "normalizers.pt")
+        torch.save({
+            'obs_normalizer': {
+                'mean': self.obs_normalizer.mean,
+                'var': self.obs_normalizer.var,
+                'tot_count': self.obs_normalizer.tot_count
+            },
+            'act_normalizer': {
+                'mean': self.act_normalizer.mean,
+                'var': self.act_normalizer.var,
+                'tot_count': self.act_normalizer.tot_count
+            }
+        }, normalizer_path)
+
 
     def load_model(self, info):
-        # util.logger.log_path = '/home/ubuntu/mopo/log/Abiomed-v0/mopo/seed_5_0331_161040-Abiomed_v0_mopo'
+         # util.logger.log_path = '/home/ubuntu/mopo/log/Abiomed-v0/mopo/seed_5_0331_161040-Abiomed_v0_mopo'
         # util.logger.log_path = '/home/ubuntu/mopo/log/halfcheetah-medium-replay-v0/mopo/seed_5_0403_215901-halfcheetah_medium_replay_v0_mopo'
         # model_save_dir = os.path.join(util.logger_model.log_path, info)
         if  info[0].lower()=="hopper-medium-v2":
@@ -317,25 +332,43 @@ class TransitionModel:
             # model_save_dir = "/public/gormpo/models/rl/walker2d/realnvp/seed_1_1110_000607_Walker2d_gormpo/dynamics_model"
             model_save_dir = "/public/gormpo/models/rl/walker2d-medium-v2/realnvp/seed_1_1223_133416_walker2d_medium_v2_gormpo/dynamics_model"
             print('loaded walker2d model from ', model_save_dir)
+            
         elif  info[0].lower()=="halfcheetah-medium-expert-v2":
             if info[1] is None:
                 model_save_dir = '/public/gormpo/models/rl/halfcheetah-medium-expert-v2/kde/seed_1_1226_083730_halfcheetah_medium_expert_v2_mbpo/dynamics_model'
                 print('loaded halfcheetah model from ', model_save_dir)
             elif "halfcheetah_medium_expert_sparse_57.5.pkl" in info[1]:
-                model_save_dir = "/public/gormpo/models/rl/halfcheetah-medium-expert-v2/realnvp/seed_1_1226_150439_halfcheetah_medium_expert_v2_gormpo/dynamics_model"
+                # model_save_dir = "/public/gormpo/models/rl/halfcheetah-medium-expert-v2/realnvp/seed_1_1226_150439_halfcheetah_medium_expert_v2_gormpo/dynamics_model"
+                model_save_dir = "/public/gormpo/models/rl/halfcheetah-medium-expert-v2/kde/seed_1_0107_232744_halfcheetah_medium_expert_v2_mbpo/dynamics_model"
                 print('loaded sparse 2 halfcheetah model from ', model_save_dir)
 
             elif "halfcheetah_medium_expert_sparse.pkl" in info[1]:
-                model_save_dir = "/public/gormpo/models/rl/halfcheetah-medium-expert-v2/diffusion/seed_1_1228_214015_halfcheetah_medium_expert_v2_gormpo/dynamics_model"
+                # model_save_dir = "/public/gormpo/models/rl/halfcheetah-medium-expert-v2/diffusion/seed_1_1228_214015_halfcheetah_medium_expert_v2_gormpo/dynamics_model"
+                model_save_dir = "/public/gormpo/models/rl/halfcheetah-medium-expert-v2/kde/seed_1_0108_120946_halfcheetah_medium_expert_v2_mbpo/dynamics_model"
                 print('loaded sparse halfcheetah model from ', model_save_dir)
+            elif "halfcheetah_medium_expert_sparse_72.5.pkl" in info[1]:
+                model_save_dir = "/public/gormpo/models/rl/halfcheetah-medium-expert-v2/kde/seed_1_0109_230855_halfcheetah_medium_expert_v2_mbpo_sparse_72.5/dynamics_model"
+                print('loaded sparse 3 halfcheetah model from ', model_save_dir)
            
         elif  info[0].lower()=="hopper-medium-expert-v2":
-            model_save_dir = '/public/gormpo/models/rl/hopper-medium-expert-v2/realnvp/seed_1_1226_161304_hopper_medium_expert_v2_gormpo/dynamics_model'
-            print('loaded hopper model from ', model_save_dir)
-        elif  info[0].lower()=="walker2d-medium-expert-v2":
-        
-            model_save_dir = '/public/gormpo/models/rl/walker2d-medium-expert-v2/kde/seed_1_1226_151328_walker2d_medium_expert_v2_mbpo/dynamics_model'
-            print('loaded walker2d model from ', model_save_dir)
+            
+            if info[1] is None:
+                model_save_dir = '/public/gormpo/models/rl/hopper-medium-expert-v2/realnvp/seed_1_1226_161304_hopper_medium_expert_v2_gormpo/dynamics_model'
+                print('loaded hopper model from ', model_save_dir)
+
+            elif "hopper_medium_expert_sparse_78.pkl" in info[1]:
+                model_save_dir = "/public/gormpo/models/rl/hopper-medium-expert-v2/kde/seed_1_0110_053717_hopper_medium_expert_v2_mbpo_sparse_78/dynamics_model"
+                print('loaded hopper sparse 3 model from ', model_save_dir)
+
+        elif  info[0].lower()=="walker2d-medium-expert-v2":        
+
+            if info[1] is None:
+                model_save_dir = '/public/gormpo/models/rl/walker2d-medium-expert-v2/kde/seed_1_1226_151328_walker2d_medium_expert_v2_mbpo/dynamics_model'
+                print('loaded walker2d model from ', model_save_dir)
+
+            elif "walker2d_medium_expert_sparse_73.pkl" in info[1]:
+                model_save_dir = '/public/gormpo/models/rl/walker2d-medium-expert-v2/kde/seed_1_0110_012418_walker2d_medium_expert_v2_gormpo_sparse_73/dynamics_model'
+                print('loaded walker2d sparse 3 model from ', model_save_dir)
 
         elif  info[0].lower()=="halfcheetah-medium-replay-v2":
             # model_save_dir = '/public/gormpo/models/rl/halfcheetah/realnvp/seed_1_1110_000453_HalfCheetah_gormpo/dynamics_model'
@@ -349,9 +382,28 @@ class TransitionModel:
         elif  info[0].lower()=="walker2d-medium-replay-v2":
             model_save_dir = "/public/gormpo/models/rl/walker2d-medium-replay-v2/kde/seed_1_1229_115824_walker2d_medium_replay_v2_gormpo/dynamics_model"
             print('loaded walker2d model from ', model_save_dir)
-           
-
         for network_name, network in self.networks.items():
             load_path = os.path.join(model_save_dir, network_name + ".pt")
             state_dict = torch.load(load_path, map_location='cuda')
-            return network.load_state_dict(state_dict)
+            network.load_state_dict(state_dict)
+
+        # Load normalizers
+        normalizer_path = os.path.join(model_save_dir, "normalizers.pt")
+        if os.path.exists(normalizer_path):
+            normalizer_data = torch.load(normalizer_path, map_location='cuda')
+
+            # Load obs_normalizer
+            self.obs_normalizer.mean = normalizer_data['obs_normalizer']['mean']
+            self.obs_normalizer.var = normalizer_data['obs_normalizer']['var']
+            self.obs_normalizer.tot_count = normalizer_data['obs_normalizer']['tot_count']
+
+            # Load act_normalizer
+            self.act_normalizer.mean = normalizer_data['act_normalizer']['mean']
+            self.act_normalizer.var = normalizer_data['act_normalizer']['var']
+            self.act_normalizer.tot_count = normalizer_data['act_normalizer']['tot_count']
+
+            print(f"Loaded normalizers from {normalizer_path}")
+        else:
+            print(f"Warning: Normalizer file not found at {normalizer_path}. Normalizers not loaded.")
+
+        return None

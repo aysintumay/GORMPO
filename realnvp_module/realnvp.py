@@ -530,7 +530,7 @@ class RealNVP(nn.Module):
         print(f"Model loaded from: {save_path}_model.pth")
         print(f"Metadata loaded from: {save_path}_meta_data.pkl")
         print(f"Threshold: {model.threshold}")
-        model_dict = {'model': model, 'thr': model.threshold, 'mean': metadata["mean"], 'std': metadata["std"]}
+        model_dict = {'model': model, 'thr': model.threshold}
         return model_dict
 
 
