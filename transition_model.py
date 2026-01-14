@@ -347,7 +347,7 @@ class TransitionModel:
                 model_save_dir = "/public/gormpo/models/rl/halfcheetah-medium-expert-v2/kde/seed_1_0108_120946_halfcheetah_medium_expert_v2_mbpo/dynamics_model"
                 print('loaded sparse halfcheetah model from ', model_save_dir)
             elif "halfcheetah_medium_expert_sparse_72.5.pkl" in info[1]:
-                model_save_dir = "/public/gormpo/models/rl/halfcheetah-medium-expert-v2/kde/seed_1_0109_230855_halfcheetah_medium_expert_v2_mbpo_sparse_72.5/dynamics_model"
+                model_save_dir = "/public/gormpo/models/rl/halfcheetah-medium-expert-v2/kde/seed_42_0114_001448_halfcheetah_medium_expert_v2_gormpo_sparse_72.5/dynamics_model"
                 print('loaded sparse 3 halfcheetah model from ', model_save_dir)
            
         elif  info[0].lower()=="hopper-medium-expert-v2":

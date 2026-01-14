@@ -187,7 +187,6 @@ def train(env, run, logger, seed, args):
         ).to(util.device)
         classifier_dict = classifier.load_model(args.classifier_model_name)
         print("vae laoded")
-        print("vae laoded")
     elif "realnvp" in args.classifier_model_name:
         classifier = RealNVP(
         device=util.device
@@ -197,71 +196,6 @@ def train(env, run, logger, seed, args):
         classifier = PercentileThresholdKDE(
         devid=args.devid
         )
-        classifier_dict = classifier.load_model(args.classifier_model_name, devid=args.devid)
-    elif "neuralODE" in args.classifier_model_name:
-        print("Loading Neural ODE based classifier... for task:", args.task)
-        # Use the new NeuralODEOOD.load_model interface
-        device = f"cuda:{args.devid}" if torch.cuda.is_available() else "cpu"
-
-        # Load model using NeuralODEOOD wrapper
-        classifier_dict = NeuralODEOOD.load_model(
-            save_path=args.classifier_model_name.replace('_model.pt', ''),
-            target_dim=args.target_dim,
-            hidden_dims=(512, 512),
-            activation="silu",
-            time_dependent=True,
-            solver="dopri5",
-            t0=0.0,
-            t1=1.0,
-            rtol=1e-5,
-            atol=1e-5,
-            device=device
-        )
-        # classifier_dict now contains: {'model': ood_model, 'threshold': ..., 'mean': ..., 'std': ...}
-        # Rename 'threshold' to 'thr' for compatibility with transition_model
-        classifier_dict['thr'] = classifier_dict['threshold']
-    elif "diffusion" in args.classifier_model_name:
-        print("Loading Diffusion based classifier... for task:", args.task)
-        # Load model using build_model_from_ckpt from monte_carlo_sampling_unconditional
-        device = f"cuda:{args.devid}" if torch.cuda.is_available() else "cpu"
-        ckpt_path = args.classifier_model_name
-        sched_dir = f"/public/gormpo/models/{args.task.lower().split('_')[0].split('-')[0]}/diffusion/scheduler/scheduler_config.json"
-
-        # Build model
-        model, cfg = build_model_from_ckpt(ckpt_path, device)
-
-        # Get target dimension
-        ckpt = torch.load(ckpt_path, map_location=device)
-        target_dim = ckpt.get("target_dim")
-
-        # Load scheduler
-        try:
-            scheduler = DDIMScheduler.from_pretrained(sched_dir)
-        except Exception:
-            try:
-                scheduler = DDPMScheduler.from_pretrained(sched_dir)
-            except Exception as e:
-                print(f"Warning: Could not load scheduler: {e}")
-                scheduler = DDIMScheduler(
-                    num_train_timesteps=1000,
-                    beta_schedule="linear",
-                    prediction_type="epsilon",
-                )
-
-        # Wrap in our interface
-        diffusion_wrapper = DiffusionDensityWrapper(model, scheduler, target_dim, device)
-
-        # Load threshold from metrics if available
-        thr_path = f"diffusion/monte_carlo_results/{args.task.lower().split('_')[0].split('-')[0]}_unconditional_ddpm/elbo_metrics.json"
-        if os.path.exists(thr_path):
-            with open(thr_path, 'r') as f:
-                metrics = json.load(f)
-            thr = metrics.get("percentile_1.0_logp", 0.0)
-        else:
-            print(f"Warning: Threshold file not found at {thr_path}, using default threshold 0.0")
-            thr = 0.0
-
-        classifier_dict = {'model': diffusion_wrapper, 'thr': thr}
         classifier_dict = classifier.load_model(args.classifier_model_name, devid=args.devid)
     elif "neuralODE" in args.classifier_model_name:
         print("Loading Neural ODE based classifier... for task:", args.task)

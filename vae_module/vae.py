@@ -173,12 +173,6 @@ class VAE(nn.Module):
         model_device = next(self.parameters()).device
         x = x.to(model_device)
 
-        x = torch.FloatTensor(x)
-
-        # Move to model's device
-        model_device = next(self.parameters()).device
-        x = x.to(model_device)
-
         self.eval()
         with torch.no_grad():
             recon, mu, logvar = self.forward(x)
@@ -791,20 +785,9 @@ if __name__ == "__main__":
         patience=config.get('patience', 15),
         verbose=config.get('verbose', True)
     )
-    history = model.fit(
-        train_data=train_data,
-        val_data=val_data,
-        test_data=test_data,
-        epochs=config.get('epochs', 100),
-        batch_size=config.get('batch_size', 128),
-        lr=config.get('lr', 1e-3),
-        beta=config.get('beta', 1.0),
-        patience=config.get('patience', 15),
-        verbose=config.get('verbose', True)
-    )
+    
 
     # Plot training curves
-    plot_training_curves(history, save_path=f"figures/{args.task}/vae_training.png")
     plot_training_curves(history, save_path=f"figures/{args.task}/vae_training.png")
 
     # Save model if requested
