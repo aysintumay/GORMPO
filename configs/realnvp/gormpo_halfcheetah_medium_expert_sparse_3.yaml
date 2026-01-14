@@ -3,7 +3,7 @@
 
 task: halfcheetah-medium-expert-v2
 algo-name: gormpo
-reward-penalty-coef: 0.1
+reward-penalty-coef: 0.8
 seed: 1
 data_path: /public/d4rl/sparse_datasets/halfcheetah_medium_expert_sparse_72.5.pkl
 epoch: 1000

@@ -646,6 +646,7 @@ def parse_args():
                         help='Path to save or load model')
     parser.add_argument('--fig_save_path', type=str, default=None,
                         help='Path to save figures')
+    parser.add_argument('--seed', type=int, default=42,)
     parser.set_defaults(**config)
     args = parser.parse_args(remaining_argv)
     args.config = config
@@ -680,8 +681,8 @@ if __name__ == "__main__":
 
     # Set random seed for reproducibility
     if 'seed' in config:
-        torch.manual_seed(config['seed'])
-        np.random.seed(config['seed'])
+        torch.manual_seed(args.seed)
+        np.random.seed(args.seed)
 
     # Determine device
     cli_device = args.device
@@ -766,7 +767,7 @@ if __name__ == "__main__":
 
     # Save model if requested
     if config.get('model_save_path', False):
-        save_path = config.get('model_save_path', 'saved_models/vae')
+        save_path = args.model_save_path 
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
         model.save_model(save_path, train_data)
         print(f"Model saved to: {save_path}_model.pth")
@@ -775,16 +776,16 @@ if __name__ == "__main__":
     # print(dict_model['mean'])
     # Evaluate on test data
 
-    plot_likelihood_distributions(
-                        model,
-                        train_data.to(device),
-                        val_data.to(device),
-                        ood_data=test_data.to(device),
-                        thr = model.threshold,
-                        title="Likelihood Distribution",
-                        savepath=args.fig_save_path,
-                        bins=50
-                    )
+    # plot_likelihood_distributions(
+    #                     model,
+    #                     train_data.to(device),
+    #                     val_data.to(device),
+    #                     ood_data=test_data.to(device),
+    #                     thr = model.threshold,
+    #                     title="Likelihood Distribution",
+    #                     savepath=args.fig_save_path,
+    #                     bins=50
+    #                 )
     print("\nEvaluating VAE on test set...")
     test_scores = model.score_samples(test_data.to(device))
     print(f"Test scores - Mean: {test_scores.mean():.4f}, Std: {test_scores.std():.4f}")

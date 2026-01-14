@@ -11,7 +11,7 @@ echo ""
 seeds=(42 123 456)
 
 # Shared results file for all seeds
-RESULTS_FILE="results/walker2d-medium-expert-v2_sparse_72.5/kde/gormpo_kde_multiseed_results.csv"
+RESULTS_FILE="results/walker2d-medium-expert-v2_sparse_78/kde/gormpo_kde_multiseed_results.csv"
 
 # Loop through each seed
 for seed in "${seeds[@]}"; do
@@ -24,8 +24,8 @@ for seed in "${seeds[@]}"; do
     python kde_module/kde.py \
         --config configs/kde/walker2d_medium_expert_sparse_3.yaml \
         --seed $seed \
-        --model_save_path /public/gormpo/models/walker2d_medium_expert_sparse_3/kde_$seed \
-        --devid 0
+        --save_path /public/gormpo/models/walker2d_medium_expert_sparse_3/kde_$seed \
+        --devid 3
     echo "✓ KDE training complete for seed $seed"
     echo ""
 
@@ -36,7 +36,7 @@ for seed in "${seeds[@]}"; do
         --seed $seed \
         --classifier_model_name /public/gormpo/models/walker2d_medium_expert_sparse_3/kde_$seed \
         --epoch 1000 \
-        --devid 0 \
+        --devid 3 \
         --results_output $RESULTS_FILE
     echo "✓ GORMPO-KDE training complete for seed $seed"
     echo ""

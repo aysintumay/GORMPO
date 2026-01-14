@@ -73,7 +73,7 @@ class DiffusionDensityWrapper:
             model=self.model,
             scheduler=self.scheduler,
             x0=x,
-            num_inference_steps=50,
+            num_inference_steps=100,
             device=device,
         )
 
@@ -299,7 +299,7 @@ def train(env, run, logger, seed, args):
     )
     #load world model
 
-    dynamics_model.load_model([args.task, args.data_path]) 
+    # dynamics_model.load_model([args.task, args.data_path]) 
 
    
     # create trainer
@@ -319,8 +319,7 @@ def train(env, run, logger, seed, args):
     )
 
     # pretrain dynamics model on the whole dataset
-    # trainer.train_dynamics()
-    # trainer.train_dynamics()
+    trainer.train_dynamics()
     # 
 
     # policy_state_dict = torch.load(os.path.join(util.logger_model.log_path, f"policy_{args.task}.pth"))

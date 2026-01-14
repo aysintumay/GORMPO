@@ -25,7 +25,7 @@ for seed in "${seeds[@]}"; do
         --reward-penalty-coef 0.0 \
         --seed $seed \
         --epoch 1000 \
-        --devid 0 \
+        --devid 7 \
         --results_output $RESULTS_FILE
     echo "✓ MBPO training complete for seed $seed"
     echo ""
