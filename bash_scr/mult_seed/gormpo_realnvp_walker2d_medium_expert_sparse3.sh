@@ -11,7 +11,7 @@ echo ""
 seeds=(42 123 456)
 
 # Shared results file for all seeds
-RESULTS_FILE="results/walker2d-medium-expert-v2_sparse_72.5/realnvp/gormpo_realnvp_multiseed_results.csv"
+RESULTS_FILE="results/walker2d-medium-expert-v2_sparse_78/realnvp/gormpo_realnvp_multiseed_results.csv"
 
 # Loop through each seed
 for seed in "${seeds[@]}"; do
@@ -25,7 +25,7 @@ for seed in "${seeds[@]}"; do
         --config configs/realnvp/walker2d_medium_expert_sparse_3.yaml \
         --seed $seed \
         --model_save_path /public/gormpo/models/walker2d_medium_expert_sparse_3/realnvp_$seed \
-        --device cuda:0
+        --device cuda:5
     echo "✓ RealNVP training complete for seed $seed"
     echo ""
 
@@ -36,7 +36,7 @@ for seed in "${seeds[@]}"; do
         --seed $seed \
         --classifier_model_name /public/gormpo/models/walker2d_medium_expert_sparse_3/realnvp_$seed \
         --epoch 1000 \
-        --devid 0 \
+        --devid 5 \
         --results_output $RESULTS_FILE
     echo "✓ GORMPO-RealNVP training complete for seed $seed"
     echo ""

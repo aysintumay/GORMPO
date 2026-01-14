@@ -694,6 +694,8 @@ def parse_args():
                         help='Number of training epochs. Overrides config file.')
     parser.add_argument('--verbose', action='store_true',
                         help='Enable verbose output. Overrides config file.')
+    parser.add_argument('--seed', type=int, default=None,
+                        help='Random seed for reproducibility. Overrides config file.')
 
     # RL dataset specific arguments
     parser.add_argument('--data_path', type=str, default=None,
@@ -704,6 +706,8 @@ def parse_args():
                         help='Observation shape (default: [17] for HalfCheetah)')
     parser.add_argument('--action_dim', type=int, default=3,
                         help='Action dimension (default: 6 for HalfCheetah)')
+    parser.add_argument('--model_save_path', type=str, default=None,
+                        help='Path to save or load model')
     parser.add_argument('--fig_save_path', type=str, default='figures/',)
     parser.set_defaults(**config)
 
@@ -1314,7 +1318,9 @@ if __name__ == "__main__":
     args.obs_shape = tuple(args.obs_dim)
     args.action_dim = args.action_dim
 
-    # Set random seed for reproducibility
+    # Set random seed for reproducibility: CLI overrides config
+    if args.seed is not None:
+        config['seed'] = args.seed
     if 'seed' in config:
         torch.manual_seed(config['seed'])
         np.random.seed(config['seed'])
@@ -1412,39 +1418,45 @@ if __name__ == "__main__":
         patience=config.get('patience', 15),
         verbose=config.get('verbose', True)
     )
-    # Save model if requested
-    if config.get('model_save_path', False):
+    # Save model if requested - use command-line arg if provided, otherwise use config
+    save_path = None
+    if hasattr(args, 'model_save_path') and args.model_save_path is not None:
+        # Command line argument was explicitly provided
+        save_path = args.model_save_path
+    elif config.get('model_save_path', False):
+        # Use config file value
         save_path = config.get('model_save_path', 'saved_models/realnvp')
+
+    if save_path:
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
         model.save_model(save_path)
         print(f"Model saved to: {save_path}_model.pth")
-    #load pretrained model
-    model_dict = RealNVP.load_model(save_path=args.model_save_path)
-    model = model_dict['model']
-    model.to(device)
-
-    print(args.device)
-    model.threshold = model_dict['thr']
-    print(model.device)
+    # #load pretrained model (commented out - appears to be test/debug code)
+    # model_dict = RealNVP.load_model(save_path=args.model_save_path)
+    # model = model_dict['model']
+    # model.to(device)
+    # print(args.device)
+    # model.threshold = model_dict['thr']
+    # print(model.device)
     # Evaluate anomaly detection
-    print("\nEvaluating anomaly detection performance...")
+    # print("\nEvaluating anomaly detection performance...")
     # results = model.evaluate_anomaly_detection(
     #     normal_data=test_normal.to(model.device),
     #     anomaly_data=anomaly_data.to(model.device),
     #     plot=config.get('plot_results', True)
     # )
-    print(type(train_data))
-    train_data = train_data.to(model.device)
-    val_data = val_data.to(model.device)
-    test_data = test_data.to(model.device)
-    print(train_data.device)
-    print(model.device)
+    # print(type(train_data))
+    # train_data = train_data.to(model.device)
+    # val_data = val_data.to(model.device)
+    # test_data = test_data.to(model.device)
+    # print(train_data.device)
+    # print(model.device)
 
-    predictions_tr = model.predict(train_data)
-    scores_tr = model.score_samples(train_data)
-    print('TRAINING SCORE', scores_tr.mean().item())
-    scores_test_in_dist = model.score_samples(test_data)
-    anomaly_test_res  = model.score_samples(anomaly_data.to(model.device))
+    # predictions_tr = model.predict(train_data)
+    # scores_tr = model.score_samples(train_data)
+    # print('TRAINING SCORE', scores_tr.mean().item())
+    # scores_test_in_dist = model.score_samples(test_data)
+    # anomaly_test_res  = model.score_samples(anomaly_data.to(model.device))
 
     # small_train = train_data[predictions_tr == 1][: int(0.1 * len(train_data))].cpu().numpy()
     # noisy_train = small_train + np.random.normal(0, 0.1, small_train.shape)
@@ -1465,18 +1477,18 @@ if __name__ == "__main__":
 
   
     # Plot validation vs test ID distribution
-    print("\n" + "="*80)
-    print("Creating Validation vs Test ID Distribution Plot...")
-    print("="*80 + "\n")
-    plot_val_test_id_distribution(
-        model=model,
-        val_data=val_data,
-        test_id_data=test_data,
-        thr=model.threshold,
-        title="Validation vs Test ID Log-Likelihood Distribution",
-        savepath=f"figures/{args.task}/val_test_id_distribution.png",
-        bins=50
-    )
+    # print("\n" + "="*80)
+    # print("Creating Validation vs Test ID Distribution Plot...")
+    # print("="*80 + "\n")
+    # plot_val_test_id_distribution(
+    #     model=model,
+    #     val_data=val_data,
+    #     test_id_data=test_data,
+    #     thr=model.threshold,
+    #     title="Validation vs Test ID Log-Likelihood Distribution",
+    #     savepath=f"figures/{args.task}/val_test_id_distribution.png",
+    #     bins=50
+    # )
 
     # Generate comprehensive plots
     # print("\n" + "="*80)

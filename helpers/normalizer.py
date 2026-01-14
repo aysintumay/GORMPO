@@ -44,8 +44,8 @@ def compute_normalized_score(csv_path, env_name):
     with open(csv_path, 'r') as f:
         reader = csv.DictReader(f)
         returns = [float(row['mean_return']) for row in reader]
-
-    normalized_mean_scores = [d4rl.get_normalized_score(np.array(r), env_name) * 100 for r in returns]
+    env_name_norm = env_name.split('-')[0]
+    normalized_mean_scores = [d4rl.get_normalized_score(env_name, np.array(r) ) * 100 for r in returns]
     mean_score = np.mean(normalized_mean_scores)
     std_score = np.std(normalized_mean_scores)
 

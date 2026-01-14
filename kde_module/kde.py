@@ -865,12 +865,20 @@ def main():
     #                     savepath=args.fig_save_path,
     #                     bins=50
     #                 )
-    
-    if config.get('model_save_path', False):
+
+    # Use command-line save_path if provided, otherwise fall back to config model_save_path
+    save_path = None
+    if hasattr(args, 'save_path') and args.save_path != '/abiomed/models/kde':
+        # Command line argument was explicitly provided (not default)
+        save_path = args.save_path
+    elif config.get('model_save_path', False):
+        # Use config file value
         save_path = config.get('model_save_path', 'saved_models/vae')
+
+    if save_path:
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
         model.save_model(save_path)
-        print(f"Model saved to: {save_path}_model.pth")
+        print(f"Model saved to: {save_path}.faiss and {save_path}_metadata.pkl")
 
 
     # Print threshold statistics

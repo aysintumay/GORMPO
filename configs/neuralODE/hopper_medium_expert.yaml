@@ -15,6 +15,6 @@ reward-penalty-coef: 0.5
 seed: 1
 # data_path: "/public/sparse_d4rl/hopper-medium-v2.pkl"
 epoch: 1000
-rollout-length: 5
+rollout-length: 3
 penalty_type: 'tanh'
 rollout_batch_size: 100

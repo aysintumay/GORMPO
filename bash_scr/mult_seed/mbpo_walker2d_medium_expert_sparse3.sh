@@ -11,7 +11,7 @@ echo ""
 seeds=(42 123 456)
 
 # Shared results file for all seeds
-RESULTS_FILE="results/walker2d-medium-expert-v2_sparse_72.5/kde/mbpo_multiseed_results.csv"
+RESULTS_FILE="results/walker2d-medium-expert-v2_sparse_78/kde/mbpo_multiseed_results.csv"
 
 # Loop through each seed
 for seed in "${seeds[@]}"; do
@@ -25,7 +25,7 @@ for seed in "${seeds[@]}"; do
         --reward-penalty-coef 0.0 \
         --seed $seed \
         --epoch 1000 \
-        --devid 0 \
+        --devid 6 \
         --results_output $RESULTS_FILE
     echo "✓ MBPO training complete for seed $seed"
     echo ""

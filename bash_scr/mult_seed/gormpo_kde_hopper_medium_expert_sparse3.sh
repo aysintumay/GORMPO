@@ -11,7 +11,7 @@ echo ""
 seeds=(42 123 456)
 
 # Shared results file for all seeds
-RESULTS_FILE="results/hopper-medium-expert-v2_sparse_72.5/kde/gormpo_kde_multiseed_results.csv"
+RESULTS_FILE="results/hopper-medium-expert-v2_sparse_73/kde/gormpo_kde_multiseed_results.csv"
 
 # Loop through each seed
 for seed in "${seeds[@]}"; do
@@ -24,7 +24,7 @@ for seed in "${seeds[@]}"; do
     python kde_module/kde.py \
         --config configs/kde/hopper_medium_expert_sparse_3.yaml \
         --seed $seed \
-        --model_save_path /public/gormpo/models/hopper_medium_expert_sparse_3/kde_$seed \
+        --save_path /public/gormpo/models/hopper_medium_expert_sparse_3/kde_$seed \
         --devid 0
     echo "✓ KDE training complete for seed $seed"
     echo ""

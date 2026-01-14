@@ -11,7 +11,7 @@ echo ""
 seeds=(42 123 456)
 
 # Shared results file for all seeds
-RESULTS_FILE="results/hopper-medium-expert-v2_sparse_72.5/kde/mbpo_multiseed_results.csv"
+RESULTS_FILE="results/hopper-medium-expert-v2_sparse_73/kde/mbpo_multiseed_results.csv"
 
 # Loop through each seed
 for seed in "${seeds[@]}"; do

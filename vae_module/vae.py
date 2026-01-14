@@ -17,6 +17,7 @@ from common.buffer import ReplayBuffer
 from common.util import load_dataset_with_validation_split, create_synthetic_data
 from helpers.plotter import plot_training_curves
 from helpers.plotter import plot_likelihood_distributions
+from helpers.plotter import plot_likelihood_distributions
 
 
 class Encoder(nn.Module):
@@ -86,6 +87,7 @@ class VAE(nn.Module):
 
         self.input_dim = input_dim
         self.latent_dim = latent_dim
+        self.hidden_dims = hidden_dims
         self.hidden_dims = hidden_dims
         self.device = device
 
@@ -166,6 +168,12 @@ class VAE(nn.Module):
         """
         if isinstance(x, np.ndarray):
             x = torch.FloatTensor(x)
+
+        # Move to model's device
+        model_device = next(self.parameters()).device
+        x = x.to(model_device)
+
+        x = torch.FloatTensor(x)
 
         # Move to model's device
         model_device = next(self.parameters()).device
@@ -345,6 +353,7 @@ class VAE(nn.Module):
 
         # Set threshold as percentile of validation scores
         self.threshold = np.quantile(scores, anomaly_fraction)
+        self.threshold = np.quantile(scores, anomaly_fraction)
 
         print(f'Threshold set to {self.threshold:.4f} '
               f'(marking {anomaly_fraction*100:.1f}% of validation data as anomalies)')
@@ -477,8 +486,25 @@ class VAE(nn.Module):
             train_data = train_data.to(model_device)
 
             train_scores = self.score_samples(train_data)
+            # Ensure train_data is a tensor
+            if not isinstance(train_data, torch.Tensor):
+                train_data = torch.FloatTensor(train_data)
+
+            # Move to model's device
+            model_device = next(self.parameters()).device
+            train_data = train_data.to(model_device)
+
+            train_scores = self.score_samples(train_data)
 
         # Save metadata (threshold and config)
+        # Handle both numpy arrays and tensors
+        if isinstance(train_scores, np.ndarray):
+            mean_score = float(np.mean(train_scores))
+            std_score = float(np.std(train_scores))
+        else:
+            mean_score = train_scores.cpu().mean().item()
+            std_score = train_scores.cpu().std().item()
+
         # Handle both numpy arrays and tensors
         if isinstance(train_scores, np.ndarray):
             mean_score = float(np.mean(train_scores))
@@ -491,6 +517,10 @@ class VAE(nn.Module):
             'threshold': self.threshold,
             'input_dim': self.input_dim,
             'latent_dim': self.latent_dim,
+            'hidden_dims': self.hidden_dims,
+            'device': str(next(self.parameters()).device),
+            "mean": float(train_scores.mean()),
+            "std": float(train_scores.std()),
             'hidden_dims': self.hidden_dims,
             'device': str(next(self.parameters()).device),
             "mean": float(train_scores.mean()),
@@ -646,6 +676,7 @@ def parse_args():
                         help='Path to save or load model')
     parser.add_argument('--fig_save_path', type=str, default=None,
                         help='Path to save figures')
+    parser.add_argument('--seed', type=int, default=42,)
     parser.set_defaults(**config)
     args = parser.parse_args(remaining_argv)
     args.config = config
@@ -680,8 +711,8 @@ if __name__ == "__main__":
 
     # Set random seed for reproducibility
     if 'seed' in config:
-        torch.manual_seed(config['seed'])
-        np.random.seed(config['seed'])
+        torch.manual_seed(args.seed)
+        np.random.seed(args.seed)
 
     # Determine device
     cli_device = args.device
@@ -760,13 +791,25 @@ if __name__ == "__main__":
         patience=config.get('patience', 15),
         verbose=config.get('verbose', True)
     )
+    history = model.fit(
+        train_data=train_data,
+        val_data=val_data,
+        test_data=test_data,
+        epochs=config.get('epochs', 100),
+        batch_size=config.get('batch_size', 128),
+        lr=config.get('lr', 1e-3),
+        beta=config.get('beta', 1.0),
+        patience=config.get('patience', 15),
+        verbose=config.get('verbose', True)
+    )
 
     # Plot training curves
+    plot_training_curves(history, save_path=f"figures/{args.task}/vae_training.png")
     plot_training_curves(history, save_path=f"figures/{args.task}/vae_training.png")
 
     # Save model if requested
     if config.get('model_save_path', False):
-        save_path = config.get('model_save_path', 'saved_models/vae')
+        save_path = args.model_save_path 
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
         model.save_model(save_path, train_data)
         print(f"Model saved to: {save_path}_model.pth")
@@ -775,16 +818,16 @@ if __name__ == "__main__":
     # print(dict_model['mean'])
     # Evaluate on test data
 
-    plot_likelihood_distributions(
-                        model,
-                        train_data.to(device),
-                        val_data.to(device),
-                        ood_data=test_data.to(device),
-                        thr = model.threshold,
-                        title="Likelihood Distribution",
-                        savepath=args.fig_save_path,
-                        bins=50
-                    )
+    # plot_likelihood_distributions(
+    #                     model,
+    #                     train_data.to(device),
+    #                     val_data.to(device),
+    #                     ood_data=test_data.to(device),
+    #                     thr = model.threshold,
+    #                     title="Likelihood Distribution",
+    #                     savepath=args.fig_save_path,
+    #                     bins=50
+    #                 )
     print("\nEvaluating VAE on test set...")
     test_scores = model.score_samples(test_data.to(device))
     print(f"Test scores - Mean: {test_scores.mean():.4f}, Std: {test_scores.std():.4f}")
