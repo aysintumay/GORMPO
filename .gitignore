@@ -3,6 +3,7 @@ wandb/
 figures/
 gormpo/
 log/
+logs/
 *.pyc
 *.pyo
 *.pyd
