@@ -173,7 +173,7 @@ class VAE(nn.Module):
         model_device = next(self.parameters()).device
         x = x.to(model_device)
 
-            x = torch.FloatTensor(x)
+        x = torch.FloatTensor(x)
 
         # Move to model's device
         model_device = next(self.parameters()).device
@@ -520,7 +520,7 @@ class VAE(nn.Module):
             'hidden_dims': self.hidden_dims,
             'device': str(next(self.parameters()).device),
             "mean": float(train_scores.mean()),
-            "std": float(train_scores.std())
+            "std": float(train_scores.std()),
             'hidden_dims': self.hidden_dims,
             'device': str(next(self.parameters()).device),
             "mean": float(train_scores.mean()),
