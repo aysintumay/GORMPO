@@ -1,6 +1,9 @@
 #!/bin/bash
 # Multi-seed GORMPO-Diffusion training for Hopper-Medium-Expert-v2 (Sparse 78%)
 # Usage: bash bash_scr/mult_seed/gormpo_diffusion_hopper_medium_expert_sparse3.sh
+source venv/bin/activate
+
+set -e  # Exit on error
 
 echo "============================================"
 echo "Multi-Seed GORMPO-Diffusion Training: Hopper-Medium-Expert-Sparse3"
@@ -19,15 +22,23 @@ for seed in "${seeds[@]}"; do
     echo ">>> Training with seed = $seed"
     echo "=========================================="
 
-    # Train GORMPO policy using the pre-trained Diffusion model
+    # Step 1: Train Diffusion model
+    echo "Training Diffusion model (seed $seed)..."
+    python diffusion/ddim_training_unconditional.py \
+        --config diffusion/configs/unconditional_training/hopper_mlp_expert_sparse_78.yaml \
+        --seed $seed
+    echo "Diffusion model training complete for seed $seed"
+    echo ""
+
+    # Step 2: Train GORMPO policy using the trained Diffusion model
     echo "Training GORMPO-Diffusion policy (seed $seed)..."
     python mopo.py \
         --config configs/diffusion/gormpo_hopper_medium_expert_sparse_3.yaml \
         --seed $seed \
         --epoch 1000 \
-        --devid 0 \
+        --devid 2 \
         --results_output $RESULTS_FILE
-    echo "✓ GORMPO-Diffusion training complete for seed $seed"
+    echo "GORMPO-Diffusion training complete for seed $seed"
     echo ""
 done
 

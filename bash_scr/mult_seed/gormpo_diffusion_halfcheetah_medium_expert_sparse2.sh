@@ -3,6 +3,8 @@
 # Usage: bash bash_scr/mult_seed/gormpo_diffusion_halfcheetah_medium_expert_sparse2.sh
 source venv/bin/activate
 
+set -e  # Exit on error
+
 echo "============================================"
 echo "Multi-Seed GORMPO-Diffusion Training: HalfCheetah-Medium-Expert-Sparse2"
 echo "============================================"
@@ -20,7 +22,15 @@ for seed in "${seeds[@]}"; do
     echo ">>> Training with seed = $seed"
     echo "=========================================="
 
-    # Train GORMPO policy using the pre-trained Diffusion model
+    # Step 1: Train Diffusion model
+    echo "Training Diffusion model (seed $seed)..."
+    python diffusion/ddim_training_unconditional.py \
+        --config diffusion/configs/unconditional_training/halfcheetah_mlp_expert_sparse_57.5.yaml \
+        --seed $seed
+    echo "Diffusion model training complete for seed $seed"
+    echo ""
+
+    # Step 2: Train GORMPO policy using the trained Diffusion model
     echo "Training GORMPO-Diffusion policy (seed $seed)..."
     python mopo.py \
         --config configs/diffusion/gormpo_halfcheetah_medium_expert_sparse_2.yaml \
@@ -28,7 +38,7 @@ for seed in "${seeds[@]}"; do
         --epoch 1000 \
         --devid 6 \
         --results_output $RESULTS_FILE
-    echo "✓ GORMPO-Diffusion training complete for seed $seed"
+    echo "GORMPO-Diffusion training complete for seed $seed"
     echo ""
 done
 
