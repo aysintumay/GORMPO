@@ -187,7 +187,6 @@ def train(env, run, logger, seed, args):
         ).to(util.device)
         classifier_dict = classifier.load_model(args.classifier_model_name)
         print("vae laoded")
-        print("vae laoded")
     elif "realnvp" in args.classifier_model_name:
         classifier = RealNVP(
         device=util.device
