@@ -19,7 +19,7 @@ for seed in "${seeds[@]}"; do
     echo ">>> Training with seed = $seed"
     echo "=========================================="
 
-    # Step 1: Train VAE density estimator for this seed
+    Step 1: Train VAE density estimator for this seed
     echo "Step 1/2: Training VAE density estimator (seed $seed)..."
     python vae_module/vae.py \
         --config configs/vae/hopper_medium_expert_sparse_3.yaml \

@@ -8,7 +8,7 @@ echo "============================================"
 echo ""
 
 # Array of random seeds to test
-seeds=(42 123 456)
+seeds=(42 123  456)
 
 # Shared results file for all seeds
 RESULTS_FILE="results/walker2d-medium-expert-v2_sparse_78/vae/gormpo_vae_multiseed_results.csv"
@@ -25,7 +25,7 @@ for seed in "${seeds[@]}"; do
         --config configs/vae/walker2d_medium_expert_sparse_3.yaml \
         --seed $seed \
         --model_save_path /public/gormpo/models/walker2d_medium_expert_sparse_3/vae_$seed \
-        --device cuda:4
+        --device cuda:5
     echo "✓ VAE training complete for seed $seed"
     echo ""
 
@@ -36,7 +36,7 @@ for seed in "${seeds[@]}"; do
         --seed $seed \
         --classifier_model_name /public/gormpo/models/walker2d_medium_expert_sparse_3/vae_$seed \
         --epoch 1000 \
-        --devid 4 \
+        --devid 5 \
         --results_output $RESULTS_FILE
     echo "✓ GORMPO-VAE training complete for seed $seed"
     echo ""
