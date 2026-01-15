@@ -224,7 +224,7 @@ def train(env, run, logger, seed, args):
         # Load model using build_model_from_ckpt from monte_carlo_sampling_unconditional
         device = f"cuda:{args.devid}" if torch.cuda.is_available() else "cpu"
         ckpt_path = args.classifier_model_name
-        sched_dir = f"/public/gormpo/models/{args.task.lower().split('_')[0].split('-')[0]}/diffusion/scheduler/scheduler_config.json"
+        sched_dir = os.path.dirname(ckpt_path) + "/scheduler"
 
         # Build model
         model, cfg = build_model_from_ckpt(ckpt_path, device)
