@@ -1,5 +1,7 @@
 #!/bin/bash
 
+source venv/bin/activate
+
 set -e  # Exit on error
 echo "============================================"
 echo "Training GORMPO with Diffusion on Hopper-Medium-Expert-v2 (Sparse 78%)"
@@ -20,7 +22,7 @@ for coef in "${penalty_coeffs[@]}"; do
         --config configs/diffusion/gormpo_hopper_medium_expert_sparse_3.yaml \
         --reward-penalty-coef $coef \
         --epoch 1000 \
-        --devid 0
+        --devid 3
 
     echo "✓ Training complete for penalty coefficient $coef"
     echo ""
