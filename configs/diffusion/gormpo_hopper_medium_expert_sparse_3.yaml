@@ -5,7 +5,7 @@ task: hopper-medium-expert-v2
 data_path: /public/d4rl/sparse_datasets/hopper_medium_expert_sparse_78.pkl
 
 algo-name: gormpo
-reward-penalty-coef: 0.5
+reward-penalty-coef: 0.05
 seed: 1
 epoch: 1000
 penalty_type: 'tanh'
