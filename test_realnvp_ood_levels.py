@@ -13,6 +13,7 @@ import argparse
 import os
 import sys
 import json
+import yaml
 from sklearn.metrics import roc_auc_score, accuracy_score, roc_curve
 
 # Add parent directory to path for imports
@@ -25,7 +26,7 @@ import torch.nn.functional as F
 from typing import Tuple, Optional, List
 from realnvp_module.realnvp import RealNVP
 
-def load_ood_test_data(dataset_name, distance, base_path='/public/d4rl/ood_test'):
+def load_ood_test_data(dataset_name, distance, base_path='/public/d4rl/ood_test', suffix=''):
     """
     Load OOD test data from pickle file.
 
@@ -33,13 +34,14 @@ def load_ood_test_data(dataset_name, distance, base_path='/public/d4rl/ood_test'
         dataset_name: Name of the dataset (e.g., 'halfcheetah-medium-v2')
         distance: OOD distance level (int or float, e.g., 0.1, 0.3, 0.5, 0.7, 1)
         base_path: Base directory containing OOD test datasets
+        suffix: Optional suffix for the file name (e.g., '-uniform')
 
     Returns:
         Numpy array of test data where first half is ID and second half is OOD
     """
     # Format distance value - preserve int/float type
     distance_str = str(int(distance)) if isinstance(distance, int) else str(distance)
-    file_path = os.path.join(base_path, dataset_name, f'ood-distance-{distance_str}.pkl')
+    file_path = os.path.join(base_path, dataset_name, f'ood-distance-{distance_str}{suffix}.pkl')
 
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Test data file not found: {file_path}")
@@ -68,7 +70,7 @@ def load_ood_test_data(dataset_name, distance, base_path='/public/d4rl/ood_test'
     return data
 
 
-def evaluate_ood_at_distance(model, dataset_name, distance, base_path='/public/d4rl/ood_test', device='cpu', mean=None, std=None):
+def evaluate_ood_at_distance(model, dataset_name, distance, base_path='/public/d4rl/ood_test', device='cpu', mean=None, std=None, suffix=''):
     """
     Evaluate RealNVP model on OOD test data at a specific distance level.
 
@@ -80,12 +82,13 @@ def evaluate_ood_at_distance(model, dataset_name, distance, base_path='/public/d
         device: Device to use
         mean: DEPRECATED - Not used (kept for backward compatibility)
         std: DEPRECATED - Not used (kept for backward compatibility)
+        suffix: Optional suffix for the file name (e.g., '-uniform')
 
     Returns:
         Dictionary with evaluation metrics
     """
     # Load test data
-    test_data = load_ood_test_data(dataset_name, distance, base_path)
+    test_data = load_ood_test_data(dataset_name, distance, base_path, suffix=suffix)
 
     # Dataset structure: First half is ID (original), second half is OOD (noisy)
     # HOWEVER: RealNVP models assign INVERTED likelihoods (ID gets lower, OOD gets higher)
@@ -407,37 +410,63 @@ def parse_number(value):
 
 def main():
     parser = argparse.ArgumentParser(description='Test RealNVP on different OOD distance levels')
-    parser.add_argument('--model_path', type=str, required=True,
+    parser.add_argument('--config', type=str, default=None,
+                       help='Path to YAML config file')
+    parser.add_argument('--model_path', type=str, default=None,
                        help='Path to saved RealNVP model (without extension)')
-    parser.add_argument('--dataset_name', type=str, required=True,
+    parser.add_argument('--dataset_name', type=str, default=None,
                        help='Dataset name (e.g., halfcheetah-medium-v2, hopper-medium-v2)')
     parser.add_argument('--sparse_dataset_name', type=str, default=None,
                        help='Sparse dataset name for figure directory (e.g., halfcheetah_medium_expert_sparse_72.5). '
                             'If provided, figures will be saved to figures/realnvp_ood_distance_tests/{sparse_dataset_name}/')
-    parser.add_argument('--distances', type=parse_number, nargs='+', default=[1,2, 3, 4],
+    parser.add_argument('--distances', type=parse_number, nargs='+', default=None,
                        help='List of OOD distance values to test (supports both int and float)')
-    parser.add_argument('--base_path', type=str, default='/public/d4rl/ood_test',
+    parser.add_argument('--base_path', type=str, default=None,
                        help='Base directory containing OOD test datasets')
-    parser.add_argument('--device', type=str, default='cpu',
+    parser.add_argument('--device', type=str, default=None,
                        help='Device to use (cpu/cuda)')
-    parser.add_argument('--save_dir', type=str, default='figures/realnvp_ood_distance_tests',
+    parser.add_argument('--save_dir', type=str, default=None,
                        help='Directory to save results')
+    parser.add_argument('--suffix', type=str, default=None,
+                       help='Suffix for OOD test file names (e.g., "-uniform" for ood-distance-1-uniform.pkl)')
 
     args = parser.parse_args()
 
+    # Load config from YAML if provided
+    config = {}
+    if args.config:
+        with open(args.config, 'r') as f:
+            config = yaml.safe_load(f)
+        print(f"Loaded config from: {args.config}")
+
+    # Merge config with CLI args (CLI args take precedence)
+    model_path = args.model_path if args.model_path is not None else config.get('model_path')
+    dataset_name = args.dataset_name if args.dataset_name is not None else config.get('dataset_name')
+    sparse_dataset_name = args.sparse_dataset_name if args.sparse_dataset_name is not None else config.get('sparse_dataset_name')
+    distances = args.distances if args.distances is not None else config.get('distances', [1, 2, 3, 4])
+    base_path = args.base_path if args.base_path is not None else config.get('base_path', '/public/d4rl/ood_test')
+    device = args.device if args.device is not None else config.get('device', 'cpu')
+    save_dir = args.save_dir if args.save_dir is not None else config.get('save_dir', 'figures/realnvp_ood_distance_tests')
+    suffix = args.suffix if args.suffix is not None else config.get('suffix', '')
+
+    # Validate required parameters
+    if model_path is None:
+        parser.error("--model_path is required (either via CLI or config file)")
+    if dataset_name is None:
+        parser.error("--dataset_name is required (either via CLI or config file)")
+
     # Set device
-    device = args.device
     if device.startswith('cuda') and not torch.cuda.is_available():
         print(f"CUDA not available, falling back to CPU")
         device = 'cpu'
 
     print(f"Using device: {device}")
-    print(f"Dataset: {args.dataset_name}")
-    print(f"OOD test data path: {args.base_path}")
+    print(f"Dataset: {dataset_name}")
+    print(f"OOD test data path: {base_path}")
 
     # Load model
-    print(f"\nLoading RealNVP model from: {args.model_path}")
-    model_dict = RealNVP.load_model(args.model_path)
+    print(f"\nLoading RealNVP model from: {model_path}")
+    model_dict = RealNVP.load_model(model_path)
     model = model_dict['model']
     mean = model_dict.get('mean', None)
     std = model_dict.get('std', None)
@@ -456,19 +485,20 @@ def main():
 
     all_results = []
 
-    for distance in args.distances:
+    for distance in distances:
         print(f"\nTesting distance = {distance}")
         print("-" * 40)
 
         try:
             results = evaluate_ood_at_distance(
                 model=model,
-                dataset_name=args.dataset_name,
+                dataset_name=dataset_name,
                 distance=distance,
-                base_path=args.base_path,
+                base_path=base_path,
                 device=device,
                 mean=mean,
-                std=std
+                std=std,
+                suffix=suffix
             )
 
             all_results.append(results)
@@ -489,26 +519,26 @@ def main():
 
     # Create save directory with dataset name
     # If sparse_dataset_name is provided, use that directly
-    if args.sparse_dataset_name:
-        dataset_name_for_dir = args.sparse_dataset_name.replace('-', '_')
+    if sparse_dataset_name:
+        dataset_name_for_dir = sparse_dataset_name.replace('-', '_')
         print(f"Using sparse dataset name for directory: {dataset_name_for_dir}")
     else:
         # Fall back to default behavior
-        dataset_name_for_dir = args.dataset_name.replace('-', '_')
+        dataset_name_for_dir = dataset_name.replace('-', '_')
 
-    save_dir = os.path.join(args.save_dir, dataset_name_for_dir)
+    final_save_dir = os.path.join(save_dir, dataset_name_for_dir)
 
     # Plot results
     print("\n" + "="*80)
     print("Generating Plots")
     print("="*80)
 
-    plot_results(all_results, save_dir=save_dir, model_name='RealNVP', threshold=model.threshold)
+    plot_results(all_results, save_dir=final_save_dir, model_name='RealNVP', threshold=model.threshold)
 
     print("\n" + "="*80)
     print("Testing Complete!")
     print("="*80)
-    print(f"\nResults saved to: {save_dir}")
+    print(f"\nResults saved to: {final_save_dir}")
 
     # Print summary
     print("\nSummary:")
@@ -534,7 +564,7 @@ def main():
             'accuracy': float(r['accuracy']) if r['accuracy'] is not None else None
         })
 
-    json_path = os.path.join(save_dir, 'results.json')
+    json_path = os.path.join(final_save_dir, 'results.json')
     with open(json_path, 'w') as f:
         json.dump(json_results, f, indent=2)
     print(f"\nResults saved to JSON: {json_path}")

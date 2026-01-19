@@ -1,0 +1,23 @@
+# VAE OOD Level Test Configuration for Walker2d-Medium-Expert-v2 (Sparse Dataset)
+# Configuration for testing OOD detection at different distance levels
+
+# Model path (without extension)
+model_path: "/public/gormpo/models/walker2d_medium_expert_sparse_3/vae"
+
+# Dataset configuration
+dataset_name: "walker2d-medium-expert-v2"
+sparse_dataset_name: "walker2d_medium_expert_sparse_73"
+
+# OOD test data configuration
+base_path: "/public/d4rl/ood_test"
+distances: [0.4, 0.6, 0.8, 1]
+suffix: "-uniform"  # Use -uniform OOD test files
+
+# Hardware
+device: "cuda"
+
+# Output
+save_dir: "figures/vae_ood_distance_tests"
+
+# Example usage:
+# python test_vae_ood_levels.py --config configs/vae/ood_test/walker2d_medium_expert_sparse_3.yaml

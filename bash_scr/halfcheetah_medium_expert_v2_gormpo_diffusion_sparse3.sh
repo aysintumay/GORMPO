@@ -1,7 +1,5 @@
 #!/bin/bash
 
-source venv/bin/activate
-
 set -e  # Exit on error
 echo "============================================"
 echo "Training GORMPO with Diffusion on HalfCheetah-Medium-Expert-v2 (Sparse 72.5%)"
@@ -10,7 +8,7 @@ echo "============================================"
 echo ""
 
 # Array of penalty coefficients to test
-penalty_coeffs=(0.3 0.5 0.8)
+penalty_coeffs=(0.05 0.1)
 
 # Loop through each penalty coefficient
 for coef in "${penalty_coeffs[@]}"; do
@@ -22,7 +20,7 @@ for coef in "${penalty_coeffs[@]}"; do
         --config configs/diffusion/gormpo_halfcheetah_medium_expert_sparse_3.yaml \
         --reward-penalty-coef $coef \
         --epoch 1000 \
-        --devid 6
+        --devid 5
 
     echo "✓ Training complete for penalty coefficient $coef"
     echo ""
