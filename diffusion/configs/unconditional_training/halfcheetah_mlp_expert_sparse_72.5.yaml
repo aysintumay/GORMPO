@@ -20,7 +20,7 @@ layers: 3
 dropout: 0.0
 
 # logging
-wandb: true
+wandb: False
 wandb_project: GORMPO
 wandb_entity: jhhuang_chloe
 wandb_run: unconditional_ddim_mlp_halfcheetah_medium_expert_sparse_72.5

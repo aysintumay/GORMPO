@@ -29,6 +29,7 @@ for seed in "${seeds[@]}"; do
         --config diffusion/configs/unconditional_training/walker2d_mlp_expert_sparse_73.yaml \
         --seed $seed \
         --epochs 100 \
+        --device cuda:5 \
         --out /public/gormpo/models/walker2d_medium_expert_sparse_3/diffusion_$seed
     echo "✓ Diffusion model training complete for seed $seed"
     echo ""
@@ -40,7 +41,7 @@ for seed in "${seeds[@]}"; do
         --seed $seed \
         --classifier_model_name /public/gormpo/models/walker2d_medium_expert_sparse_3/diffusion_$seed/checkpoint.pt \
         --epoch 1000 \
-        --devid 4 \
+        --devid 5 \
         --results_output $RESULTS_FILE
     echo "✓ GORMPO-Diffusion training complete for seed $seed"
     echo ""

@@ -40,7 +40,7 @@ for seed in "${seeds[@]}"; do
         --seed $seed \
         --classifier_model_name /public/gormpo/models/halfcheetah_medium_expert_sparse_3/diffusion_$seed/checkpoint.pt \
         --epoch 1000 \
-        --devid 0 \
+        --devid 6 \
         --results_output $RESULTS_FILE
     echo "✓ GORMPO-Diffusion training complete for seed $seed"
     echo ""

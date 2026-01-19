@@ -29,6 +29,7 @@ for seed in "${seeds[@]}"; do
         --config diffusion/configs/unconditional_training/hopper_mlp_expert_sparse_78.yaml \
         --seed $seed \
         --epochs 100 \
+        --device cuda:1 \
         --out /public/gormpo/models/hopper_medium_expert_sparse_3/diffusion_$seed
     echo "✓ Diffusion model training complete for seed $seed"
     echo ""
@@ -40,7 +41,7 @@ for seed in "${seeds[@]}"; do
         --seed $seed \
         --classifier_model_name /public/gormpo/models/hopper_medium_expert_sparse_3/diffusion_$seed/checkpoint.pt \
         --epoch 1000 \
-        --devid 2 \
+        --devid 1 \
         --results_output $RESULTS_FILE
     echo "✓ GORMPO-Diffusion training complete for seed $seed"
     echo ""
