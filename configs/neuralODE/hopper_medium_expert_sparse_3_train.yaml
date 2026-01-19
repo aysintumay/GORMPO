@@ -1,0 +1,37 @@
+# Neural ODE Training Configuration
+# Configuration for training a Continuous Normalizing Flow on Hopper-Medium-Expert (Sparse 78%) dataset
+
+# Dataset configuration
+npz: /public/d4rl/sparse_datasets/hopper_medium_expert_sparse_78.pkl
+out: /public/gormpo/models/hopper_medium_expert_sparse_3/neuralODE
+
+# Training parameters
+epochs: 10
+batch: 512
+lr: 0.001
+wd: 0.0
+
+# Model architecture
+hidden_dims: [512, 512]
+activation: silu
+time_dependent: true
+
+# ODE solver configuration
+solver: dopri5
+t0: 0.0
+t1: 1.0
+rtol: 1.0e-5
+atol: 1.0e-5
+
+# Hardware
+device: cuda
+
+# Logging and checkpointing
+log_every: 100
+checkpoint_every: 50
+
+# Random seed
+seed: 42
+
+# Usage:
+# python neuralODE/neural_ode_density.py --config configs/neuralODE/hopper_medium_expert_sparse_3_train.yaml

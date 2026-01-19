@@ -1,0 +1,24 @@
+# GORMPO Training Configuration for Hopper-Medium-Expert-Sparse (78%) with Neural ODE
+# This config is used with mopo.py to train GORMPO using a pre-trained Neural ODE density model
+
+task: hopper-medium-expert-v2
+algo-name: gormpo
+reward-penalty-coef: 0.3
+seed: 1
+data_path: /public/d4rl/sparse_datasets/hopper_medium_expert_sparse_78.pkl
+epoch: 1000
+rollout-length: 3
+penalty_type: tanh
+classifier_model_name: /public/gormpo/models/hopper_medium_expert_sparse_3/neuralODE/model.pt
+density_model: neuralODE
+target_dim: 14  # 11 (obs) + 3 (action) for Hopper
+
+# Neural ODE model architecture (must match training config)
+hidden_dims: [512, 512]
+activation: silu
+time_dependent: true
+solver: dopri5
+t0: 0.0
+t1: 1.0
+rtol: 1.0e-5
+atol: 1.0e-5
