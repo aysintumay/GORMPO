@@ -288,9 +288,54 @@ class NeuralODEOOD:
         Returns:
             Dictionary with loaded model, threshold, and statistics
         """
+        import glob
+
+        # Support both old format ({save_path}_metadata.pkl) and new format ({save_path}/metadata.pkl)
+        metadata_path_new = os.path.join(save_path, "metadata.pkl")
+        metadata_path_old = f"{save_path}_metadata.pkl"
+        model_path_new = os.path.join(save_path, "model.pt")
+        model_path_old = f"{save_path}_model.pt"
+
+        if os.path.exists(metadata_path_new):
+            metadata_path = metadata_path_new
+            # Check for model.pt, fallback to latest checkpoint
+            if os.path.exists(model_path_new):
+                model_path = model_path_new
+            else:
+                # Find latest checkpoint
+                ckpt_pattern = os.path.join(save_path, "checkpoint_epoch_*.pt")
+                ckpts = glob.glob(ckpt_pattern)
+                if ckpts:
+                    # Sort by epoch number and get latest
+                    ckpts.sort(key=lambda x: int(x.split('_epoch_')[-1].replace('.pt', '')))
+                    model_path = ckpts[-1]
+                    print(f"model.pt not found, using latest checkpoint: {model_path}")
+                else:
+                    raise FileNotFoundError(
+                        f"Could not find model.pt or any checkpoint in {save_path}"
+                    )
+        elif os.path.exists(metadata_path_old):
+            metadata_path = metadata_path_old
+            model_path = model_path_old
+        else:
+            raise FileNotFoundError(
+                f"Could not find metadata file at {metadata_path_new} or {metadata_path_old}"
+            )
+
         # Load metadata
-        with open(f"{save_path}_metadata.pkl", 'rb') as f:
+        with open(metadata_path, 'rb') as f:
             metadata = pickle.load(f)
+
+        # Use metadata values if available, otherwise use provided arguments
+        hidden_dims = metadata.get('hidden_dims', hidden_dims)
+        activation = metadata.get('activation', activation)
+        time_dependent = metadata.get('time_dependent', time_dependent)
+        solver = metadata.get('solver', solver)
+        t0 = metadata.get('t0', t0)
+        t1 = metadata.get('t1', t1)
+        rtol = metadata.get('rtol', rtol)
+        atol = metadata.get('atol', atol)
+        target_dim = metadata.get('target_dim', target_dim)
 
         # Create ODE function and flow
         odefunc = ODEFunc(
@@ -309,16 +354,20 @@ class NeuralODEOOD:
             atol=atol,
         ).to(device)
 
-        # Load model state dict
-        flow.load_state_dict(torch.load(f"{save_path}_model.pt", map_location=device))
+        # Load model state dict (handle both checkpoint format and direct state dict)
+        ckpt = torch.load(model_path, map_location=device)
+        if isinstance(ckpt, dict) and 'model_state_dict' in ckpt:
+            flow.load_state_dict(ckpt['model_state_dict'])
+        else:
+            flow.load_state_dict(ckpt)
         flow.eval()
 
         # Create OOD wrapper
         ood_model = cls(flow, device=device)
         ood_model.threshold = metadata.get('threshold')
 
-        print(f"Model loaded from: {save_path}_model.pt")
-        print(f"Metadata loaded from: {save_path}_metadata.pkl")
+        print(f"Model loaded from: {model_path}")
+        print(f"Metadata loaded from: {metadata_path}")
         print(f"Threshold: {ood_model.threshold}")
 
         model_dict = {
