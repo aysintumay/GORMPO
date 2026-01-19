@@ -38,7 +38,7 @@ for seed in "${seeds[@]}"; do
     python mopo.py \
         --config configs/neuralODE/gormpo_walker2d_medium_expert_sparse_3.yaml \
         --seed $seed \
-        --classifier_model_name /public/gormpo/models/walker2d_medium_expert_sparse_3/neuralODE_$seed/model.pt \
+        --classifier_model_name /public/gormpo/models/walker2d_medium_expert_sparse_3/neuralODE_$seed \
         --epoch 1000 \
         --devid 0 \
         --results_output $RESULTS_FILE

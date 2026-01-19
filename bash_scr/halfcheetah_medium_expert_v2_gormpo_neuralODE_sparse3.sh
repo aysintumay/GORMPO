@@ -19,7 +19,7 @@ for coef in "${penalty_coeffs[@]}"; do
     python mopo.py \
         --config configs/neuralODE/gormpo_halfcheetah_medium_expert_sparse_3.yaml \
         --reward-penalty-coef $coef \
-        --epoch 1000 \
+        --epoch 10 \
         --devid 0
 
     echo "✓ Training complete for penalty coefficient $coef"

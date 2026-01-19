@@ -38,7 +38,7 @@ for seed in "${seeds[@]}"; do
     python mopo.py \
         --config configs/neuralODE/gormpo_halfcheetah_medium_expert_sparse_2.yaml \
         --seed $seed \
-        --classifier_model_name /public/gormpo/models/halfcheetah_medium_expert_sparse_2/neuralODE_$seed/model.pt \
+        --classifier_model_name /public/gormpo/models/halfcheetah_medium_expert_sparse_2/neuralODE_$seed \
         --epoch 1000 \
         --devid 0 \
         --results_output $RESULTS_FILE
