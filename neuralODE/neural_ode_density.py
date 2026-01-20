@@ -337,6 +337,48 @@ def train(cfg: TrainConfig) -> None:
 
     torch.save(flow.state_dict(), os.path.join(cfg.out_dir, "model.pt"))
 
+    # Compute and save metadata (threshold, mean, std) for OOD detection
+    print("Computing metadata for OOD detection...")
+    flow.eval()
+    all_log_probs = []
+    with torch.no_grad():
+        for batch in loader:
+            x = batch.to(cfg.device)
+            log_px = flow.log_prob(x)
+            all_log_probs.append(log_px.cpu().numpy())
+    all_log_probs = np.concatenate(all_log_probs)
+
+    # Set threshold as 1st percentile (marking 1% as anomalies)
+    threshold = float(np.percentile(all_log_probs, 1.0))
+    mean_logp = float(np.mean(all_log_probs))
+    std_logp = float(np.std(all_log_probs))
+
+    metadata = {
+        'threshold': threshold,
+        'mean': mean_logp,
+        'std': std_logp,
+        'device': cfg.device,
+        'target_dim': dataset.target_dim,
+        'hidden_dims': cfg.hidden_dims,
+        'activation': cfg.activation,
+        'time_dependent': cfg.time_dependent,
+        'solver': cfg.solver,
+        't0': cfg.t0,
+        't1': cfg.t1,
+        'rtol': cfg.rtol,
+        'atol': cfg.atol,
+    }
+
+    metadata_path = os.path.join(cfg.out_dir, "metadata.pkl")
+    with open(metadata_path, 'wb') as f:
+        pickle.dump(metadata, f)
+
+    print(f"Model saved to: {os.path.join(cfg.out_dir, 'model.pt')}")
+    print(f"Metadata saved to: {metadata_path}")
+    print(f"  Threshold: {threshold:.4f}")
+    print(f"  Mean log prob: {mean_logp:.4f}")
+    print(f"  Std log prob: {std_logp:.4f}")
+
 
 def parse_args() -> TrainConfig:
     config_only = argparse.ArgumentParser(add_help=False)

@@ -187,7 +187,6 @@ def train(env, run, logger, seed, args):
         ).to(util.device)
         classifier_dict = classifier.load_model(args.classifier_model_name)
         print("vae laoded")
-        print("vae laoded")
     elif "realnvp" in args.classifier_model_name:
         classifier = RealNVP(
         device=util.device
@@ -198,7 +197,6 @@ def train(env, run, logger, seed, args):
         devid=args.devid
         )
         classifier_dict = classifier.load_model(args.classifier_model_name, devid=args.devid)
-    
     elif "neuralODE" in args.classifier_model_name:
         print("Loading Neural ODE based classifier... for task:", args.task)
         # Use the new NeuralODEOOD.load_model interface
@@ -226,7 +224,7 @@ def train(env, run, logger, seed, args):
         # Load model using build_model_from_ckpt from monte_carlo_sampling_unconditional
         device = f"cuda:{args.devid}" if torch.cuda.is_available() else "cpu"
         ckpt_path = args.classifier_model_name
-        sched_dir = f"/public/gormpo/models/{args.task.lower().split('_')[0].split('-')[0]}/diffusion/scheduler/scheduler_config.json"
+        sched_dir = os.path.dirname(ckpt_path) + "/scheduler"
 
         # Build model
         model, cfg = build_model_from_ckpt(ckpt_path, device)
@@ -244,7 +242,7 @@ def train(env, run, logger, seed, args):
             except Exception as e:
                 print(f"Warning: Could not load scheduler: {e}")
                 scheduler = DDIMScheduler(
-                    num_train_timesteps=100,
+                    num_train_timesteps=1000,
                     beta_schedule="linear",
                     prediction_type="epsilon",
                 )
@@ -309,9 +307,7 @@ def train(env, run, logger, seed, args):
     )
     #load world model
 
-    dynamics_model.load_model([args.task, args.data_path]) 
-
-   
+    
     # create trainer
     trainer = Trainer(
         algo,
@@ -328,9 +324,15 @@ def train(env, run, logger, seed, args):
         
     )
 
-    # pretrain dynamics model on the whole dataset
-    # trainer.train_dynamics()
-    # 
+    if args.dynamics_model_dir != None:
+        print(f"Loading dynamics model")
+        dynamics_model.load_model([args.task, args.data_path]) 
+        print("Dynamics model loaded.")
+    else:
+        print("Training dynamics model from scratch.")
+        # pretrain dynamics model on the whole dataset
+        trainer.train_dynamics()
+    
 
     # policy_state_dict = torch.load(os.path.join(util.logger_model.log_path, f"policy_{args.task}.pth"))
     # sac_policy.load_state_dict(policy_state_dict)
