@@ -29,7 +29,7 @@ for seed in "${seeds[@]}"; do
         --config configs/vae/hopper.yaml \
         --seed $seed \
         --model_save_path /public/gormpo/models/hopper_medium/vae_$seed \
-        --device cuda:2
+        --device cuda:1
     echo "VAE training complete for seed $seed"
     echo ""
 
@@ -40,7 +40,7 @@ for seed in "${seeds[@]}"; do
         --seed $seed \
         --classifier_model_name /public/gormpo/models/hopper_medium/vae_$seed \
         --epoch 1000 \
-        --devid 2 \
+        --devid 1 \
         --results_output $RESULTS_FILE
     echo "GORMPO-VAE training complete for seed $seed"
     echo ""
