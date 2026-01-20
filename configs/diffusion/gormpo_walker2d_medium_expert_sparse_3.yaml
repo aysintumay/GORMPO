@@ -9,4 +9,4 @@ reward-penalty-coef: 0.05
 seed: 1
 epoch: 1000
 penalty_type: 'tanh'
-rollout-length: 5
+rollout-length: 3

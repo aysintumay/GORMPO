@@ -10,5 +10,3 @@ seed: 1
 epoch: 1000
 penalty_type: 'tanh'
 rollout-length: 5
-penalty_type: 'tanh'
-rollout-length: 5
