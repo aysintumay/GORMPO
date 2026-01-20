@@ -26,7 +26,7 @@ for seed in "${seeds[@]}"; do
     # Step 1: Train Neural ODE density model for this seed
     echo "Step 1/2: Training Neural ODE density model (seed $seed)..."
     python neuralODE/neural_ode_density.py \
-        --config configs/neuralODE/halfcheetah_train.yaml \
+        --task halfcheetah-medium-v2 \
         --seed $seed \
         --epochs 10 \
         --out /public/gormpo/models/halfcheetah_medium/neuralODE_$seed
