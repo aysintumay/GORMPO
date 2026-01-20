@@ -23,22 +23,21 @@ for seed in "${seeds[@]}"; do
     echo ">>> Training with seed = $seed"
     echo "=========================================="
 
-    # Step 1: Train Neural ODE density model for this seed
-    echo "Step 1/2: Training Neural ODE density model (seed $seed)..."
-    python neuralODE/neural_ode_density.py \
-        --config configs/neuralODE/walker2d_medium_expert_train.yaml \
-        --seed $seed \
-        --epochs 10 \
-        --out /public/gormpo/models/walker2d_medium_expert/neuralODE_$seed
-    echo "Neural ODE training complete for seed $seed"
-    echo ""
+    # # Step 1: Train Neural ODE density model for this seed
+    # echo "Step 1/2: Training Neural ODE density model (seed $seed)..."
+    # python neuralODE/neural_ode_density.py \
+    #     --config configs/neuralODE/walker2d_medium_expert_train.yaml \
+    #     --seed $seed \
+    #     --epochs 10 \
+    #     --out /public/gormpo/models/walker2d_medium_expert/neuralODE_$seed
+    # echo "Neural ODE training complete for seed $seed"
+    # echo ""
 
     # Step 2: Train GORMPO policy using the trained Neural ODE model
     echo "Step 2/2: Training GORMPO-NeuralODE policy (seed $seed)..."
     python mopo.py \
         --config configs/neuralODE/walker2d_medium_expert.yaml \
         --seed $seed \
-        --classifier_model_name /public/gormpo/models/walker2d_medium_expert/neuralODE_$seed \
         --epoch 1000 \
         --devid 0 \
         --results_output $RESULTS_FILE
