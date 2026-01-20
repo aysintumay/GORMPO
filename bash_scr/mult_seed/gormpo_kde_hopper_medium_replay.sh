@@ -29,7 +29,7 @@ for seed in "${seeds[@]}"; do
         --config configs/kde/hopper_medium_replay.yaml \
         --seed $seed \
         --save_path /public/gormpo/models/hopper_medium_replay/kde_$seed \
-        --devid 1
+        --devid 7
     echo "KDE training complete for seed $seed"
     echo ""
 
@@ -40,7 +40,7 @@ for seed in "${seeds[@]}"; do
         --seed $seed \
         --classifier_model_name /public/gormpo/models/hopper_medium_replay/kde_$seed \
         --epoch 1000 \
-        --devid 1 \
+        --devid 7 \
         --results_output $RESULTS_FILE
     echo "GORMPO-KDE training complete for seed $seed"
     echo ""
