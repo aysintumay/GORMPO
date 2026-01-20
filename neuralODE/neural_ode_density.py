@@ -39,18 +39,6 @@ class NPZTargetDataset(Dataset):
                 raise ValueError(
                     f"Failed to load dataset from {npz_path}. Tried numpy.load and pickle.load. Error: {e}"
                 )
-        # Expect common key names; fall back heuristics
-        possible_target_keys = [
-            "target",
-            "y",
-            "action",
-            "next",
-            "outputs",
-            "X_target",
-            "data",
-            "x",
-            "samples",
-        ]
 
         def available_keys(obj):
             if isinstance(obj, dict):
@@ -63,24 +51,54 @@ class NPZTargetDataset(Dataset):
                 except Exception:
                     return []
 
-        def pick(keys):
-            for k in keys:
+        def get_key(key):
+            """Try to get a key from data, return None if not found."""
+            try:
+                if key in data:
+                    return data[key]
+            except Exception:
                 try:
-                    if k in data:
-                        return data[k]
+                    if hasattr(data, "files") and key in data.files:
+                        return data[key]
                 except Exception:
-                    # For NpzFile mapping interface
-                    try:
-                        if hasattr(data, "files") and k in data.files:
-                            return data[k]
-                    except Exception:
-                        pass
-            raise KeyError(
-                f"Could not find any of keys {keys} in {available_keys(data)}. "
-                "Please rename your arrays or pass a small shim."
-            )
+                    pass
+            return None
 
-        self.target_np = pick(possible_target_keys)
+        # Check for D4RL format (observations + actions)
+        observations = get_key("observations")
+        actions = get_key("actions")
+
+        if observations is not None and actions is not None:
+            # D4RL format: concatenate observations and actions
+            print(f"Detected D4RL format: observations shape={observations.shape}, actions shape={actions.shape}")
+            self.target_np = np.concatenate([observations, actions], axis=1)
+            print(f"Concatenated target shape: {self.target_np.shape}")
+        else:
+            # Fall back to original single-key format
+            possible_target_keys = [
+                "target",
+                "y",
+                "action",
+                "next",
+                "outputs",
+                "X_target",
+                "data",
+                "x",
+                "samples",
+            ]
+
+            def pick(keys):
+                for k in keys:
+                    val = get_key(k)
+                    if val is not None:
+                        return val
+                raise KeyError(
+                    f"Could not find any of keys {keys} in {available_keys(data)}. "
+                    "For D4RL datasets, ensure both 'observations' and 'actions' keys exist. "
+                    "Otherwise, rename your arrays or pass a small shim."
+                )
+
+            self.target_np = pick(possible_target_keys)
 
         self.target = torch.from_numpy(self.target_np).to(dtype)
 
@@ -97,14 +115,59 @@ class NPZTargetDataset(Dataset):
         return self.target[idx]
 
 
-def divergence_bruteforce(f: torch.Tensor, z: torch.Tensor) -> torch.Tensor:
+class D4RLTargetDataset(Dataset):
+    """Dataset that loads directly from D4RL task names."""
+
+    def __init__(self, task: str, dtype: torch.dtype = torch.float32):
+        super().__init__()
+        try:
+            import gym
+            import d4rl
+        except ImportError as e:
+            raise ImportError(
+                "D4RL and gym are required for loading from task names. "
+                "Install with: pip install gym d4rl"
+            ) from e
+
+        print(f"Loading D4RL dataset for task: {task}")
+        env = gym.make(task)
+        dataset = d4rl.qlearning_dataset(env)
+
+        observations = dataset['observations']
+        actions = dataset['actions']
+
+        print(f"D4RL dataset loaded: observations shape={observations.shape}, actions shape={actions.shape}")
+        self.target_np = np.concatenate([observations, actions], axis=1).astype(np.float32)
+        print(f"Concatenated target shape: {self.target_np.shape}")
+
+        self.target = torch.from_numpy(self.target_np).to(dtype)
+        self.target = self.target.view(self.target.size(0), -1)
+
+        self.num_samples = self.target.size(0)
+        self.target_dim = self.target.size(1)
+
+        env.close()
+
+    def __len__(self) -> int:
+        return self.num_samples
+
+    def __getitem__(self, idx: int) -> torch.Tensor:
+        return self.target[idx]
+
+
+def divergence_bruteforce(f: torch.Tensor, z: torch.Tensor, create_graph: bool = True) -> torch.Tensor:
     """
     Computes divergence of f with respect to z using autograd.
+
+    Args:
+        f: Output tensor from the ODE function
+        z: Input tensor
+        create_graph: Whether to create graph for higher-order gradients (False for inference)
     """
     divergence = torch.zeros(z.size(0), device=z.device)
     for i in range(z.size(1)):
         grad = torch.autograd.grad(
-            f[:, i].sum(), z, create_graph=True, retain_graph=True
+            f[:, i].sum(), z, create_graph=create_graph, retain_graph=True
         )[0][:, i]
         divergence = divergence + grad
     return divergence
@@ -125,6 +188,7 @@ class ODEFunc(nn.Module):
         super().__init__()
         self.dim = dim
         self.time_dependent = time_dependent
+        self._inference_mode = False  # Set to True during inference to reduce memory
 
         act = nn.SiLU if activation == "silu" else nn.Tanh
         input_dim = dim + (1 if time_dependent else 0)
@@ -147,7 +211,8 @@ class ODEFunc(nn.Module):
         else:
             h = z
         dz_dt = self.net(h)
-        div = divergence_bruteforce(dz_dt, z)
+        # Use create_graph=False during inference to save memory
+        div = divergence_bruteforce(dz_dt, z, create_graph=not self._inference_mode)
         dlogp_dt = -div
         return dz_dt, dlogp_dt
 
@@ -192,25 +257,37 @@ class ContinuousNormalizingFlow(nn.Module):
         )
         return z_t[-1], logp_t[-1]
 
-    def log_prob(self, x: torch.Tensor) -> torch.Tensor:
+    def log_prob(self, x: torch.Tensor, requires_grad: bool = False) -> torch.Tensor:
         """
         Compute log probability of data points.
 
         Args:
             x: Input tensor of shape (batch_size, dim)
+            requires_grad: Whether to compute gradients (default: False for inference)
 
         Returns:
             Log probabilities for each sample
         """
         if not isinstance(x, torch.Tensor):
             x = torch.tensor(x, dtype=torch.float32, device=self.integration_times.device)
-        torch.set_grad_enabled(True)  # Required for divergence computation
+
+        # Set inference mode on the ODE function to reduce memory usage
+        self.func._inference_mode = not requires_grad
+
+        # For divergence computation in ODE, we always need input gradients
+        # But we can avoid creating the computation graph during inference
+        x = x.requires_grad_(True)
         logp0 = torch.zeros(x.size(0), device=x.device)
         z1, logp1 = self._odeint(x, logp0, reverse=False)
         logpz = -0.5 * (
             z1.pow(2).sum(dim=1) + z1.size(1) * math.log(2 * math.pi)
         )
-        return logpz - logp1
+        result = logpz - logp1
+
+        # Reset inference mode
+        self.func._inference_mode = False
+
+        return result
 
     def score_samples(self, x: torch.Tensor, device: str = 'cuda', batch_size: int = 100) -> np.ndarray:
         """
@@ -224,6 +301,8 @@ class ContinuousNormalizingFlow(nn.Module):
         Returns:
             Log probabilities as numpy array
         """
+        self.eval()
+
         # Ensure x is a tensor on the correct device
         if not isinstance(x, torch.Tensor):
             x = torch.tensor(x, dtype=torch.float32)
@@ -237,12 +316,14 @@ class ContinuousNormalizingFlow(nn.Module):
         log_probs_list = []
 
         for i in range(0, n_samples, batch_size):
-            batch = x[i:i+batch_size]
-            with torch.no_grad():
-                batch_log_probs = self.log_prob(batch)
-                log_probs_list.append(batch_log_probs.detach().cpu())
+            batch = x[i:i+batch_size].detach().clone()
 
-            # Clear GPU cache after each batch
+            # Compute log prob - requires_grad=False for inference
+            batch_log_probs = self.log_prob(batch, requires_grad=False)
+            log_probs_list.append(batch_log_probs.detach().cpu())
+
+            # Delete intermediate tensors and clear GPU cache
+            del batch, batch_log_probs
             if model_device.type == 'cuda':
                 torch.cuda.empty_cache()
 
@@ -258,8 +339,9 @@ class ContinuousNormalizingFlow(nn.Module):
 
 @dataclass
 class TrainConfig:
-    npz_path: str
+    npz_path: Optional[str]  # Path to NPZ/pkl file, or None if using task
     out_dir: str
+    task: Optional[str] = None  # D4RL task name (e.g., "halfcheetah-medium-expert-v2")
     batch_size: int = 512
     num_epochs: int = 200
     lr: float = 1e-3
@@ -283,7 +365,16 @@ def train(cfg: TrainConfig) -> None:
     torch.manual_seed(cfg.seed)
     os.makedirs(cfg.out_dir, exist_ok=True)
 
-    dataset = NPZTargetDataset(cfg.npz_path)
+    # Load dataset from task name or npz path
+    if cfg.task is not None:
+        print(f"Loading dataset from D4RL task: {cfg.task}")
+        dataset = D4RLTargetDataset(cfg.task)
+    elif cfg.npz_path is not None:
+        print(f"Loading dataset from file: {cfg.npz_path}")
+        dataset = NPZTargetDataset(cfg.npz_path)
+    else:
+        raise ValueError("Either --task or --npz must be specified")
+
     loader = DataLoader(dataset, batch_size=cfg.batch_size, shuffle=True, drop_last=True)
 
     odefunc = ODEFunc(
@@ -399,10 +490,15 @@ def parse_args() -> TrainConfig:
         return yaml_defaults.get(key, default)
 
     parser = argparse.ArgumentParser(
-        description="Train a neural ODE (CNF) density model on NPZ data",
+        description="Train a neural ODE (CNF) density model on NPZ data or D4RL task",
         parents=[config_only],
     )
-    parser.add_argument("--npz", required=("npz" not in yaml_defaults), default=dget("npz", None))
+    # Either --npz or --task must be provided
+    has_data_source = "npz" in yaml_defaults or "task" in yaml_defaults
+    parser.add_argument("--npz", required=False, default=dget("npz", None),
+                        help="Path to NPZ/pkl dataset file")
+    parser.add_argument("--task", required=False, default=dget("task", None),
+                        help="D4RL task name (e.g., halfcheetah-medium-expert-v2)")
     parser.add_argument("--out", required=("out" not in yaml_defaults), default=dget("out", None))
     parser.add_argument("--epochs", type=int, default=dget("epochs", 200))
     parser.add_argument("--batch", type=int, default=dget("batch", 512))
@@ -425,6 +521,11 @@ def parse_args() -> TrainConfig:
     parser.set_defaults(time_dependent=dget("time_dependent", True))
 
     args = parser.parse_args()
+
+    # Validate that either npz or task is provided
+    if args.npz is None and args.task is None:
+        parser.error("Either --npz or --task must be specified")
+
     print("Parsed configuration:")
     for k, v in vars(args).items():
         print(f"  {k}: {v}")
@@ -434,6 +535,7 @@ def parse_args() -> TrainConfig:
     return TrainConfig(
         npz_path=args.npz,
         out_dir=args.out,
+        task=args.task,
         num_epochs=args.epochs,
         batch_size=args.batch,
         lr=args.lr,

@@ -260,7 +260,7 @@ class NeuralODEOOD:
     def load_model(
         cls,
         save_path: str,
-        target_dim: int,
+        target_dim: Optional[int] = None,
         hidden_dims: Tuple[int, ...] = (512, 512),
         activation: str = "silu",
         time_dependent: bool = True,
@@ -276,7 +276,7 @@ class NeuralODEOOD:
 
         Args:
             save_path: Base path for loading (without extension)
-            target_dim: Dimension of target data
+            target_dim: Dimension of target data (optional, will be read from metadata if not provided)
             hidden_dims: Hidden layer dimensions
             activation: Activation function
             time_dependent: Whether to use time-dependent ODE
@@ -336,6 +336,30 @@ class NeuralODEOOD:
         rtol = metadata.get('rtol', rtol)
         atol = metadata.get('atol', atol)
         target_dim = metadata.get('target_dim', target_dim)
+
+        # If target_dim still not found, try to infer from environment name in path
+        if target_dim is None:
+            # Standard D4RL environment dimensions (obs_dim + act_dim)
+            env_dims = {
+                'halfcheetah': 23,  # 17 obs + 6 act
+                'hopper': 14,       # 11 obs + 3 act
+                'walker2d': 23,     # 17 obs + 6 act
+                'walker': 23,       # alias for walker2d
+            }
+            save_path_lower = save_path.lower()
+            for env_name, dim in env_dims.items():
+                if env_name in save_path_lower:
+                    target_dim = dim
+                    print(f"Inferred target_dim={target_dim} from environment '{env_name}' in path")
+                    break
+
+        if target_dim is None:
+            raise ValueError(
+                f"target_dim not found in metadata at {metadata_path}, not provided as argument, "
+                f"and could not be inferred from path '{save_path}'. "
+                "Please provide target_dim explicitly or use a path containing the environment name "
+                "(halfcheetah, hopper, walker2d)."
+            )
 
         # Create ODE function and flow
         odefunc = ODEFunc(

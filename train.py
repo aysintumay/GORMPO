@@ -203,17 +203,9 @@ def train(env, run, logger, seed, args):
         device = f"cuda:{args.devid}" if torch.cuda.is_available() else "cpu"
 
         # Load model using NeuralODEOOD wrapper
+        # target_dim is read from metadata, no need to pass it explicitly
         classifier_dict = NeuralODEOOD.load_model(
             save_path=args.classifier_model_name.replace('_model.pt', ''),
-            target_dim=args.target_dim,
-            hidden_dims=(512, 512),
-            activation="silu",
-            time_dependent=True,
-            solver="dopri5",
-            t0=0.0,
-            t1=1.0,
-            rtol=1e-5,
-            atol=1e-5,
             device=device
         )
         # classifier_dict now contains: {'model': ood_model, 'threshold': ..., 'mean': ..., 'std': ...}
