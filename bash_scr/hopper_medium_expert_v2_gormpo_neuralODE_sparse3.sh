@@ -8,7 +8,7 @@ echo "============================================"
 echo ""
 
 # Array of penalty coefficients to test
-penalty_coeffs=(0.05 0.1 0.3 0.5 0.8)
+penalty_coeffs=(0.05 0.1 0.3 0.5)
 
 # Loop through each penalty coefficient
 for coef in "${penalty_coeffs[@]}"; do
@@ -19,8 +19,9 @@ for coef in "${penalty_coeffs[@]}"; do
     python mopo.py \
         --config configs/neuralODE/gormpo_hopper_medium_expert_sparse_3.yaml \
         --reward-penalty-coef $coef \
-        --epoch 10 \
-        --devid 0
+        --epoch 1000 \
+        --devid 0 \
+        --dynamics-model-dir dynamics
 
     echo "✓ Training complete for penalty coefficient $coef"
     echo ""

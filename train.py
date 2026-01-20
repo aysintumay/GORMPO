@@ -307,9 +307,7 @@ def train(env, run, logger, seed, args):
     )
     #load world model
 
-    # dynamics_model.load_model([args.task, args.data_path]) 
-
-   
+    
     # create trainer
     trainer = Trainer(
         algo,
@@ -326,9 +324,15 @@ def train(env, run, logger, seed, args):
         
     )
 
-    # pretrain dynamics model on the whole dataset
-    trainer.train_dynamics()
-    # 
+    if args.dynamics_model_dir != None:
+        print(f"Loading dynamics model")
+        dynamics_model.load_model([args.task, args.data_path]) 
+        print("Dynamics model loaded.")
+    else:
+        print("Training dynamics model from scratch.")
+        # pretrain dynamics model on the whole dataset
+        trainer.train_dynamics()
+    
 
     # policy_state_dict = torch.load(os.path.join(util.logger_model.log_path, f"policy_{args.task}.pth"))
     # sac_policy.load_state_dict(policy_state_dict)
