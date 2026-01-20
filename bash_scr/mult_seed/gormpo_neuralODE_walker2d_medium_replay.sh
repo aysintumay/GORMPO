@@ -26,7 +26,7 @@ for seed in "${seeds[@]}"; do
     # Step 1: Train Neural ODE density model for this seed
     echo "Step 1/2: Training Neural ODE density model (seed $seed)..."
     python neuralODE/neural_ode_density.py \
-        --config configs/neuralODE/walker2d_medium_replay_train.yaml \
+        --task walker2d-medium-replay-v2 \
         --seed $seed \
         --epochs 10 \
         --out /public/gormpo/models/walker2d_medium_replay/neuralODE_$seed
