@@ -79,8 +79,7 @@ class NeuralODEOOD:
             x = torch.tensor(x, dtype=torch.float32)
         x = x.to(self.device)
 
-        with torch.enable_grad():
-            log_probs = self.flow.log_prob(x)
+        log_probs = self.flow.log_prob(x)
         return log_probs.detach().cpu().numpy()
 
     def set_threshold(
@@ -275,6 +274,11 @@ class NeuralODEOOD:
         """
         Load a saved Neural ODE OOD model.
 
+        Supports three formats:
+        1. New format: {save_path}/metadata.pkl + {save_path}/model.pt
+        2. Old format: {save_path}_metadata.pkl + {save_path}_model.pt
+        3. Standalone format: {save_path}.pt with embedded metadata (no separate metadata file)
+
         Args:
             save_path: Base path for loading (without extension)
             target_dim: Dimension of target data (optional, will be read from metadata if not provided)
@@ -291,11 +295,19 @@ class NeuralODEOOD:
         """
         import glob
 
-        # Support both old format ({save_path}_metadata.pkl) and new format ({save_path}/metadata.pkl)
+        # Support multiple formats:
+        # 1. New format: {save_path}/metadata.pkl + {save_path}/model.pt
+        # 2. Old format: {save_path}_metadata.pkl + {save_path}_model.pt
+        # 3. Standalone format: {save_path}.pt with embedded metadata (no separate metadata file)
         metadata_path_new = os.path.join(save_path, "metadata.pkl")
         metadata_path_old = f"{save_path}_metadata.pkl"
         model_path_new = os.path.join(save_path, "model.pt")
         model_path_old = f"{save_path}_model.pt"
+        model_path_standalone = f"{save_path}.pt" if not save_path.endswith('.pt') else save_path
+
+        metadata = {}
+        metadata_path = None
+        model_path = None
 
         if os.path.exists(metadata_path_new):
             metadata_path = metadata_path_new
@@ -318,19 +330,38 @@ class NeuralODEOOD:
         elif os.path.exists(metadata_path_old):
             metadata_path = metadata_path_old
             model_path = model_path_old
-        elif os.path.exists(model_path_new):
-            model_path = model_path_new
-            
+        elif os.path.exists(model_path_standalone):
+            # Standalone format: only model.pt exists, metadata embedded in checkpoint
+            model_path = model_path_standalone
+            metadata_path = None
+            print(f"Loading standalone model (no separate metadata file): {model_path}")
         else:
             raise FileNotFoundError(
-                f"Could not find metadata file at {metadata_path_new} or {metadata_path_old}"
+                f"Could not find metadata file at {metadata_path_new} or {metadata_path_old}, "
+                f"nor standalone model at {model_path_standalone}"
             )
 
-        # Load metadata
-        with open(metadata_path, 'rb') as f:
-            metadata = pickle.load(f)
+        # Load metadata from file if available
+        if metadata_path is not None:
+            with open(metadata_path, 'rb') as f:
+                metadata = pickle.load(f)
 
-        # Use metadata values if available, otherwise use provided arguments
+        # Load checkpoint to check for embedded metadata
+        ckpt = torch.load(model_path, map_location=device)
+
+        # Handle standalone format with embedded metadata (toy experiments format)
+        # This format stores: ode_func_state_dict, hidden_dims, time_dependent, solver, input_dim
+        if isinstance(ckpt, dict) and 'ode_func_state_dict' in ckpt:
+            # Toy experiments format - extract metadata from checkpoint
+            if target_dim is None:
+                target_dim = ckpt.get('input_dim', ckpt.get('target_dim'))
+            hidden_dims = tuple(ckpt.get('hidden_dims', hidden_dims))
+            time_dependent = ckpt.get('time_dependent', time_dependent)
+            solver = ckpt.get('solver', solver)
+            # activation defaults to 'silu' if not in checkpoint
+            activation = ckpt.get('activation', activation)
+
+        # Use metadata values if available, otherwise use provided arguments or checkpoint values
         hidden_dims = metadata.get('hidden_dims', hidden_dims)
         activation = metadata.get('activation', activation)
         time_dependent = metadata.get('time_dependent', time_dependent)
@@ -359,7 +390,7 @@ class NeuralODEOOD:
 
         if target_dim is None:
             raise ValueError(
-                f"target_dim not found in metadata at {metadata_path}, not provided as argument, "
+                f"target_dim not found in metadata or checkpoint, not provided as argument, "
                 f"and could not be inferred from path '{save_path}'. "
                 "Please provide target_dim explicitly or use a path containing the environment name "
                 "(halfcheetah, hopper, walker2d)."
@@ -382,10 +413,16 @@ class NeuralODEOOD:
             atol=atol,
         ).to(device)
 
-        # Load model state dict (handle both checkpoint format and direct state dict)
-        ckpt = torch.load(model_path, map_location=device)
-        if isinstance(ckpt, dict) and 'model_state_dict' in ckpt:
-            flow.load_state_dict(ckpt['model_state_dict'])
+        # Load model state dict (handle multiple checkpoint formats)
+        if isinstance(ckpt, dict):
+            if 'model_state_dict' in ckpt:
+                flow.load_state_dict(ckpt['model_state_dict'])
+            elif 'ode_func_state_dict' in ckpt:
+                # Toy experiments format - load just the ODE function state
+                odefunc.load_state_dict(ckpt['ode_func_state_dict'])
+            else:
+                # Assume the dict is the state dict itself
+                flow.load_state_dict(ckpt)
         else:
             flow.load_state_dict(ckpt)
         flow.eval()
@@ -395,7 +432,10 @@ class NeuralODEOOD:
         ood_model.threshold = metadata.get('threshold')
 
         print(f"Model loaded from: {model_path}")
-        print(f"Metadata loaded from: {metadata_path}")
+        if metadata_path:
+            print(f"Metadata loaded from: {metadata_path}")
+        else:
+            print("Metadata extracted from checkpoint (standalone format)")
         print(f"Threshold: {ood_model.threshold}")
 
         model_dict = {
