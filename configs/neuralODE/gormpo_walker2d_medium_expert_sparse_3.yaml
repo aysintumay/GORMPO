@@ -3,7 +3,7 @@
 
 task: walker2d-medium-expert-v2
 algo-name: gormpo
-reward-penalty-coef: 0.5
+reward-penalty-coef: 0.05
 seed: 1
 data_path: /public/d4rl/sparse_datasets/walker2d_medium_expert_sparse_73.pkl
 epoch: 1000

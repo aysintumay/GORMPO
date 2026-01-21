@@ -1,4 +1,4 @@
-classifier_model_name: /public/gormpo/models/walker2d_medium_replay/neuralODE/model.pt
+classifier_model_name: /public/gormpo/models/walker2d_medium_replay/neuralODE
 density_model: neuralODE
 hidden_dims: [512, 512]
 activation: silu

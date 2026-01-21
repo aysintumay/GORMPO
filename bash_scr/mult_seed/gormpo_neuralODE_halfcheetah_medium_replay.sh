@@ -24,21 +24,20 @@ for seed in "${seeds[@]}"; do
     echo "=========================================="
 
     # Step 1: Train Neural ODE density model for this seed
-    echo "Step 1/2: Training Neural ODE density model (seed $seed)..."
-    python neuralODE/neural_ode_density.py \
-        --task halfcheetah-medium-replay-v2 \
-        --seed $seed \
-        --epochs 10 \
-        --out /public/gormpo/models/halfcheetah_medium_replay/neuralODE_$seed
-    echo "Neural ODE training complete for seed $seed"
-    echo ""
+    # echo "Step 1/2: Training Neural ODE density model (seed $seed)..."
+    # python neuralODE/neural_ode_density.py \
+    #     --task halfcheetah-medium-replay-v2 \
+    #     --seed $seed \
+    #     --epochs 10 \
+    #     --out /public/gormpo/models/halfcheetah_medium_replay/neuralODE_$seed
+    # echo "Neural ODE training complete for seed $seed"
+    # echo ""
 
     # Step 2: Train GORMPO policy using the trained Neural ODE model
     echo "Step 2/2: Training GORMPO-NeuralODE policy (seed $seed)..."
     python mopo.py \
         --config configs/neuralODE/halfcheetah_medium_replay.yaml \
         --seed $seed \
-        --classifier_model_name /public/gormpo/models/halfcheetah_medium_replay/neuralODE_$seed \
         --epoch 1000 \
         --devid 0 \
         --results_output $RESULTS_FILE

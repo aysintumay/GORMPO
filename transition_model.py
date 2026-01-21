@@ -372,15 +372,15 @@ class TransitionModel:
 
         elif  info[0].lower()=="halfcheetah-medium-replay-v2":
             # model_save_dir = '/public/gormpo/models/rl/halfcheetah/realnvp/seed_1_1110_000453_HalfCheetah_gormpo/dynamics_model'
-            model_save_dir = '/public/gormpo/models/rl/halfcheetah-medium-replay-v2/kde/seed_1_1229_113207_halfcheetah_medium_replay_v2_mbpo/dynamics_model'
+            model_save_dir = '/public/gormpo/models/rl/halfcheetah-medium-replay-v2/diffusion/seed_1_0112_173906_halfcheetah_medium_replay_v2_gormpo/dynamics_model'
             print('loaded halfcheetah model from ', model_save_dir)
 
         elif  info[0].lower()=="hopper-medium-replay-v2":
-            model_save_dir = '/public/gormpo/models/rl/hopper-medium-replay-v2/kde/seed_1_1229_115745_hopper_medium_replay_v2_gormpo/dynamics_model'
+            model_save_dir = '/public/gormpo/models/rl/hopper-medium-replay-v2/diffusion/seed_1_0112_173852_hopper_medium_replay_v2_gormpo/dynamics_model'
             print('loaded hopper model from ', model_save_dir)
 
         elif  info[0].lower()=="walker2d-medium-replay-v2":
-            model_save_dir = "/public/gormpo/models/rl/walker2d-medium-replay-v2/kde/seed_1_1229_115824_walker2d_medium_replay_v2_gormpo/dynamics_model"
+            model_save_dir = "/public/gormpo/models/rl/walker2d-medium-replay-v2/diffusion/seed_1_0112_173811_walker2d_medium_replay_v2_gormpo/dynamics_model"
             print('loaded walker2d model from ', model_save_dir)
         for network_name, network in self.networks.items():
             load_path = os.path.join(model_save_dir, network_name + ".pt")
