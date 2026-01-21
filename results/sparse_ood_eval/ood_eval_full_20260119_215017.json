@@ -1,0 +1,593 @@
+{
+  "timestamp": "20260119_215017",
+  "config": {
+    "ood_distances": {
+      "hopper": [
+        1.0,
+        1.2,
+        1.4,
+        1.6,
+        1.8
+      ],
+      "halfcheetah": [
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "walker2d": [
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ]
+    },
+    "device": "cuda",
+    "batch_size": 256,
+    "max_train_samples": 5000
+  },
+  "models": {
+    "halfcheetah_sparse_57.5": {
+      "diffusion": {
+        "model_name": "halfcheetah_sparse_57.5",
+        "density_type": "diffusion",
+        "env": "halfcheetah",
+        "env_name": "halfcheetah-medium-expert-v2",
+        "sparse_level": "57.5%",
+        "model_dir": "/public/gormpo/models/halfcheetah_medium_expert_sparse_2/diffusion",
+        "train_data_path": "/public/d4rl/sparse_datasets/diffusion_processed/halfcheetah_medium_expert_sparse_57.5_train.npz",
+        "n_train_samples": 5000,
+        "ood_distances": [
+          0.4,
+          0.6,
+          0.8,
+          1.0
+        ],
+        "ood_results": {
+          "0.4": {
+            "roc_auc": 0.40786062,
+            "avg_precision": 0.6039496510925318,
+            "train_log_prob_mean": -3442588.0,
+            "train_log_prob_std": 1858679.375,
+            "ood_log_prob_mean": -2844413.25,
+            "ood_log_prob_std": 1714048.25,
+            "log_prob_gap": -598174.75,
+            "n_train": 5000,
+            "n_ood": 10000,
+            "ood_path": "/public/d4rl/ood_test/halfcheetah-medium-expert-v2/ood-distance-0.4-uniform.pkl"
+          },
+          "0.6": {
+            "roc_auc": 0.48025487,
+            "avg_precision": 0.6569923755451386,
+            "train_log_prob_mean": -3446986.0,
+            "train_log_prob_std": 1857410.25,
+            "ood_log_prob_mean": -3324107.25,
+            "ood_log_prob_std": 1864336.875,
+            "log_prob_gap": -122878.75,
+            "n_train": 5000,
+            "n_ood": 10000,
+            "ood_path": "/public/d4rl/ood_test/halfcheetah-medium-expert-v2/ood-distance-0.6-uniform.pkl"
+          },
+          "0.8": {
+            "roc_auc": 0.31738953,
+            "avg_precision": 0.5428750285858254,
+            "train_log_prob_mean": -3432389.0,
+            "train_log_prob_std": 1855505.25,
+            "ood_log_prob_mean": -2242596.0,
+            "ood_log_prob_std": 1351062.75,
+            "log_prob_gap": -1189793.0,
+            "n_train": 5000,
+            "n_ood": 10000,
+            "ood_path": "/public/d4rl/ood_test/halfcheetah-medium-expert-v2/ood-distance-0.8-uniform.pkl"
+          },
+          "1.0": {
+            "roc_auc": 0.5376112399999999,
+            "avg_precision": 0.6903705810204512,
+            "train_log_prob_mean": -3440044.75,
+            "train_log_prob_std": 1856211.0,
+            "ood_log_prob_mean": -3688626.5,
+            "ood_log_prob_std": 1849166.75,
+            "log_prob_gap": 248581.75,
+            "n_train": 5000,
+            "n_ood": 10000,
+            "ood_path": "/public/d4rl/ood_test/halfcheetah-medium-expert-v2/ood-distance-1-uniform.pkl"
+          }
+        }
+      },
+      "neuralode": {
+        "model_name": "halfcheetah_sparse_57.5",
+        "density_type": "neuralode",
+        "env": "halfcheetah",
+        "env_name": "halfcheetah-medium-expert-v2",
+        "sparse_level": "57.5%",
+        "model_dir": "/public/gormpo/models/halfcheetah_medium_expert_sparse_2/neuralODE",
+        "train_data_path": "/public/d4rl/sparse_datasets/diffusion_processed/halfcheetah_medium_expert_sparse_57.5_train.npz",
+        "n_train_samples": 5000,
+        "ood_distances": [
+          0.4,
+          0.6,
+          0.8,
+          1.0
+        ],
+        "ood_results": {
+          "0.4": {
+            "roc_auc": 0.8251627500000001,
+            "avg_precision": 0.9235503758253346,
+            "train_log_prob_mean": 4.083487510681152,
+            "train_log_prob_std": 8.236937522888184,
+            "ood_log_prob_mean": -743683.6875,
+            "ood_log_prob_std": 2161967.0,
+            "log_prob_gap": 743687.75,
+            "n_train": 5000,
+            "n_ood": 10000,
+            "ood_path": "/public/d4rl/ood_test/halfcheetah-medium-expert-v2/ood-distance-0.4-uniform.pkl"
+          },
+          "0.6": {
+            "roc_auc": 0.7636320799999999,
+            "avg_precision": 0.893774625605866,
+            "train_log_prob_mean": 4.083487510681152,
+            "train_log_prob_std": 8.236937522888184,
+            "ood_log_prob_mean": -1188043.375,
+            "ood_log_prob_std": 3117629.75,
+            "log_prob_gap": 1188047.5,
+            "n_train": 5000,
+            "n_ood": 10000,
+            "ood_path": "/public/d4rl/ood_test/halfcheetah-medium-expert-v2/ood-distance-0.6-uniform.pkl"
+          },
+          "0.8": {
+            "roc_auc": 0.8410728000000001,
+            "avg_precision": 0.9258772071148881,
+            "train_log_prob_mean": 4.083487510681152,
+            "train_log_prob_std": 8.236937522888184,
+            "ood_log_prob_mean": -3279230.25,
+            "ood_log_prob_std": 6907919.5,
+            "log_prob_gap": 3279234.25,
+            "n_train": 5000,
+            "n_ood": 10000,
+            "ood_path": "/public/d4rl/ood_test/halfcheetah-medium-expert-v2/ood-distance-0.8-uniform.pkl"
+          },
+          "1.0": {
+            "roc_auc": 0.72944968,
+            "avg_precision": 0.8777953743320099,
+            "train_log_prob_mean": 4.083487510681152,
+            "train_log_prob_std": 8.236937522888184,
+            "ood_log_prob_mean": -2846152.0,
+            "ood_log_prob_std": 4744549.5,
+            "log_prob_gap": 2846156.0,
+            "n_train": 5000,
+            "n_ood": 10000,
+            "ood_path": "/public/d4rl/ood_test/halfcheetah-medium-expert-v2/ood-distance-1-uniform.pkl"
+          }
+        }
+      }
+    },
+    "halfcheetah_sparse_72.5": {
+      "diffusion": {
+        "model_name": "halfcheetah_sparse_72.5",
+        "density_type": "diffusion",
+        "env": "halfcheetah",
+        "env_name": "halfcheetah-medium-expert-v2",
+        "sparse_level": "72.5%",
+        "model_dir": "/public/gormpo/models/halfcheetah_medium_expert_sparse_3/diffusion",
+        "train_data_path": "/public/d4rl/sparse_datasets/diffusion_processed/halfcheetah_medium_expert_sparse_72.5_train.npz",
+        "n_train_samples": 5000,
+        "ood_distances": [
+          0.4,
+          0.6,
+          0.8,
+          1.0
+        ],
+        "ood_results": {
+          "0.4": {
+            "roc_auc": 0.45595091,
+            "avg_precision": 0.6303542400188421,
+            "train_log_prob_mean": -3141060.25,
+            "train_log_prob_std": 1838883.5,
+            "ood_log_prob_mean": -2841208.25,
+            "ood_log_prob_std": 1709410.875,
+            "log_prob_gap": -299852.0,
+            "n_train": 5000,
+            "n_ood": 10000,
+            "ood_path": "/public/d4rl/ood_test/halfcheetah-medium-expert-v2/ood-distance-0.4-uniform.pkl"
+          },
+          "0.6": {
+            "roc_auc": 0.52886024,
+            "avg_precision": 0.686491672718587,
+            "train_log_prob_mean": -3139420.5,
+            "train_log_prob_std": 1839933.875,
+            "ood_log_prob_mean": -3329132.5,
+            "ood_log_prob_std": 1869052.25,
+            "log_prob_gap": 189712.0,
+            "n_train": 5000,
+            "n_ood": 10000,
+            "ood_path": "/public/d4rl/ood_test/halfcheetah-medium-expert-v2/ood-distance-0.6-uniform.pkl"
+          },
+          "0.8": {
+            "roc_auc": 0.36562859999999997,
+            "avg_precision": 0.5651474191486725,
+            "train_log_prob_mean": -3133858.5,
+            "train_log_prob_std": 1840819.25,
+            "ood_log_prob_mean": -2243042.0,
+            "ood_log_prob_std": 1350243.875,
+            "log_prob_gap": -890816.5,
+            "n_train": 5000,
+            "n_ood": 10000,
+            "ood_path": "/public/d4rl/ood_test/halfcheetah-medium-expert-v2/ood-distance-0.8-uniform.pkl"
+          },
+          "1.0": {
+            "roc_auc": 0.58420989,
+            "avg_precision": 0.7193647728607102,
+            "train_log_prob_mean": -3131874.0,
+            "train_log_prob_std": 1835519.125,
+            "ood_log_prob_mean": -3685081.0,
+            "ood_log_prob_std": 1854416.125,
+            "log_prob_gap": 553207.0,
+            "n_train": 5000,
+            "n_ood": 10000,
+            "ood_path": "/public/d4rl/ood_test/halfcheetah-medium-expert-v2/ood-distance-1-uniform.pkl"
+          }
+        }
+      },
+      "neuralode": {
+        "model_name": "halfcheetah_sparse_72.5",
+        "density_type": "neuralode",
+        "env": "halfcheetah",
+        "env_name": "halfcheetah-medium-expert-v2",
+        "sparse_level": "72.5%",
+        "model_dir": "/public/gormpo/models/halfcheetah_medium_expert_sparse_3/neuralODE",
+        "train_data_path": "/public/d4rl/sparse_datasets/diffusion_processed/halfcheetah_medium_expert_sparse_72.5_train.npz",
+        "n_train_samples": 5000,
+        "ood_distances": [
+          0.4,
+          0.6,
+          0.8,
+          1.0
+        ],
+        "ood_results": {
+          "0.4": {
+            "roc_auc": 0.8056572099999999,
+            "avg_precision": 0.9152391201551436,
+            "train_log_prob_mean": 2.925349712371826,
+            "train_log_prob_std": 8.421428680419922,
+            "ood_log_prob_mean": -29289.673828125,
+            "ood_log_prob_std": 269322.6875,
+            "log_prob_gap": 29292.599609375,
+            "n_train": 5000,
+            "n_ood": 10000,
+            "ood_path": "/public/d4rl/ood_test/halfcheetah-medium-expert-v2/ood-distance-0.4-uniform.pkl"
+          },
+          "0.6": {
+            "roc_auc": 0.7498703,
+            "avg_precision": 0.8875033717455182,
+            "train_log_prob_mean": 2.925349712371826,
+            "train_log_prob_std": 8.421428680419922,
+            "ood_log_prob_mean": -47728.31640625,
+            "ood_log_prob_std": 137933.09375,
+            "log_prob_gap": 47731.2421875,
+            "n_train": 5000,
+            "n_ood": 10000,
+            "ood_path": "/public/d4rl/ood_test/halfcheetah-medium-expert-v2/ood-distance-0.6-uniform.pkl"
+          },
+          "0.8": {
+            "roc_auc": 0.79327815,
+            "avg_precision": 0.9052203935974152,
+            "train_log_prob_mean": 2.925349712371826,
+            "train_log_prob_std": 8.421428680419922,
+            "ood_log_prob_mean": -91362.34375,
+            "ood_log_prob_std": 247241.1875,
+            "log_prob_gap": 91365.265625,
+            "n_train": 5000,
+            "n_ood": 10000,
+            "ood_path": "/public/d4rl/ood_test/halfcheetah-medium-expert-v2/ood-distance-0.8-uniform.pkl"
+          },
+          "1.0": {
+            "roc_auc": 0.72413668,
+            "avg_precision": 0.8757601468743978,
+            "train_log_prob_mean": 2.925349712371826,
+            "train_log_prob_std": 8.421428680419922,
+            "ood_log_prob_mean": -120772.40625,
+            "ood_log_prob_std": 187013.6875,
+            "log_prob_gap": 120775.328125,
+            "n_train": 5000,
+            "n_ood": 10000,
+            "ood_path": "/public/d4rl/ood_test/halfcheetah-medium-expert-v2/ood-distance-1-uniform.pkl"
+          }
+        }
+      }
+    },
+    "hopper_sparse_78": {
+      "diffusion": {
+        "model_name": "hopper_sparse_78",
+        "density_type": "diffusion",
+        "env": "hopper",
+        "env_name": "hopper-medium-expert-v2",
+        "sparse_level": "78%",
+        "model_dir": "/public/gormpo/models/hopper_medium_expert_sparse_3/diffusion",
+        "train_data_path": "/public/d4rl/sparse_datasets/diffusion_processed/hopper_medium_expert_sparse_78_train.npz",
+        "n_train_samples": 5000,
+        "ood_distances": [
+          1.0,
+          1.2,
+          1.4,
+          1.6,
+          1.8
+        ],
+        "ood_results": {
+          "1.0": {
+            "roc_auc": 0.573812844352617,
+            "avg_precision": 0.5835230037325219,
+            "train_log_prob_mean": -317962.75,
+            "train_log_prob_std": 229309.484375,
+            "ood_log_prob_mean": -362930.34375,
+            "ood_log_prob_std": 230631.984375,
+            "log_prob_gap": 44967.59375,
+            "n_train": 5000,
+            "n_ood": 5808,
+            "ood_path": "/public/d4rl/ood_test/hopper-medium-expert-v2/ood-distance-1-uniform.pkl"
+          },
+          "1.2": {
+            "roc_auc": 0.5670374326404927,
+            "avg_precision": 0.5621405800561934,
+            "train_log_prob_mean": -317699.3125,
+            "train_log_prob_std": 227937.734375,
+            "ood_log_prob_mean": -364884.59375,
+            "ood_log_prob_std": 242629.375,
+            "log_prob_gap": 47185.28125,
+            "n_train": 5000,
+            "n_ood": 5196,
+            "ood_path": "/public/d4rl/ood_test/hopper-medium-expert-v2/ood-distance-1.2-uniform.pkl"
+          },
+          "1.4": {
+            "roc_auc": 0.626773784031814,
+            "avg_precision": 0.6597437923052812,
+            "train_log_prob_mean": -319153.25,
+            "train_log_prob_std": 230149.71875,
+            "ood_log_prob_mean": -414838.125,
+            "ood_log_prob_std": 248073.28125,
+            "log_prob_gap": 95684.875,
+            "n_train": 5000,
+            "n_ood": 6538,
+            "ood_path": "/public/d4rl/ood_test/hopper-medium-expert-v2/ood-distance-1.4-uniform.pkl"
+          },
+          "1.6": {
+            "roc_auc": 0.6490300686772171,
+            "avg_precision": 0.6883317825190618,
+            "train_log_prob_mean": -317626.3125,
+            "train_log_prob_std": 227784.421875,
+            "ood_log_prob_mean": -437822.15625,
+            "ood_log_prob_std": 255926.875,
+            "log_prob_gap": 120195.84375,
+            "n_train": 5000,
+            "n_ood": 6698,
+            "ood_path": "/public/d4rl/ood_test/hopper-medium-expert-v2/ood-distance-1.6-uniform.pkl"
+          },
+          "1.8": {
+            "roc_auc": 0.6604170436612309,
+            "avg_precision": 0.7317059777757469,
+            "train_log_prob_mean": -318332.90625,
+            "train_log_prob_std": 227683.9375,
+            "ood_log_prob_mean": -459198.5,
+            "ood_log_prob_std": 272903.75,
+            "log_prob_gap": 140865.59375,
+            "n_train": 5000,
+            "n_ood": 7604,
+            "ood_path": "/public/d4rl/ood_test/hopper-medium-expert-v2/ood-distance-1.8-uniform.pkl"
+          }
+        }
+      },
+      "neuralode": {
+        "model_name": "hopper_sparse_78",
+        "density_type": "neuralode",
+        "env": "hopper",
+        "env_name": "hopper-medium-expert-v2",
+        "sparse_level": "78%",
+        "model_dir": "/public/gormpo/models/hopper_medium_expert_sparse_3/neuralODE",
+        "train_data_path": "/public/d4rl/sparse_datasets/diffusion_processed/hopper_medium_expert_sparse_78_train.npz",
+        "n_train_samples": 5000,
+        "ood_distances": [
+          1.0,
+          1.2,
+          1.4,
+          1.6,
+          1.8
+        ],
+        "ood_results": {
+          "1.0": {
+            "roc_auc": 0.7355429063360881,
+            "avg_precision": 0.8289645012169218,
+            "train_log_prob_mean": 14.360784530639648,
+            "train_log_prob_std": 6.159715175628662,
+            "ood_log_prob_mean": -5132570.5,
+            "ood_log_prob_std": 5901649.0,
+            "log_prob_gap": 5132585.0,
+            "n_train": 5000,
+            "n_ood": 5808,
+            "ood_path": "/public/d4rl/ood_test/hopper-medium-expert-v2/ood-distance-1-uniform.pkl"
+          },
+          "1.2": {
+            "roc_auc": 0.7504789645881448,
+            "avg_precision": 0.8292460900077908,
+            "train_log_prob_mean": 14.360784530639648,
+            "train_log_prob_std": 6.159715175628662,
+            "ood_log_prob_mean": -7079173.5,
+            "ood_log_prob_std": 7767914.0,
+            "log_prob_gap": 7079188.0,
+            "n_train": 5000,
+            "n_ood": 5196,
+            "ood_path": "/public/d4rl/ood_test/hopper-medium-expert-v2/ood-distance-1.2-uniform.pkl"
+          },
+          "1.4": {
+            "roc_auc": 0.7645490364025695,
+            "avg_precision": 0.8535948938893776,
+            "train_log_prob_mean": 14.360784530639648,
+            "train_log_prob_std": 6.159715175628662,
+            "ood_log_prob_mean": -8520295.0,
+            "ood_log_prob_std": 9126957.0,
+            "log_prob_gap": 8520309.0,
+            "n_train": 5000,
+            "n_ood": 6538,
+            "ood_path": "/public/d4rl/ood_test/hopper-medium-expert-v2/ood-distance-1.4-uniform.pkl"
+          },
+          "1.6": {
+            "roc_auc": 0.7618785906240668,
+            "avg_precision": 0.8547870488034341,
+            "train_log_prob_mean": 14.360784530639648,
+            "train_log_prob_std": 6.159715175628662,
+            "ood_log_prob_mean": -10482543.0,
+            "ood_log_prob_std": 11078440.0,
+            "log_prob_gap": 10482557.0,
+            "n_train": 5000,
+            "n_ood": 6698,
+            "ood_path": "/public/d4rl/ood_test/hopper-medium-expert-v2/ood-distance-1.6-uniform.pkl"
+          },
+          "1.8": {
+            "roc_auc": 0.7424624539715939,
+            "avg_precision": 0.8576635172654212,
+            "train_log_prob_mean": 14.360784530639648,
+            "train_log_prob_std": 6.159715175628662,
+            "ood_log_prob_mean": -12479396.0,
+            "ood_log_prob_std": 13119547.0,
+            "log_prob_gap": 12479410.0,
+            "n_train": 5000,
+            "n_ood": 7604,
+            "ood_path": "/public/d4rl/ood_test/hopper-medium-expert-v2/ood-distance-1.8-uniform.pkl"
+          }
+        }
+      }
+    },
+    "walker2d_sparse_73": {
+      "diffusion": {
+        "model_name": "walker2d_sparse_73",
+        "density_type": "diffusion",
+        "env": "walker2d",
+        "env_name": "walker2d-medium-expert-v2",
+        "sparse_level": "73%",
+        "model_dir": "/public/gormpo/models/walker2d_medium_expert_sparse_3/diffusion",
+        "train_data_path": "/public/d4rl/sparse_datasets/diffusion_processed/walker2d_medium_expert_sparse_73_train.npz",
+        "n_train_samples": 5000,
+        "ood_distances": [
+          0.4,
+          0.6,
+          0.8,
+          1.0
+        ],
+        "ood_results": {
+          "0.4": {
+            "roc_auc": 0.47142834218680835,
+            "avg_precision": 0.628787556729264,
+            "train_log_prob_mean": -707982.875,
+            "train_log_prob_std": 389072.9375,
+            "ood_log_prob_mean": -673424.0,
+            "ood_log_prob_std": 389330.25,
+            "log_prob_gap": -34558.875,
+            "n_train": 5000,
+            "n_ood": 9036,
+            "ood_path": "/public/d4rl/ood_test/walker2d-medium-expert-v2/ood-distance-0.4-uniform.pkl"
+          },
+          "0.6": {
+            "roc_auc": 0.5007831307401405,
+            "avg_precision": 0.6085298113510358,
+            "train_log_prob_mean": -709501.4375,
+            "train_log_prob_std": 389748.4375,
+            "ood_log_prob_mean": -720466.4375,
+            "ood_log_prob_std": 422622.5,
+            "log_prob_gap": 10965.0,
+            "n_train": 5000,
+            "n_ood": 7404,
+            "ood_path": "/public/d4rl/ood_test/walker2d-medium-expert-v2/ood-distance-0.6-uniform.pkl"
+          },
+          "0.8": {
+            "roc_auc": 0.4332260382641157,
+            "avg_precision": 0.5988163133989901,
+            "train_log_prob_mean": -707548.5625,
+            "train_log_prob_std": 389707.625,
+            "ood_log_prob_mean": -633205.8125,
+            "ood_log_prob_std": 405450.25,
+            "log_prob_gap": -74342.75,
+            "n_train": 5000,
+            "n_ood": 8572,
+            "ood_path": "/public/d4rl/ood_test/walker2d-medium-expert-v2/ood-distance-0.8-uniform.pkl"
+          },
+          "1.0": {
+            "roc_auc": 0.5120310184132757,
+            "avg_precision": 0.6640385848787506,
+            "train_log_prob_mean": -707514.5,
+            "train_log_prob_std": 385968.71875,
+            "ood_log_prob_mean": -743081.625,
+            "ood_log_prob_std": 445646.125,
+            "log_prob_gap": 35567.125,
+            "n_train": 5000,
+            "n_ood": 8798,
+            "ood_path": "/public/d4rl/ood_test/walker2d-medium-expert-v2/ood-distance-1-uniform.pkl"
+          }
+        }
+      },
+      "neuralode": {
+        "model_name": "walker2d_sparse_73",
+        "density_type": "neuralode",
+        "env": "walker2d",
+        "env_name": "walker2d-medium-expert-v2",
+        "sparse_level": "73%",
+        "model_dir": "/public/gormpo/models/walker2d_medium_expert_sparse_3/neuralODE",
+        "train_data_path": "/public/d4rl/sparse_datasets/diffusion_processed/walker2d_medium_expert_sparse_73_train.npz",
+        "n_train_samples": 5000,
+        "ood_distances": [
+          0.4,
+          0.6,
+          0.8,
+          1.0
+        ],
+        "ood_results": {
+          "0.4": {
+            "roc_auc": 0.7616489707835326,
+            "avg_precision": 0.8847490611652415,
+            "train_log_prob_mean": 21.020544052124023,
+            "train_log_prob_std": 11.918498992919922,
+            "ood_log_prob_mean": -1470382.75,
+            "ood_log_prob_std": 8149786.0,
+            "log_prob_gap": 1470403.75,
+            "n_train": 5000,
+            "n_ood": 9036,
+            "ood_path": "/public/d4rl/ood_test/walker2d-medium-expert-v2/ood-distance-0.4-uniform.pkl"
+          },
+          "0.6": {
+            "roc_auc": 0.775441639654241,
+            "avg_precision": 0.8735249625455958,
+            "train_log_prob_mean": 21.020544052124023,
+            "train_log_prob_std": 11.918498992919922,
+            "ood_log_prob_mean": -1782322.125,
+            "ood_log_prob_std": 9140550.0,
+            "log_prob_gap": 1782343.125,
+            "n_train": 5000,
+            "n_ood": 7404,
+            "ood_path": "/public/d4rl/ood_test/walker2d-medium-expert-v2/ood-distance-0.6-uniform.pkl"
+          },
+          "0.8": {
+            "roc_auc": 0.8253678138124125,
+            "avg_precision": 0.9093022598532902,
+            "train_log_prob_mean": 21.020544052124023,
+            "train_log_prob_std": 11.918498992919922,
+            "ood_log_prob_mean": -1518701.125,
+            "ood_log_prob_std": 6946238.0,
+            "log_prob_gap": 1518722.125,
+            "n_train": 5000,
+            "n_ood": 8572,
+            "ood_path": "/public/d4rl/ood_test/walker2d-medium-expert-v2/ood-distance-0.8-uniform.pkl"
+          },
+          "1.0": {
+            "roc_auc": 0.7940151739031598,
+            "avg_precision": 0.8987432258845574,
+            "train_log_prob_mean": 21.020544052124023,
+            "train_log_prob_std": 11.918498992919922,
+            "ood_log_prob_mean": -2204619.5,
+            "ood_log_prob_std": 12925139.0,
+            "log_prob_gap": 2204640.5,
+            "n_train": 5000,
+            "n_ood": 8798,
+            "ood_path": "/public/d4rl/ood_test/walker2d-medium-expert-v2/ood-distance-1-uniform.pkl"
+          }
+        }
+      }
+    }
+  }
+}
