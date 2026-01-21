@@ -12,7 +12,7 @@ echo "============================================"
 echo ""
 
 # Array of random seeds to test
-seeds=(42 123 456)
+seeds=(456)
 
 # Shared results file for all seeds
 RESULTS_FILE="results/walker2d-medium-expert-v2_sparse_73/neuralODE/gormpo_neuralODE_multiseed_results.csv"
