@@ -79,7 +79,8 @@ class NeuralODEOOD:
             x = torch.tensor(x, dtype=torch.float32)
         x = x.to(self.device)
 
-        log_probs = self.flow.log_prob(x)
+        with torch.enable_grad():
+            log_probs = self.flow.log_prob(x)
         return log_probs.detach().cpu().numpy()
 
     def set_threshold(
@@ -317,6 +318,9 @@ class NeuralODEOOD:
         elif os.path.exists(metadata_path_old):
             metadata_path = metadata_path_old
             model_path = model_path_old
+        elif os.path.exists(model_path_new):
+            model_path = model_path_new
+            
         else:
             raise FileNotFoundError(
                 f"Could not find metadata file at {metadata_path_new} or {metadata_path_old}"
