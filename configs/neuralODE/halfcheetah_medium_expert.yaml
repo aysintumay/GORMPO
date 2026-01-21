@@ -1,4 +1,4 @@
-classifier_model_name: /public/gormpo/models/halfcheetah_medium_expert/neuralODE/model.pt
+classifier_model_name: /public/gormpo/models/halfcheetah_medium_expert/neuralODE
 density_model: neuralODE
 
 hidden_dims: [512, 512]
