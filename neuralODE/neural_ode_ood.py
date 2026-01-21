@@ -79,7 +79,9 @@ class NeuralODEOOD:
             x = torch.tensor(x, dtype=torch.float32)
         x = x.to(self.device)
 
-        log_probs = self.flow.log_prob(x)
+        # Enable gradients even inside no_grad context (needed for divergence computation)
+        with torch.enable_grad():
+            log_probs = self.flow.log_prob(x)
         return log_probs.detach().cpu().numpy()
 
     def set_threshold(
