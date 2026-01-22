@@ -71,7 +71,8 @@ class TransitionModel:
         
         """
         Version with optimized IQR filtering.
-        """
+        """ 
+        print('THR', self.classifier_thr)
         
         if self.classifier_name is None:
             input_np = np.concatenate([state, action], axis=1)
@@ -335,7 +336,7 @@ class TransitionModel:
             
         elif  info[0].lower()=="halfcheetah-medium-expert-v2":
             if info[1] is None:
-                model_save_dir = '/public/gormpo/models/rl/halfcheetah-medium-expert-v2/kde/seed_1_1226_083730_halfcheetah_medium_expert_v2_mbpo/dynamics_model'
+                model_save_dir = '/public/gormpo/models/rl/halfcheetah-medium-expert-v2/kde/seed_456_0122_170405_halfcheetah_medium_expert_v2_mbpo/dynamics_model'
                 print('loaded halfcheetah model from ', model_save_dir)
             elif "halfcheetah_medium_expert_sparse_57.5.pkl" in info[1]:
                 # model_save_dir = "/public/gormpo/models/rl/halfcheetah-medium-expert-v2/realnvp/seed_1_1226_150439_halfcheetah_medium_expert_v2_gormpo/dynamics_model"
