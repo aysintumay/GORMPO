@@ -1557,6 +1557,6 @@ if __name__ == "__main__":
 
 
     
-    print("Scores test ID (pure test set):", scores_test_in_dist.mean().item())
+    # print("Scores test ID (pure test set):", scores_test_in_dist.mean().item())
 
     print("\nRealNVP training and evaluation completed!")

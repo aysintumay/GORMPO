@@ -18,7 +18,7 @@ pca: false
 
 # Output
 plot: true
-model_save_path: /public/gormpo/models/walker2d_medium_expert/kde
+model_save_path: /public/gormpo/models/walker2d_medium_expert/kde_42
 fig_save_path: figures/walker2d_medium_expert/kde
 devid: 0
 seed: 42
