@@ -90,15 +90,15 @@ def main():
     flow.eval()
 
     # Compute log probabilities
+    # Note: log_prob needs gradients for divergence computation, so we can't use torch.no_grad()
     print("Computing log probabilities on training data...")
     all_log_probs = []
-    with torch.no_grad():
-        for i, batch in enumerate(loader):
-            x = batch.to(args.device)
-            log_px = flow.log_prob(x)
-            all_log_probs.append(log_px.detach().cpu().numpy())
-            if (i + 1) % 10 == 0:
-                print(f"  Processed {(i+1) * args.batch} / {len(dataset)} samples")
+    for i, batch in enumerate(loader):
+        x = batch.to(args.device)
+        log_px = flow.log_prob(x)
+        all_log_probs.append(log_px.detach().cpu().numpy())
+        if (i + 1) % 10 == 0:
+            print(f"  Processed {(i+1) * args.batch} / {len(dataset)} samples")
 
     all_log_probs = np.concatenate(all_log_probs)
 
@@ -133,7 +133,19 @@ def main():
     with open(metadata_path, 'wb') as f:
         pickle.dump(metadata, f)
 
+    # Also update model.pt with embedded metadata
+    model_ckpt = {
+        'model_state_dict': flow.state_dict(),
+        'threshold': threshold,
+        'mean': mean_logp,
+        'std': std_logp,
+        'target_dim': target_dim,
+    }
+    model_pt_path = os.path.join(args.model_dir, "model.pt")
+    torch.save(model_ckpt, model_pt_path)
+
     print(f"\nMetadata saved to: {metadata_path}")
+    print(f"Model updated with embedded metadata: {model_pt_path}")
 
 
 if __name__ == "__main__":
