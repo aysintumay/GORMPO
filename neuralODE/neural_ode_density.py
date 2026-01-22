@@ -426,8 +426,6 @@ def train(cfg: TrainConfig) -> None:
             }
             torch.save(ckpt, os.path.join(cfg.out_dir, f"checkpoint_epoch_{epoch+1}.pt"))
 
-    torch.save(flow.state_dict(), os.path.join(cfg.out_dir, "model.pt"))
-
     # Compute and save metadata (threshold, mean, std) for OOD detection
     print("Computing metadata for OOD detection...")
     flow.eval()
@@ -460,6 +458,18 @@ def train(cfg: TrainConfig) -> None:
         'atol': cfg.atol,
     }
 
+    # Save model.pt with embedded metadata
+    model_ckpt = {
+        'model_state_dict': flow.state_dict(),
+        'threshold': threshold,
+        'mean': mean_logp,
+        'std': std_logp,
+        'target_dim': dataset.target_dim,
+        'cfg': cfg.__dict__,
+    }
+    torch.save(model_ckpt, os.path.join(cfg.out_dir, "model.pt"))
+
+    # Also save metadata.pkl for backwards compatibility
     metadata_path = os.path.join(cfg.out_dir, "metadata.pkl")
     with open(metadata_path, 'wb') as f:
         pickle.dump(metadata, f)
