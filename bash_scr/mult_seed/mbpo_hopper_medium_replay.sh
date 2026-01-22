@@ -24,11 +24,13 @@ for seed in "${seeds[@]}"; do
     python mopo.py \
         --task hopper-medium-replay-v2 \
         --algo-name mbpo \
+        --config configs/kde/mbpo_hopper_medium_replay.yaml \
+        --dynamics-model-dir 'true' \
         --reward-penalty-coef 0.0 \
         --seed $seed \
         --epoch 1000 \
         --rollout-length 5 \
-        --devid 0 \
+        --devid 2 \
         --results_output $RESULTS_FILE
 
     echo "MBPO training complete for seed $seed"

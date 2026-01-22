@@ -6,5 +6,5 @@ seed: 1
 epoch: 1000
 rollout-length: 1
 penalty_type: 'tanh'
-classifier_model_name: "/public/gormpo/models/walker2d_medium_expert/kde"
+classifier_model_name: "/public/gormpo/models/walker2d_medium_expert/kde_42"
 density_model: kde

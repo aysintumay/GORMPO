@@ -79,6 +79,7 @@ class NeuralODEOOD:
             x = torch.tensor(x, dtype=torch.float32)
         x = x.to(self.device)
 
+        # Enable gradients even inside no_grad context (needed for divergence computation)
         with torch.enable_grad():
             log_probs = self.flow.log_prob(x)
         return log_probs.detach().cpu().numpy()
@@ -275,11 +276,6 @@ class NeuralODEOOD:
         """
         Load a saved Neural ODE OOD model.
 
-        Supports three formats:
-        1. New format: {save_path}/metadata.pkl + {save_path}/model.pt
-        2. Old format: {save_path}_metadata.pkl + {save_path}_model.pt
-        3. Standalone format: {save_path}.pt with embedded metadata (no separate metadata file)
-
         Args:
             save_path: Base path for loading (without extension)
             target_dim: Dimension of target data (optional, will be read from metadata if not provided)
@@ -332,10 +328,17 @@ class NeuralODEOOD:
             metadata_path = metadata_path_old
             model_path = model_path_old
         elif os.path.exists(model_path_standalone):
-            # Standalone format: only model.pt exists, metadata embedded in checkpoint
+            # Standalone format: model.pt exists, check for metadata in same directory
             model_path = model_path_standalone
-            metadata_path = None
-            print(f"Loading standalone model (no separate metadata file): {model_path}")
+            # Check for metadata.pkl in the same directory as model.pt
+            model_dir = os.path.dirname(model_path)
+            metadata_in_dir = os.path.join(model_dir, "metadata.pkl")
+            if os.path.exists(metadata_in_dir):
+                metadata_path = metadata_in_dir
+                print(f"Loading model with metadata from same directory: {model_path}")
+            else:
+                metadata_path = None
+                print(f"Loading standalone model (metadata embedded in checkpoint): {model_path}")
         else:
             raise FileNotFoundError(
                 f"Could not find metadata file at {metadata_path_new} or {metadata_path_old}, "
@@ -430,7 +433,19 @@ class NeuralODEOOD:
 
         # Create OOD wrapper
         ood_model = cls(flow, device=device)
-        ood_model.threshold = metadata.get('threshold')
+
+        # Extract threshold, mean, std from checkpoint if not in metadata
+        # Check checkpoint first (for embedded metadata), then fall back to metadata dict
+        if isinstance(ckpt, dict):
+            threshold = ckpt.get('threshold', metadata.get('threshold'))
+            mean_val = ckpt.get('mean', metadata.get('mean'))
+            std_val = ckpt.get('std', metadata.get('std'))
+        else:
+            threshold = metadata.get('threshold')
+            mean_val = metadata.get('mean')
+            std_val = metadata.get('std')
+
+        ood_model.threshold = threshold
 
         print(f"Model loaded from: {model_path}")
         if metadata_path:
@@ -441,12 +456,13 @@ class NeuralODEOOD:
 
         model_dict = {
             'model': ood_model,
-            'threshold': ood_model.threshold,
-            'mean': metadata.get('mean'),
-            'std': metadata.get('std')
+            'threshold': threshold,
+            'mean': mean_val,
+            'std': std_val
         }
 
         return model_dict
+
 
 
 def plot_likelihood_distributions(

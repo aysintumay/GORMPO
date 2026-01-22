@@ -10,7 +10,7 @@ echo "============================================"
 echo ""
 
 # Array of random seeds to test
-seeds=(42 123 456)
+seeds=(123 456)
 
 # Shared results file for all seeds
 RESULTS_FILE="results/hopper-medium-expert-v2/mbpo/mbpo_multiseed_results.csv"
@@ -23,12 +23,14 @@ for seed in "${seeds[@]}"; do
 
     python mopo.py \
         --task hopper-medium-expert-v2 \
+        --config configs/kde/mbpo_hopper_medium_expert.yaml \
+        --dynamics-model-dir 'true' \
         --algo-name mbpo \
         --reward-penalty-coef 0.0 \
         --seed $seed \
         --epoch 1000 \
         --rollout-length 5 \
-        --devid 0 \
+        --devid 1 \
         --results_output $RESULTS_FILE
 
     echo "MBPO training complete for seed $seed"

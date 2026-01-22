@@ -71,7 +71,8 @@ class TransitionModel:
         
         """
         Version with optimized IQR filtering.
-        """
+        """ 
+        print('THR', self.classifier_thr)
         
         if self.classifier_name is None:
             input_np = np.concatenate([state, action], axis=1)
@@ -322,7 +323,7 @@ class TransitionModel:
         # model_save_dir = os.path.join(util.logger_model.log_path, info)
         if  info[0].lower()=="hopper-medium-v2":
             # model_save_dir = "/public/gormpo/models/rl/hopper/realnvp/seed_1_1110_000546_Hopper_gormpo/dynamics_model"
-            model_save_dir = "/public/gormpo/models/rl/hopper-medium-v2/realnvp/seed_1_1223_133358_hopper_medium_v2_gormpo/dynamics_model"
+            model_save_dir = "/public/gormpo/models/rl/hopper-medium-v2/kde/seed_456_0121_044201_hopper_medium_v2_gormpo/dynamics_model"
             print('loaded hopper model from ', model_save_dir)
         elif  info[0].lower()=="halfcheetah-medium-v2":
             # model_save_dir = '/public/gormpo/models/rl/halfcheetah/realnvp/seed_1_1110_000453_HalfCheetah_gormpo/dynamics_model'
@@ -330,12 +331,12 @@ class TransitionModel:
             print('loaded halfcheetah model from ', model_save_dir)
         elif info[0].lower()=="walker2d-medium-v2":
             # model_save_dir = "/public/gormpo/models/rl/walker2d/realnvp/seed_1_1110_000607_Walker2d_gormpo/dynamics_model"
-            model_save_dir = "/public/gormpo/models/rl/walker2d-medium-v2/realnvp/seed_1_1223_133416_walker2d_medium_v2_gormpo/dynamics_model"
+            model_save_dir = "/public/gormpo/models/rl/walker2d-medium-v2/kde/seed_456_0120_201323_walker2d_medium_v2_gormpo/dynamics_model"
             print('loaded walker2d model from ', model_save_dir)
             
         elif  info[0].lower()=="halfcheetah-medium-expert-v2":
             if info[1] is None:
-                model_save_dir = '/public/gormpo/models/rl/halfcheetah-medium-expert-v2/kde/seed_1_1226_083730_halfcheetah_medium_expert_v2_mbpo/dynamics_model'
+                model_save_dir = '/public/gormpo/models/rl/halfcheetah-medium-expert-v2/kde/seed_456_0122_170405_halfcheetah_medium_expert_v2_mbpo/dynamics_model'
                 print('loaded halfcheetah model from ', model_save_dir)
             elif "halfcheetah_medium_expert_sparse_57.5.pkl" in info[1]:
                 # model_save_dir = "/public/gormpo/models/rl/halfcheetah-medium-expert-v2/realnvp/seed_1_1226_150439_halfcheetah_medium_expert_v2_gormpo/dynamics_model"
@@ -353,7 +354,7 @@ class TransitionModel:
         elif  info[0].lower()=="hopper-medium-expert-v2":
             
             if info[1] is None:
-                model_save_dir = '/public/gormpo/models/rl/hopper-medium-expert-v2/realnvp/seed_1_1226_161304_hopper_medium_expert_v2_gormpo/dynamics_model'
+                model_save_dir = '/public/gormpo/models/rl/hopper-medium-expert-v2/kde/seed_456_0120_200009_hopper_medium_expert_v2_gormpo/dynamics_model'
                 print('loaded hopper model from ', model_save_dir)
 
             elif "hopper_medium_expert_sparse_78.pkl" in info[1]:
@@ -363,7 +364,7 @@ class TransitionModel:
         elif  info[0].lower()=="walker2d-medium-expert-v2":        
 
             if info[1] is None:
-                model_save_dir = '/public/gormpo/models/rl/walker2d-medium-expert-v2/kde/seed_1_1226_151328_walker2d_medium_expert_v2_mbpo/dynamics_model'
+                model_save_dir = '/public/gormpo/models/rl/walker2d-medium-expert-v2/kde/seed_456_0120_194146_walker2d_medium_expert_v2_gormpo/dynamics_model'
                 print('loaded walker2d model from ', model_save_dir)
 
             elif "walker2d_medium_expert_sparse_73.pkl" in info[1]:
