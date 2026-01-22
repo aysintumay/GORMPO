@@ -163,10 +163,10 @@ class Trainer:
             plot_q_value(np.array(q2_l).reshape(-1,1), 'Q2')
             plot_q_value(np.array(q_l).reshape(-1,1), 'Q')
 
-            plot_p_loss(np.array(critic_loss1).reshape(-1,1), 'Critic1')
-            plot_p_loss(np.array(critic_loss2).reshape(-1,1), 'Critic2')
-            plot_p_loss(np.array(actor_loss).reshape(-1,1), 'Actor')
-            plot_p_loss(np.array(entropy).reshape(-1,1), 'Entropy')
+            # plot_p_loss(np.array(critic_loss1).reshape(-1,1), 'Critic1')
+            # plot_p_loss(np.array(critic_loss2).reshape(-1,1), 'Critic2')
+            # plot_p_loss(np.array(actor_loss).reshape(-1,1), 'Actor')
+            # plot_p_loss(np.array(entropy).reshape(-1,1), 'Entropy')
             # plot_p_loss(np.array(alpha_loss).reshape(-1,1), 'Alpha')
 
             plot_accuracy(np.array(reward_l), np.array(reward_std_l), 'Average Return')
