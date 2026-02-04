@@ -24,24 +24,26 @@ for seed in "${seeds[@]}"; do
     echo "=========================================="
 
     # Step 1: Train Diffusion model for this seed
-    echo "Step 1/2: Training Diffusion model (seed $seed)..."
-    python diffusion/ddim_training_unconditional.py \
-        --config diffusion/configs/unconditional_training/walker2d_mlp_expert_sparse_73.yaml \
-        --seed $seed \
-        --epochs 100 \
-        --device cuda:5 \
-        --out /public/gormpo/models/walker2d_medium_expert_sparse_3/diffusion_$seed
-    echo "✓ Diffusion model training complete for seed $seed"
-    echo ""
+    # echo "Step 1/2: Training Diffusion model (seed $seed)..."
+    # python diffusion/ddim_training_unconditional.py \
+    #     --config diffusion/configs/unconditional_training/walker2d_mlp_expert_sparse_73.yaml \
+    #     --seed $seed \
+    #     --epochs 100 \
+    #     --device cuda:5 \
+    #     --out /public/gormpo/models/walker2d_medium_expert_sparse_3/diffusion_$seed
+    # echo "✓ Diffusion model training complete for seed $seed"
+    # echo ""
 
     # Step 2: Train GORMPO policy using the trained Diffusion model
     echo "Step 2/2: Training GORMPO-Diffusion policy (seed $seed)..."
     python mopo.py \
         --config configs/diffusion/gormpo_walker2d_medium_expert_sparse_3.yaml \
         --seed $seed \
+        --dynamics-model-dir 'true' \
+        --rollout-length 5 \
         --classifier_model_name /public/gormpo/models/walker2d_medium_expert_sparse_3/diffusion_$seed/checkpoint.pt \
         --epoch 1000 \
-        --devid 5 \
+        --devid 2 \
         --results_output $RESULTS_FILE
     echo "✓ GORMPO-Diffusion training complete for seed $seed"
     echo ""

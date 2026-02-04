@@ -34,6 +34,8 @@ for seed in "${seeds[@]}"; do
     python mopo.py \
         --config configs/kde/gormpo_walker2d_medium_expert_sparse_3.yaml \
         --seed $seed \
+        --dynamics-model-dir 'true' \
+        --rollout-length 5 \
         --classifier_model_name /public/gormpo/models/walker2d_medium_expert_sparse_3/kde_$seed \
         --epoch 1000 \
         --devid 3 \

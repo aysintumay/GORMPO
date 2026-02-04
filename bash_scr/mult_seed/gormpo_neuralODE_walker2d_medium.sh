@@ -39,7 +39,7 @@ for seed in "${seeds[@]}"; do
         --config configs/neuralODE/walker2d_normal.yaml \
         --seed $seed \
         --epoch 1000 \
-        --devid 1 \
+        --devid 4 \
         --results_output $RESULTS_FILE
     echo "GORMPO-NeuralODE training complete for seed $seed"
     echo ""

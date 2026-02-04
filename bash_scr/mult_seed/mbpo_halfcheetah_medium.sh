@@ -24,12 +24,13 @@ for seed in "${seeds[@]}"; do
     python mopo.py \
         --task halfcheetah-medium-v2 \
         --algo-name mbpo \
+        --dynamics-model-dir 'true' \
         --config configs/kde/mbpo_halfcheetah.yaml \
         --reward-penalty-coef 0.0 \
         --seed $seed \
         --epoch 1000 \
         --rollout-length 5 \
-        --devid 4 \
+        --devid 2 \
         --results_output $RESULTS_FILE
 
     echo "MBPO training complete for seed $seed"

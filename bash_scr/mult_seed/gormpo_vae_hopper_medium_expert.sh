@@ -29,7 +29,7 @@ for seed in "${seeds[@]}"; do
         --config configs/vae/hopper_medium_expert.yaml \
         --seed $seed \
         --model_save_path /public/gormpo/models/hopper_medium_expert/vae_$seed \
-        --device cuda:1
+        --device cuda:3
     echo "VAE training complete for seed $seed"
     echo ""
 
@@ -37,10 +37,11 @@ for seed in "${seeds[@]}"; do
     echo "Step 2/2: Training GORMPO-VAE policy (seed $seed)..."
     python mopo.py \
         --config configs/vae/mbpo_hopper_medium_expert.yaml \
+        --dynamics-model-dir 'true' \
         --seed $seed \
         --classifier_model_name /public/gormpo/models/hopper_medium_expert/vae_$seed \
         --epoch 1000 \
-        --devid 1 \
+        --devid 3 \
         --results_output $RESULTS_FILE
     echo "GORMPO-VAE training complete for seed $seed"
     echo ""
