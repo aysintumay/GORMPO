@@ -8,7 +8,7 @@ echo "============================================"
 echo ""
 
 # Array of penalty coefficients to test
-penalty_coeffs=(0.05 0.1 0.3 0.5)
+penalty_coeffs=(0.5)
 
 # Loop through each penalty coefficient
 for coef in "${penalty_coeffs[@]}"; do

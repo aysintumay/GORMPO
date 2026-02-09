@@ -79,6 +79,7 @@ class NeuralODEOOD:
             x = torch.tensor(x, dtype=torch.float32)
         x = x.to(self.device)
 
+        # Enable gradients even inside no_grad context (needed for divergence computation)
         with torch.enable_grad():
             log_probs = self.flow.log_prob(x)
         return log_probs.detach().cpu().numpy()
@@ -275,11 +276,6 @@ class NeuralODEOOD:
         """
         Load a saved Neural ODE OOD model.
 
-        Supports three formats:
-        1. New format: {save_path}/metadata.pkl + {save_path}/model.pt
-        2. Old format: {save_path}_metadata.pkl + {save_path}_model.pt
-        3. Standalone format: {save_path}.pt with embedded metadata (no separate metadata file)
-
         Args:
             save_path: Base path for loading (without extension)
             target_dim: Dimension of target data (optional, will be read from metadata if not provided)
@@ -466,6 +462,7 @@ class NeuralODEOOD:
         }
 
         return model_dict
+
 
 
 def plot_likelihood_distributions(

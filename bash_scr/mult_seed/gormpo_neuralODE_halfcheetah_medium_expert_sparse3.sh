@@ -39,8 +39,8 @@ for seed in "${seeds[@]}"; do
         --config configs/neuralODE/gormpo_halfcheetah_medium_expert_sparse_3.yaml \
         --seed $seed \
         --epoch 1000 \
-        --dynamics-model-dir 'true' \
-        --devid 6 \
+        --devid 0 \
+        --dynamics-model-dir 'true'\
         --results_output $RESULTS_FILE
     echo "✓ GORMPO-NeuralODE training complete for seed $seed"
     echo ""

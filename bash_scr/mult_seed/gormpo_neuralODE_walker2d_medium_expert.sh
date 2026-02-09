@@ -37,9 +37,10 @@ for seed in "${seeds[@]}"; do
     echo "Step 2/2: Training GORMPO-NeuralODE policy (seed $seed)..."
     python mopo.py \
         --config configs/neuralODE/walker2d_medium_expert.yaml \
+        --dynamics-model-dir 'true' \
         --seed $seed \
         --epoch 1000 \
-        --devid 0 \
+        --devid 6 \
         --results_output $RESULTS_FILE
     echo "GORMPO-NeuralODE training complete for seed $seed"
     echo ""

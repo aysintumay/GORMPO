@@ -12,7 +12,7 @@ echo "============================================"
 echo ""
 
 # Array of random seeds to test
-seeds=(42 123 456)
+seeds=(123 456)
 
 # Shared results file for all seeds
 RESULTS_FILE="results/halfcheetah-medium-replay/kde/gormpo_kde_multiseed_results.csv"

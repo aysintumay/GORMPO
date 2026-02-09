@@ -143,8 +143,24 @@ def evaluate_ood_at_distance(model, dataset_name, distance, base_path='/public/d
         # Predict OOD if log_prob < threshold
         predictions = (log_probs < model.threshold).astype(int)
         accuracy = accuracy_score(labels, predictions)
+
+        # Calculate TPR at threshold (True Positive Rate for OOD detection)
+        # TPR = True Positives / (True Positives + False Negatives)
+        # True Positives: OOD samples correctly predicted as OOD
+        true_positives = np.sum((predictions == 1) & (labels == 1))
+        total_positives = np.sum(labels == 1)
+        tpr_at_threshold = true_positives / total_positives if total_positives > 0 else None
+
+        # Calculate TNR at threshold (True Negative Rate for ID detection)
+        # TNR = True Negatives / (True Negatives + False Positives)
+        # True Negatives: ID samples correctly predicted as ID
+        true_negatives = np.sum((predictions == 0) & (labels == 0))
+        total_negatives = np.sum(labels == 0)
+        tnr_at_threshold = true_negatives / total_negatives if total_negatives > 0 else None
     else:
         accuracy = None
+        tpr_at_threshold = None
+        tnr_at_threshold = None
 
     results = {
         'distance': distance,
@@ -156,6 +172,8 @@ def evaluate_ood_at_distance(model, dataset_name, distance, base_path='/public/d
         'std_ood_log_likelihood': std_ood,
         'roc_auc': roc_auc,
         'accuracy': accuracy,
+        'tpr_at_threshold': tpr_at_threshold,
+        'tnr_at_threshold': tnr_at_threshold,
         'log_probs': log_probs,
         'labels': labels,
         'fpr': fpr,
@@ -555,7 +573,9 @@ def main():
             'id_log_likelihood': float(r['mean_id_log_likelihood']),
             'ood_log_likelihood': float(r['mean_ood_log_likelihood']),
             'roc_auc': float(r['roc_auc']),
-            'accuracy': float(r['accuracy']) if r['accuracy'] is not None else None
+            'accuracy': float(r['accuracy']) if r['accuracy'] is not None else None,
+            'tpr_at_threshold': float(r['tpr_at_threshold']) if r['tpr_at_threshold'] is not None else None,
+            'tnr_at_threshold': float(r['tnr_at_threshold']) if r['tnr_at_threshold'] is not None else None
         })
 
     json_path = os.path.join(final_save_dir, 'results.json')

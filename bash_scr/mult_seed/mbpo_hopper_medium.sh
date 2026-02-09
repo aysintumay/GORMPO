@@ -17,18 +17,17 @@ RESULTS_FILE="results/hopper-medium-v2/mbpo/mbpo_multiseed_results.csv"
 
 # Loop through each seed
 for seed in "${seeds[@]}"; do
-    echo "=========================================="
-    echo ">>> Training MBPO with seed = $seed"
-    echo "=========================================="
 
     python mopo.py \
         --task hopper-medium-v2 \
         --algo-name mbpo \
+        --config configs/kde/mbpo_hopper.yaml \
+        --dynamics-model-dir 'true' \
         --reward-penalty-coef 0.0 \
         --seed $seed \
         --epoch 1000 \
         --rollout-length 5 \
-        --devid 0 \
+        --devid 3 \
         --results_output $RESULTS_FILE
 
     echo "MBPO training complete for seed $seed"

@@ -8,7 +8,7 @@ echo "============================================"
 echo ""
 
 # Array of random seeds to test
-seeds=(42 123 456)
+seeds=(2 3 4 )
 
 # Shared results file for all seeds
 RESULTS_FILE="results/halfcheetah-medium-expert-v2_sparse_72.5/kde/gormpo_kde_multiseed_results.csv"
@@ -25,7 +25,7 @@ for seed in "${seeds[@]}"; do
         --config configs/kde/halfcheetah_medium_expert_sparse_3.yaml \
         --seed $seed \
         --save_path /public/gormpo/models/halfcheetah_medium_expert_sparse_3/kde_$seed \
-        --devid 1
+        --devid 0
     echo "✓ KDE training complete for seed $seed"
     echo ""
 
@@ -36,7 +36,8 @@ for seed in "${seeds[@]}"; do
         --seed $seed \
         --classifier_model_name /public/gormpo/models/halfcheetah_medium_expert_sparse_3/kde_$seed \
         --epoch 1000 \
-        --devid 1 \
+        --devid 0 \
+        --dynamics-model-dir 'true'\
         --results_output $RESULTS_FILE
     echo "✓ GORMPO-KDE training complete for seed $seed"
     echo ""

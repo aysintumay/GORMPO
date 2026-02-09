@@ -10,7 +10,7 @@ echo "============================================"
 echo ""
 
 # Array of random seeds to test
-seeds=(42 123 456)
+seeds=(2 3 4)
 
 # Shared results file for all seeds
 RESULTS_FILE="results/walker2d-medium-expert-v2/mbpo/mbpo_multiseed_results.csv"
@@ -24,11 +24,13 @@ for seed in "${seeds[@]}"; do
     python mopo.py \
         --task walker2d-medium-expert-v2 \
         --algo-name mbpo \
+        --config configs/kde/mbpo_walker2d_medium_expert.yaml \
+        --dynamics-model-dir 'true' \
         --reward-penalty-coef 0.0 \
         --seed $seed \
         --epoch 1000 \
         --rollout-length 1 \
-        --devid 0 \
+        --devid 1 \
         --results_output $RESULTS_FILE
 
     echo "MBPO training complete for seed $seed"
