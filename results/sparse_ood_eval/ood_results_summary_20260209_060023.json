@@ -1,0 +1,82 @@
+{
+  "timestamp": "20260209_060023",
+  "models": {
+    "hopper_sparse_78": {
+      "env_name": "hopper-medium-expert-v2",
+      "sparse_level": "78%",
+      "threshold": -990767.25,
+      "ood_results": {
+        "1.0": {
+          "roc_auc": 0.5696292915051111,
+          "avg_precision": 0.579397565910373,
+          "train_log_prob_mean": -318429.5,
+          "ood_log_prob_mean": -365219.71875,
+          "log_prob_gap": 46790.21875
+        },
+        "1.2": {
+          "roc_auc": 0.582169294770206,
+          "avg_precision": 0.56235962070892,
+          "train_log_prob_mean": -317827.5625,
+          "ood_log_prob_mean": -375195.90625,
+          "log_prob_gap": 57368.34375
+        },
+        "1.4": {
+          "roc_auc": 0.6220006538084342,
+          "avg_precision": 0.6445099531639742,
+          "train_log_prob_mean": -316346.15625,
+          "ood_log_prob_mean": -410403.90625,
+          "log_prob_gap": 94057.75
+        },
+        "1.6": {
+          "roc_auc": 0.6286545239825581,
+          "avg_precision": 0.6302991169008374,
+          "train_log_prob_mean": -318718.375,
+          "ood_log_prob_mean": -423042.75,
+          "log_prob_gap": 104324.375
+        },
+        "1.8": {
+          "roc_auc": 0.6539219315895373,
+          "avg_precision": 0.6777906203806342,
+          "train_log_prob_mean": -317736.5625,
+          "ood_log_prob_mean": -454543.59375,
+          "log_prob_gap": 136807.03125
+        }
+      }
+    },
+    "walker2d_sparse_73": {
+      "env_name": "walker2d-medium-expert-v2",
+      "sparse_level": "73%",
+      "threshold": -1865196.625,
+      "ood_results": {
+        "0.4": {
+          "roc_auc": 0.512180911778081,
+          "avg_precision": 0.6439499962763259,
+          "train_log_prob_mean": -707595.4375,
+          "ood_log_prob_mean": -719433.0,
+          "log_prob_gap": 11837.5625
+        },
+        "0.6": {
+          "roc_auc": 0.4636477655677656,
+          "avg_precision": 0.6219847129083883,
+          "train_log_prob_mean": -705959.625,
+          "ood_log_prob_mean": -678887.125,
+          "log_prob_gap": -27072.5
+        },
+        "0.8": {
+          "roc_auc": 0.4921792469879518,
+          "avg_precision": 0.662819034136757,
+          "train_log_prob_mean": -707825.1875,
+          "ood_log_prob_mean": -698092.8125,
+          "log_prob_gap": -9732.375
+        },
+        "1.0": {
+          "roc_auc": 0.52568589,
+          "avg_precision": 0.6857881909715233,
+          "train_log_prob_mean": -708719.1875,
+          "ood_log_prob_mean": -744768.5625,
+          "log_prob_gap": 36049.375
+        }
+      }
+    }
+  }
+}

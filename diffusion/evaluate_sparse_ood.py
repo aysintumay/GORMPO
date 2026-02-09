@@ -71,8 +71,64 @@ SPARSE_MODELS = {
     },
 }
 
-# OOD distance levels to test
-OOD_DISTANCES = [0.1, 0.3, 0.5, 1.0, 2.0, 3.0, 4.0]
+# OOD distance levels to test (per-environment) — same as run_sparse_ood_eval
+OOD_DISTANCES_DEFAULT = [0.5, 1.0, 2.0, 3.0, 4.0]
+OOD_DISTANCES_PER_ENV = {
+    "halfcheetah": [0.4, 0.6, 0.8, 1.0],
+    "hopper": [1.0, 1.2, 1.4, 1.6, 1.8],
+    "walker2d": [0.4, 0.6, 0.8, 1.0],
+}
+
+# Training config YAMLs to build eval config from (out -> model_dir, npz -> train_data)
+TRAINING_CONFIG_MAP = {
+    "halfcheetah_sparse_57.5": {
+        "yaml": "halfcheetah_mlp_expert_sparse_57.5.yaml",
+        "env_name": "halfcheetah-medium-expert-v2",
+        "sparse_level": "57.5%",
+        "ood_base_dir": "/public/d4rl/ood_test/halfcheetah-medium-expert-v2",
+    },
+    "hopper_sparse_78": {
+        "yaml": "hopper_mlp_expert_sparse_78.yaml",
+        "env_name": "hopper-medium-expert-v2",
+        "sparse_level": "78%",
+        "ood_base_dir": "/public/d4rl/ood_test/hopper-medium-expert-v2",
+    },
+    "walker2d_sparse_73": {
+        "yaml": "walker2d_mlp_expert_sparse_73.yaml",
+        "env_name": "walker2d-medium-expert-v2",
+        "sparse_level": "73%",
+        "ood_base_dir": "/public/d4rl/ood_test/walker2d-medium-expert-v2",
+    },
+}
+
+
+def load_models_from_training_configs(config_dir: str) -> Dict[str, Dict]:
+    """Load model config from unconditional_training YAMLs (out -> model_dir, npz -> train_data)."""
+    try:
+        import yaml
+    except ImportError:
+        raise ImportError("PyYAML required for --from-training-configs. pip install pyyaml")
+    models = {}
+    for model_name, meta in TRAINING_CONFIG_MAP.items():
+        yaml_path = os.path.join(config_dir, meta["yaml"])
+        if not os.path.isfile(yaml_path):
+            print(f"Warning: {yaml_path} not found, skipping {model_name}")
+            continue
+        with open(yaml_path, "r") as f:
+            cfg = yaml.safe_load(f)
+        model_dir = cfg.get("out")
+        train_data = cfg.get("npz")
+        if not model_dir or not train_data:
+            print(f"Warning: {yaml_path} missing 'out' or 'npz', skipping {model_name}")
+            continue
+        models[model_name] = {
+            "model_dir": model_dir,
+            "train_data": train_data,
+            "ood_base_dir": meta["ood_base_dir"],
+            "env_name": meta["env_name"],
+            "sparse_level": meta["sparse_level"],
+        }
+    return models
 
 
 def load_ood_data(ood_path: str, device: str = "cuda") -> torch.Tensor:
@@ -155,7 +211,7 @@ def evaluate_single_ood(
     ood_data: torch.Tensor,
     batch_size: int = 256,
 ) -> Dict:
-    """Evaluate OOD detection for a single OOD dataset."""
+    """Evaluate OOD detection for a single OOD dataset (same metrics as run_sparse_ood_eval)."""
     # Score both datasets
     train_scores = ood_model.score_samples(train_data, batch_size=batch_size).cpu().numpy()
     ood_scores = ood_model.score_samples(ood_data, batch_size=batch_size).cpu().numpy()
@@ -170,17 +226,46 @@ def evaluate_single_ood(
     y_scores = np.concatenate([-train_scores, -ood_scores])
 
     # Compute ROC curve and AUC
-    fpr, tpr, _ = roc_curve(y_true, y_scores)
+    fpr, tpr, thresholds = roc_curve(y_true, y_scores)
     roc_auc = auc(fpr, tpr)
 
     # Compute precision-recall curve and average precision
     precision, recall, _ = precision_recall_curve(y_true, y_scores)
     avg_precision = average_precision_score(y_true, y_scores)
 
-    # Compute separation statistics
+    # Accuracy and TPR/TNR at model threshold (same as run_sparse_ood_eval)
+    threshold = getattr(ood_model, "threshold", None)
+    if threshold is not None:
+        # Predict: log_prob < threshold -> OOD (1)
+        train_preds = (train_scores < threshold).astype(int)
+        ood_preds = (ood_scores < threshold).astype(int)
+        y_pred = np.concatenate([train_preds, ood_preds])
+        accuracy = float((y_pred == y_true).mean())
+        tpr_at_threshold = float(ood_preds.mean())
+        tnr_at_threshold = float(1 - train_preds.mean())
+    else:
+        accuracy = None
+        tpr_at_threshold = None
+        tnr_at_threshold = None
+
+    # Optimal threshold (Youden's J)
+    j_scores = tpr - fpr
+    optimal_idx = np.argmax(j_scores)
+    optimal_tpr = float(tpr[optimal_idx])
+    optimal_fpr = float(fpr[optimal_idx])
+    thresh = thresholds[min(optimal_idx, len(thresholds) - 1)] if len(thresholds) > 0 else -np.inf
+    y_pred_optimal = (y_scores >= thresh).astype(int)
+    accuracy_optimal = float((y_pred_optimal == y_true).mean())
+
     results = {
         "roc_auc": float(roc_auc),
         "avg_precision": float(avg_precision),
+        "accuracy": accuracy,
+        "accuracy_optimal": accuracy_optimal,
+        "tpr_at_threshold": tpr_at_threshold,
+        "tnr_at_threshold": tnr_at_threshold,
+        "optimal_tpr": optimal_tpr,
+        "optimal_fpr": optimal_fpr,
         "train_log_prob_mean": float(train_scores.mean()),
         "train_log_prob_std": float(train_scores.std()),
         "ood_log_prob_mean": float(ood_scores.mean()),
@@ -188,7 +273,6 @@ def evaluate_single_ood(
         "log_prob_gap": float(train_scores.mean() - ood_scores.mean()),
         "n_train": len(train_scores),
         "n_ood": len(ood_scores),
-        # Store raw scores for later analysis
         "train_scores": train_scores.tolist(),
         "ood_scores": ood_scores.tolist(),
         "fpr": fpr.tolist(),
@@ -238,12 +322,14 @@ def evaluate_model(
 
     results = {
         "model_name": model_name,
+        "density_type": "diffusion",
         "env_name": config["env_name"],
         "sparse_level": config["sparse_level"],
         "model_dir": config["model_dir"],
         "train_data_path": config["train_data"],
-        "threshold": ood_model.threshold,
         "n_train_samples": len(train_data),
+        "threshold": ood_model.threshold,
+        "ood_distances": ood_distances,
         "ood_results": {},
     }
 
@@ -289,32 +375,47 @@ def evaluate_model(
     return results
 
 
-def save_results(results: Dict, output_dir: str):
-    """Save results to JSON file."""
+def _get_model_results(model_data: Dict) -> Dict:
+    """Get diffusion results from either nested models[name]['diffusion'] or flat models[name]."""
+    return model_data.get("diffusion", model_data)
+
+
+def save_results(results: Dict, output_dir: str, sparse_ood_format: bool = True):
+    """Save results to JSON. If sparse_ood_format, also write ood_eval_full_*.json (same as run_sparse_ood_eval)."""
     os.makedirs(output_dir, exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    # Save full results
-    full_path = os.path.join(output_dir, f"ood_results_full_{timestamp}.json")
+    # Save full results (same filename as run_sparse_ood_eval when sparse_ood_format)
+    if sparse_ood_format:
+        full_path = os.path.join(output_dir, f"ood_eval_full_{timestamp}.json")
+        latest_name = "ood_eval_latest.json"
+    else:
+        full_path = os.path.join(output_dir, f"ood_results_full_{timestamp}.json")
+        latest_name = "ood_results_full_latest.json"
+
     with open(full_path, "w") as f:
         json.dump(results, f, indent=2)
     print(f"\nFull results saved to: {full_path}")
 
-    # Save summary (without raw scores for smaller file)
+    latest_full = os.path.join(output_dir, latest_name)
+    with open(latest_full, "w") as f:
+        json.dump(results, f, indent=2)
+    print(f"Latest copy saved to: {latest_full}")
+
+    # Summary (without raw scores)
     summary = {}
-    for model_name, model_results in results["models"].items():
+    for model_name, model_data in results["models"].items():
+        model_results = _get_model_results(model_data)
         if "error" in model_results:
             summary[model_name] = model_results
             continue
-
         summary[model_name] = {
             "env_name": model_results.get("env_name"),
             "sparse_level": model_results.get("sparse_level"),
             "threshold": model_results.get("threshold"),
             "ood_results": {},
         }
-
         for dist, ood_res in model_results.get("ood_results", {}).items():
             if "error" in ood_res:
                 summary[model_name]["ood_results"][dist] = ood_res
@@ -332,14 +433,6 @@ def save_results(results: Dict, output_dir: str):
         json.dump({"timestamp": timestamp, "models": summary}, f, indent=2)
     print(f"Summary saved to: {summary_path}")
 
-    # Also save a latest symlink-style copy
-    latest_full = os.path.join(output_dir, "ood_results_full_latest.json")
-    latest_summary = os.path.join(output_dir, "ood_results_summary_latest.json")
-    with open(latest_full, "w") as f:
-        json.dump(results, f, indent=2)
-    with open(latest_summary, "w") as f:
-        json.dump({"timestamp": timestamp, "models": summary}, f, indent=2)
-
     return full_path, summary_path
 
 
@@ -353,7 +446,8 @@ def plot_results(results: Dict, output_dir: str):
     colors = plt.cm.tab10.colors
     markers = ['o', 's', '^', 'D']
 
-    for idx, (model_name, model_results) in enumerate(results["models"].items()):
+    for idx, (model_name, model_data) in enumerate(results["models"].items()):
+        model_results = _get_model_results(model_data)
         if "error" in model_results:
             continue
 
@@ -388,7 +482,8 @@ def plot_results(results: Dict, output_dir: str):
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
     axes = axes.flatten()
 
-    for idx, (model_name, model_results) in enumerate(results["models"].items()):
+    for idx, (model_name, model_data) in enumerate(results["models"].items()):
+        model_results = _get_model_results(model_data)
         if "error" in model_results or idx >= 4:
             continue
 
@@ -430,7 +525,8 @@ def plot_results(results: Dict, output_dir: str):
     # Plot 3: ROC curves at distance 1.0
     fig, ax = plt.subplots(figsize=(8, 8))
 
-    for idx, (model_name, model_results) in enumerate(results["models"].items()):
+    for idx, (model_name, model_data) in enumerate(results["models"].items()):
+        model_results = _get_model_results(model_data)
         if "error" in model_results:
             continue
 
@@ -464,12 +560,18 @@ def plot_results(results: Dict, output_dir: str):
 def main():
     parser = argparse.ArgumentParser(description="Evaluate OOD detection for sparse diffusion models")
     parser.add_argument("--models", nargs="+", default=None,
-                       help="Specific models to evaluate (default: all)")
+                       help="Specific models to evaluate (default: all or from --from-training-configs)")
+    parser.add_argument("--from-training-configs", action="store_true",
+                       help="Load model_dir and train_data from unconditional_training YAMLs (57.5, 78, 73)")
+    parser.add_argument("--config-dir", type=str, default=None,
+                       help="Directory with unconditional_training YAMLs (default: <repo>/diffusion/configs/unconditional_training)")
     parser.add_argument("--distances", nargs="+", type=float, default=None,
-                       help="OOD distances to test (default: 0.1, 0.3, 0.5, 1.0, 2.0, 3.0, 4.0)")
+                       help="OOD distances to test (default: per-environment distances)")
+    parser.add_argument("--use-env-distances", action="store_true", default=True,
+                       help="Use per-environment OOD distances (default: True)")
     parser.add_argument("--output-dir", type=str,
-                       default="/home/ubuntu/Projects/GORMPO/results/sparse_diffusion_ood",
-                       help="Output directory for results")
+                       default="results/sparse_ood_eval",
+                       help="Output directory (default: results/sparse_ood_eval)")
     parser.add_argument("--device", type=str, default="cuda")
     parser.add_argument("--batch-size", type=int, default=256)
     parser.add_argument("--max-train-samples", type=int, default=5000)
@@ -477,19 +579,34 @@ def main():
 
     args = parser.parse_args()
 
-    # Select models
-    models_to_eval = SPARSE_MODELS
-    if args.models:
-        models_to_eval = {k: v for k, v in SPARSE_MODELS.items() if k in args.models}
+    # Select models: from training configs or built-in SPARSE_MODELS
+    if getattr(args, "from_training_configs", False) or args.config_dir:
+        config_dir = args.config_dir
+        if not config_dir:
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            repo_root = os.path.dirname(script_dir)
+            config_dir = os.path.join(repo_root, "diffusion", "configs", "unconditional_training")
+        models_to_eval = load_models_from_training_configs(config_dir)
+        if args.models:
+            models_to_eval = {k: v for k, v in models_to_eval.items() if k in args.models}
+    else:
+        models_to_eval = SPARSE_MODELS
+        if args.models:
+            models_to_eval = {k: v for k, v in SPARSE_MODELS.items() if k in args.models}
 
-    # Select distances
-    distances = args.distances if args.distances else OOD_DISTANCES
+    # Determine if using per-environment distances
+    use_env_distances = args.use_env_distances and args.distances is None
 
     print("="*60)
     print("Sparse Diffusion Model OOD Evaluation")
     print("="*60)
     print(f"Models: {list(models_to_eval.keys())}")
-    print(f"OOD distances: {distances}")
+    if use_env_distances:
+        print("OOD distances: per-environment")
+        for env, dists in OOD_DISTANCES_PER_ENV.items():
+            print(f"  {env}: {dists}")
+    else:
+        print(f"OOD distances: {args.distances if args.distances else OOD_DISTANCES_DEFAULT}")
     print(f"Device: {args.device}")
     print(f"Output dir: {args.output_dir}")
 
@@ -497,7 +614,8 @@ def main():
     all_results = {
         "timestamp": datetime.now().isoformat(),
         "config": {
-            "ood_distances": distances,
+            "ood_distances": "per-environment" if use_env_distances else (args.distances or OOD_DISTANCES_DEFAULT),
+            "ood_distances_per_env": OOD_DISTANCES_PER_ENV if use_env_distances else None,
             "device": args.device,
             "batch_size": args.batch_size,
             "max_train_samples": args.max_train_samples,
@@ -506,16 +624,27 @@ def main():
     }
 
     for model_name, config in models_to_eval.items():
+        # Get per-environment distances if enabled
+        if use_env_distances:
+            env_key = None
+            for env in OOD_DISTANCES_PER_ENV.keys():
+                if env in model_name.lower():
+                    env_key = env
+                    break
+            distances = OOD_DISTANCES_PER_ENV.get(env_key, OOD_DISTANCES_DEFAULT)
+        else:
+            distances = args.distances if args.distances else OOD_DISTANCES_DEFAULT
+
         model_results = evaluate_model(
             model_name, config, distances,
             device=args.device,
             batch_size=args.batch_size,
             max_train_samples=args.max_train_samples,
         )
-        all_results["models"][model_name] = model_results
+        all_results["models"][model_name] = {"diffusion": model_results}
 
-    # Save results
-    full_path, summary_path = save_results(all_results, args.output_dir)
+    sparse_ood_format = "sparse_ood_eval" in args.output_dir
+    full_path, summary_path = save_results(all_results, args.output_dir, sparse_ood_format=sparse_ood_format)
 
     # Generate plots
     if not args.no_plot:

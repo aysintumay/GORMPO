@@ -1,5 +1,5 @@
 npz: /public/d4rl/sparse_datasets/diffusion_processed/hopper_medium_expert_sparse_78_train.npz
-out: /public/gormpo/models/hopper_medium_expert_sparse_3/neuralODE
+out: /public/gormpo/models/hopper_medium_expert_sparse_3_next/neuralODE
 
 epochs: 20
 batch: 128
