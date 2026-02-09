@@ -19,24 +19,26 @@ for seed in "${seeds[@]}"; do
     echo ">>> Training with seed = $seed"
     echo "=========================================="
 
-    Step 1: Train VAE density estimator for this seed
-    echo "Step 1/2: Training VAE density estimator (seed $seed)..."
-    python vae_module/vae.py \
-        --config configs/vae/hopper_medium_expert_sparse_3.yaml \
-        --seed $seed \
-        --model_save_path /public/gormpo/models/hopper_medium_expert_sparse_3/vae_$seed \
-        --device cuda:1
-    echo "✓ VAE training complete for seed $seed"
-    echo ""
+    # Step 1: Train VAE density estimator for this seed
+    # echo "Step 1/2: Training VAE density estimator (seed $seed)..."
+    # python vae_module/vae.py \
+    #     --config configs/vae/hopper_medium_expert_sparse_3.yaml \
+    #     --seed $seed \
+    #     --model_save_path /public/gormpo/models/hopper_medium_expert_sparse_3/vae_$seed \
+    #     --device cuda:1
+    # echo "✓ VAE training complete for seed $seed"
+    # echo ""
 
     # Step 2: Train GORMPO policy using the trained VAE model
     echo "Step 2/2: Training GORMPO-VAE policy (seed $seed)..."
     python mopo.py \
         --config configs/vae/gormpo_hopper_medium_expert_sparse_3.yaml \
         --seed $seed \
+        --dynamics-model-dir 'true' \
+        --rollout-length 5 \
         --classifier_model_name /public/gormpo/models/hopper_medium_expert_sparse_3/vae_$seed \
         --epoch 1000 \
-        --devid 1 \
+        --devid 3\
         --results_output $RESULTS_FILE
     echo "✓ GORMPO-VAE training complete for seed $seed"
     echo ""

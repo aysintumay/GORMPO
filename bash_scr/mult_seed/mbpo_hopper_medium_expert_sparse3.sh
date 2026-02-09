@@ -8,7 +8,7 @@ echo "============================================"
 echo ""
 
 # Array of random seeds to test
-seeds=(42 123 456)
+seeds=(2 3 4)
 
 # Shared results file for all seeds
 RESULTS_FILE="results/hopper-medium-expert-v2_sparse_73/kde/mbpo_multiseed_results.csv"
@@ -23,9 +23,11 @@ for seed in "${seeds[@]}"; do
         --config configs/kde/gormpo_hopper_medium_expert_sparse_3.yaml \
         --algo-name mbpo \
         --reward-penalty-coef 0.0 \
+        --dynamics-model-dir 'true' \
+        --rollout-length 5 \
         --seed $seed \
         --epoch 1000 \
-        --devid 0 \
+        --devid 6 \
         --results_output $RESULTS_FILE
     echo "✓ MBPO training complete for seed $seed"
     echo ""

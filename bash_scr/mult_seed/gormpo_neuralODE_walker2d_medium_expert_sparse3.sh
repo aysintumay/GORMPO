@@ -12,7 +12,7 @@ echo "============================================"
 echo ""
 
 # Array of random seeds to test
-seeds=(123)
+seeds=(42 123 456)
 
 # Shared results file for all seeds
 RESULTS_FILE="results/walker2d-medium-expert-v2_sparse_73/neuralODE/gormpo_neuralODE_multiseed_results.csv"
@@ -39,7 +39,9 @@ for seed in "${seeds[@]}"; do
         --config configs/neuralODE/gormpo_walker2d_medium_expert_sparse_3.yaml \
         --seed $seed \
         --epoch 1000 \
-        --devid 7 \
+        --dynamics-model-dir 'true' \
+        --rollout-length 5 \
+        --devid 1 \
         --dynamics-model-dir 'true' \
         --results_output $RESULTS_FILE
     echo "✓ GORMPO-NeuralODE training complete for seed $seed"
