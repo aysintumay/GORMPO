@@ -64,14 +64,14 @@ class NPZTargetDataset(Dataset):
                     pass
             return None
 
-        # Check for D4RL format (observations + actions)
-        observations = get_key("observations")
+        # Check for D4RL/RL format: use next_observations + actions for density (same as RealNVP/VAE)
+        next_observations = get_key("next_observations")
         actions = get_key("actions")
 
-        if observations is not None and actions is not None:
-            # D4RL format: concatenate observations and actions
-            print(f"Detected D4RL format: observations shape={observations.shape}, actions shape={actions.shape}")
-            self.target_np = np.concatenate([observations, actions], axis=1)
+        if next_observations is not None and actions is not None:
+            # D4RL format: concatenate next_observations and actions for density training
+            print(f"Detected D4RL format: next_observations shape={next_observations.shape}, actions shape={actions.shape}")
+            self.target_np = np.concatenate([next_observations, actions], axis=1)
             print(f"Concatenated target shape: {self.target_np.shape}")
         else:
             # Fall back to original single-key format
@@ -94,7 +94,7 @@ class NPZTargetDataset(Dataset):
                         return val
                 raise KeyError(
                     f"Could not find any of keys {keys} in {available_keys(data)}. "
-                    "For D4RL datasets, ensure both 'observations' and 'actions' keys exist. "
+                    "For D4RL datasets, ensure both 'next_observations' and 'actions' keys exist. "
                     "Otherwise, rename your arrays or pass a small shim."
                 )
 
@@ -133,11 +133,11 @@ class D4RLTargetDataset(Dataset):
         env = gym.make(task)
         dataset = d4rl.qlearning_dataset(env)
 
-        observations = dataset['observations']
+        next_observations = dataset['next_observations']
         actions = dataset['actions']
 
-        print(f"D4RL dataset loaded: observations shape={observations.shape}, actions shape={actions.shape}")
-        self.target_np = np.concatenate([observations, actions], axis=1).astype(np.float32)
+        print(f"D4RL dataset loaded: next_observations shape={next_observations.shape}, actions shape={actions.shape}")
+        self.target_np = np.concatenate([next_observations, actions], axis=1).astype(np.float32)
         print(f"Concatenated target shape: {self.target_np.shape}")
 
         self.target = torch.from_numpy(self.target_np).to(dtype)

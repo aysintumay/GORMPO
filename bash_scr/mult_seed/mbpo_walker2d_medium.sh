@@ -28,9 +28,9 @@ for seed in "${seeds[@]}"; do
         --dynamics-model-dir 'true' \
         --reward-penalty-coef 0.0 \
         --seed $seed \
-        --epoch 1000 \
+        --epoch 3000 \
         --rollout-length 5 \
-        --devid 2 \
+        --devid 3 \
         --results_output $RESULTS_FILE
 
     echo "MBPO training complete for seed $seed"

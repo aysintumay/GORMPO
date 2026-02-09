@@ -484,13 +484,13 @@ def load_data(data_path, test_size, validation_size, args=None):
         action_dim = env.action_space.shape[0]
         replay_buffer = ReplayBufferAbiomed(state_dim, action_dim)
         replay_buffer.convert_abiomed(data, env)
-        X = np.concatenate([replay_buffer.state, replay_buffer.action], axis=1)
+        X = np.concatenate([replay_buffer.next_state, replay_buffer.action], axis=1)
     elif hasattr(args, 'task') and args.task:
         # D4RL dataset loading
         env, data = get_d4rl_data(args)
-        X = np.concatenate([data["observations"], data["actions"]], axis=1)
+        X = np.concatenate([data["next_observations"], data["actions"]], axis=1)
         print(f"Loaded D4RL dataset: {args.task}")
-        print(f"  Observations shape: {data['observations'].shape}")
+        print(f"  next_observations shape: {data['next_observations'].shape}")
         print(f"  Actions shape: {data['actions'].shape}")
     else:
         # Load from file path
@@ -503,7 +503,7 @@ def load_data(data_path, test_size, validation_size, args=None):
             data = {k: data[k] for k in data.files}
             print("Loaded npz file")
 
-        X = np.concatenate([data["observations"], data["actions"]], axis=1)
+        X = np.concatenate([data["next_observations"], data["actions"]], axis=1)
 
     n_samples = len(X)
 

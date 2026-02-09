@@ -326,7 +326,7 @@ class TransitionModel:
             print('loaded hopper model from ', model_save_dir)
         elif  info[0].lower()=="halfcheetah-medium-v2":
             # model_save_dir = '/public/gormpo/models/rl/halfcheetah/realnvp/seed_1_1110_000453_HalfCheetah_gormpo/dynamics_model'
-            model_save_dir = '/public/gormpo/models/rl/halfcheetah-medium-v2/realnvp/seed_1_1223_133252_halfcheetah_medium_v2_gormpo/dynamics_model'
+            model_save_dir = '/public/gormpo/models/rl/halfcheetah-medium-v2/kde/seed_456_0121_021857_halfcheetah_medium_v2_gormpo/dynamics_model'
             print('loaded halfcheetah model from ', model_save_dir)
         elif info[0].lower()=="walker2d-medium-v2":
             # model_save_dir = "/public/gormpo/models/rl/walker2d/realnvp/seed_1_1110_000607_Walker2d_gormpo/dynamics_model"

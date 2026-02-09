@@ -10,7 +10,7 @@ echo "============================================"
 echo ""
 
 # Array of random seeds to test
-seeds=(42 123 456)
+seeds=(2 3 4)
 
 # Shared results file for all seeds
 RESULTS_FILE="results/halfcheetah-medium-replay-v2/mbpo/mbpo_multiseed_results.csv"
@@ -24,12 +24,13 @@ for seed in "${seeds[@]}"; do
     python mopo.py \
         --task halfcheetah-medium-replay-v2 \
         --algo-name mbpo \
+        --dynamics-model-dir 'true' \
         --config configs/kde/mbpo_halfcheetah_medium_replay.yaml \
         --reward-penalty-coef 0.0 \
         --seed $seed \
         --epoch 1000 \
         --rollout-length 5 \
-        --devid 4 \
+        --devid 1\
         --results_output $RESULTS_FILE
 
     echo "MBPO training complete for seed $seed"

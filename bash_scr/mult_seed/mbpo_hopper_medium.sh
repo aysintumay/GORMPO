@@ -27,7 +27,7 @@ for seed in "${seeds[@]}"; do
         --seed $seed \
         --epoch 1000 \
         --rollout-length 5 \
-        --devid 1 \
+        --devid 3 \
         --results_output $RESULTS_FILE
 
     echo "MBPO training complete for seed $seed"

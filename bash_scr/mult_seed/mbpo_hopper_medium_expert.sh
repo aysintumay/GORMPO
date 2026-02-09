@@ -10,7 +10,7 @@ echo "============================================"
 echo ""
 
 # Array of random seeds to test
-seeds=(123 456)
+seeds=(2 3 4)
 
 # Shared results file for all seeds
 RESULTS_FILE="results/hopper-medium-expert-v2/mbpo/mbpo_multiseed_results.csv"
@@ -30,7 +30,7 @@ for seed in "${seeds[@]}"; do
         --seed $seed \
         --epoch 1000 \
         --rollout-length 5 \
-        --devid 1 \
+        --devid 2 \
         --results_output $RESULTS_FILE
 
     echo "MBPO training complete for seed $seed"

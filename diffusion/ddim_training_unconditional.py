@@ -69,6 +69,18 @@ class NPZTargetDataset(Dataset):
                 except Exception:
                     return []
 
+        def get_key(key):
+            try:
+                if key in data:
+                    return data[key]
+            except Exception:
+                try:
+                    if hasattr(data, "files") and key in data.files:
+                        return data[key]
+                except Exception:
+                    pass
+            return None
+
         def pick(keys):
             for k in keys:
                 try:
@@ -83,10 +95,17 @@ class NPZTargetDataset(Dataset):
                         pass
             raise KeyError(
                 f"Could not find any of keys {keys} in {available_keys(data)}. "
-                "Please rename your arrays or pass a small shim."
+                "For D4RL/RL datasets, ensure 'next_observations' and 'actions' exist. "
+                "Otherwise rename your arrays or pass a small shim."
             )
 
-        self.target_np = pick(possible_target_keys)
+        # Prefer D4RL/RL format: next_observations + actions (same as RealNVP/VAE/Neural ODE)
+        next_obs = get_key("next_observations")
+        actions = get_key("actions")
+        if next_obs is not None and actions is not None:
+            self.target_np = np.concatenate([next_obs, actions], axis=1)
+        else:
+            self.target_np = pick(possible_target_keys)
 
         self.target = torch.from_numpy(self.target_np).to(dtype)
 

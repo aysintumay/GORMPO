@@ -401,19 +401,37 @@ def load_rl_data_for_ood(data_path: str, val_ratio: float = 0.2, test_ratio: flo
     train_dataset = dataset_result['train_data']
     val_dataset = dataset_result['val_data']
     test_dataset = dataset_result['test_data']
+    available = list(train_dataset.keys())
 
-    # Extract next_observations + actions (like Neural ODE)
-    train_next_obs = torch.FloatTensor(train_dataset['next_observations'])
-    train_actions = torch.FloatTensor(train_dataset['actions'])
-    train_data = torch.cat([train_next_obs, train_actions], dim=1)
-
-    val_next_obs = torch.FloatTensor(val_dataset['next_observations'])
-    val_actions = torch.FloatTensor(val_dataset['actions'])
-    val_data = torch.cat([val_next_obs, val_actions], dim=1)
-
-    test_next_obs = torch.FloatTensor(test_dataset['next_observations'])
-    test_actions = torch.FloatTensor(test_dataset['actions'])
-    test_data = torch.cat([test_next_obs, test_actions], dim=1)
+    # Case 1: Single "target" array (e.g. diffusion-processed NPZ with concat next_obs+actions)
+    if 'target' in train_dataset:
+        train_data = torch.FloatTensor(train_dataset['target'])
+        val_data = torch.FloatTensor(val_dataset['target'])
+        test_data = torch.FloatTensor(test_dataset['target'])
+    else:
+        # Case 2: Obs + actions (prefer next_observations, then observations)
+        obs_key = None
+        for k in ('next_observations', 'observations', 'obs'):
+            if k in train_dataset:
+                obs_key = k
+                break
+        action_key = 'actions' if 'actions' in train_dataset else 'action'
+        if obs_key is None or action_key not in train_dataset:
+            raise KeyError(
+                f"Dataset must have either 'target' or (obs + actions). "
+                f"Available keys: {available}"
+            )
+        if obs_key != 'next_observations':
+            print(f"Note: using '{obs_key}' for OOD reference data (next_observations not found).")
+        train_obs = torch.FloatTensor(train_dataset[obs_key])
+        train_actions = torch.FloatTensor(train_dataset[action_key])
+        train_data = torch.cat([train_obs, train_actions], dim=1)
+        val_obs = torch.FloatTensor(val_dataset[obs_key])
+        val_actions = torch.FloatTensor(val_dataset[action_key])
+        val_data = torch.cat([val_obs, val_actions], dim=1)
+        test_obs = torch.FloatTensor(test_dataset[obs_key])
+        test_actions = torch.FloatTensor(test_dataset[action_key])
+        test_data = torch.cat([test_obs, test_actions], dim=1)
 
     # Limit samples if needed
     if len(train_data) > max_samples:

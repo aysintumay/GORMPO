@@ -29,7 +29,7 @@ for seed in "${seeds[@]}"; do
         --config configs/realnvp/halfcheetah_medium_replay.yaml \
         --seed $seed \
         --model_save_path /public/gormpo/models/halfcheetah_medium_replay/realnvp_$seed \
-        --device cuda:4
+        --device cuda:2
     echo "RealNVP training complete for seed $seed"
     echo ""
 
@@ -40,7 +40,7 @@ for seed in "${seeds[@]}"; do
         --seed $seed \
         --classifier_model_name /public/gormpo/models/halfcheetah_medium_replay/realnvp_$seed \
         --epoch 1000 \
-        --devid 4 \
+        --devid 2\
         --results_output $RESULTS_FILE
     echo "GORMPO-RealNVP training complete for seed $seed"
     echo ""
