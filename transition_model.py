@@ -72,7 +72,6 @@ class TransitionModel:
         """
         Version with optimized IQR filtering.
         """ 
-        print('THR', self.classifier_thr)
         
         if self.classifier_name is None:
             input_np = np.concatenate([state, action], axis=1)
@@ -302,19 +301,19 @@ class TransitionModel:
             torch.save(network.state_dict(), save_path)
 
         # Save normalizers
-        normalizer_path = os.path.join(model_save_dir, "normalizers.pt")
-        torch.save({
-            'obs_normalizer': {
-                'mean': self.obs_normalizer.mean,
-                'var': self.obs_normalizer.var,
-                'tot_count': self.obs_normalizer.tot_count
-            },
-            'act_normalizer': {
-                'mean': self.act_normalizer.mean,
-                'var': self.act_normalizer.var,
-                'tot_count': self.act_normalizer.tot_count
-            }
-        }, normalizer_path)
+        # normalizer_path = os.path.join(model_save_dir, "normalizers.pt")
+        # torch.save({
+        #     'obs_normalizer': {
+        #         'mean': self.obs_normalizer.mean,
+        #         'var': self.obs_normalizer.var,
+        #         'tot_count': self.obs_normalizer.tot_count
+        #     },
+        #     'act_normalizer': {
+        #         'mean': self.act_normalizer.mean,
+        #         'var': self.act_normalizer.var,
+        #         'tot_count': self.act_normalizer.tot_count
+        #     }
+        # }, normalizer_path)
 
 
     def load_model(self, info):

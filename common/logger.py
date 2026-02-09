@@ -20,3 +20,5 @@ class Logger:
     def print(self, info):
         print("\033[1;32m [info]\033[0m: " + info)
         self.output_file.write(info + '\n')
+
+

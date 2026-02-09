@@ -40,7 +40,7 @@ for seed in "${seeds[@]}"; do
         --dynamics-model-dir "true" \
         --seed $seed \
         --epoch 1000 \
-        --devid 5 \
+        --devid 0 \
         --results_output $RESULTS_FILE
     echo "GORMPO-NeuralODE training complete for seed $seed"
     echo ""

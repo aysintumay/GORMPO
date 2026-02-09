@@ -90,6 +90,7 @@ class StandardNormalizer(object):
         self.tot_count += sample_count
 
     def transform(self, data):
+        # return data
         if self.mean is None or self.var is None:
             return data
 

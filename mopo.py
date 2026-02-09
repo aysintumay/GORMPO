@@ -91,7 +91,7 @@ def get_args():
     parser.add_argument(
                     "--devid", 
                     type=int,
-                    default=5,
+                    default=3,
                     help="Which GPU device index to use"
                 )
 
@@ -117,7 +117,7 @@ def get_args():
     parser.add_argument("--model-retain-epochs", type=int, default=5)
     parser.add_argument("--real-ratio", type=float, default=0.05)
     parser.add_argument("--dynamics-model-dir", type=str, default=None)
-    parser.add_argument("--penalty_type", type=str, default="linear", choices=["linear", "inverse", "exponential", "softplus", "tanh"])
+    parser.add_argument("--penalty_type", type=str, default="tanh", choices=["linear", "inverse", "exponential", "softplus", "tanh"])
 
     parser.add_argument("--epoch", type=int, default=1)
     parser.add_argument("--step-per-epoch", type=int, default=1000)

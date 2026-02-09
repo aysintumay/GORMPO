@@ -12,7 +12,7 @@ echo "============================================"
 echo ""
 
 # Array of random seeds to test
-seeds=(42 123 456)
+seeds=(1 2 3)
 
 # Shared results file for all seeds
 RESULTS_FILE="results/hopper-medium/vae/gormpo_vae_multiseed_results.csv"
@@ -24,14 +24,14 @@ for seed in "${seeds[@]}"; do
     echo "=========================================="
 
     # Step 1: Train VAE density estimator for this seed
-    echo "Step 1/2: Training VAE density estimator (seed $seed)..."
-    python vae_module/vae.py \
-        --config configs/vae/hopper.yaml \
-        --seed $seed \
-        --model_save_path /public/gormpo/models/hopper_medium/vae_$seed \
-        --device cuda:1
-    echo "VAE training complete for seed $seed"
-    echo ""
+    # echo "Step 1/2: Training VAE density estimator (seed $seed)..."
+    # python vae_module/vae.py \
+    #     --config configs/vae/hopper.yaml \
+    #     --seed $seed \
+    #     --model_save_path /public/gormpo/models/hopper_medium/vae_$seed \
+    #     --device cuda:2
+    # echo "VAE training complete for seed $seed"
+    # echo ""
 
     # Step 2: Train GORMPO policy using the trained VAE model
     echo "Step 2/2: Training GORMPO-VAE policy (seed $seed)..."
@@ -40,7 +40,7 @@ for seed in "${seeds[@]}"; do
         --seed $seed \
         --classifier_model_name /public/gormpo/models/hopper_medium/vae_$seed \
         --epoch 1000 \
-        --devid 1 \
+        --devid 4 \
         --results_output $RESULTS_FILE
     echo "GORMPO-VAE training complete for seed $seed"
     echo ""

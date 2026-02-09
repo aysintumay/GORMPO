@@ -211,7 +211,6 @@ def train(env, run, logger, seed, args):
         # classifier_dict now contains: {'model': ood_model, 'threshold': ..., 'mean': ..., 'std': ...}
         # Rename 'threshold' to 'thr' for compatibility with transition_model
         classifier_dict['thr'] = classifier_dict['threshold']
-        print(f"Neural ODE classifier loaded with threshold {classifier_dict['thr']}")
     elif "diffusion" in args.classifier_model_name:
         print("Loading Diffusion based classifier... for task:", args.task)
         # Load model using build_model_from_ckpt from monte_carlo_sampling_unconditional
