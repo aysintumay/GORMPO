@@ -354,7 +354,8 @@ def run_exp(tune_config):
 
     # begin train
     result = trainer.train_policy()
-    tune.report(**result)
+    from ray.air import session
+    session.report(result)
 
 
 
@@ -368,7 +369,7 @@ if __name__ == "__main__":
     ray.init(num_gpus=2)
     config = {}
     penalty_coef = [0.1,0.2,0.3, 0.4, 0.5, 0.6,0.7, 0.8]
-    # penalty_coef = [0.05, 0.1]
+    # penalty_coef = [0.05]
     seeds = list(range(1))
     config["reward_penalty_coef"] = tune.grid_search(penalty_coef)
     config["seed"] = tune.grid_search(seeds)
