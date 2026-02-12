@@ -5,6 +5,7 @@ import numpy as np
 import torch
 from matplotlib import pyplot as plt
 import copy 
+from typing import Optional, Dict, List, Tuple
 
 from tqdm import tqdm
 from common import util
@@ -68,9 +69,9 @@ class Trainer:
         run_id,
         env_name = '',
         eval_episodes=100,
-        terminal_counter=1
-        
-    ):
+        terminal_counter=1,
+        lr_scheduler: Optional[torch.optim.lr_scheduler._LRScheduler] = None
+    ) -> None:
         self.algo = algo
         self.eval_env = eval_env
 
@@ -86,6 +87,7 @@ class Trainer:
 
         self._eval_episodes = eval_episodes
         self.terminal_counter = terminal_counter
+        self.lr_scheduler = lr_scheduler
 
         if self.run_id !=0 :
 
@@ -132,6 +134,9 @@ class Trainer:
                             self.logger.record(k, v, num_timesteps, printed=False)
                     num_timesteps += 1
                     t.update(1)
+
+            if self.lr_scheduler is not None:
+                self.lr_scheduler.step()
             # evaluate current policy
             if e % 10 == 0:
                
