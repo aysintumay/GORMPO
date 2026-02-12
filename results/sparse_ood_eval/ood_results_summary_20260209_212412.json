@@ -1,0 +1,117 @@
+{
+  "timestamp": "20260209_212412",
+  "models": {
+    "halfcheetah_sparse_72.5": {
+      "env_name": "halfcheetah-medium-expert-v2",
+      "sparse_level": "72.5%",
+      "threshold": -7319756.5,
+      "ood_results": {
+        "0.4": {
+          "roc_auc": 0.36146917,
+          "avg_precision": 0.5666247664286936,
+          "train_log_prob_mean": -3133708.75,
+          "ood_log_prob_mean": -2230655.75,
+          "log_prob_gap": -903053.0
+        },
+        "0.6": {
+          "roc_auc": 0.36761730000000004,
+          "avg_precision": 0.5689580170717315,
+          "train_log_prob_mean": -3136033.25,
+          "ood_log_prob_mean": -2260553.0,
+          "log_prob_gap": -875480.25
+        },
+        "0.8": {
+          "roc_auc": 0.47445154999999994,
+          "avg_precision": 0.6503350279369768,
+          "train_log_prob_mean": -3136273.5,
+          "ood_log_prob_mean": -2971894.5,
+          "log_prob_gap": -164379.0
+        },
+        "1.0": {
+          "roc_auc": 0.51714666,
+          "avg_precision": 0.6788711971448407,
+          "train_log_prob_mean": -3132792.75,
+          "ood_log_prob_mean": -3233471.75,
+          "log_prob_gap": 100679.0
+        }
+      }
+    },
+    "hopper_sparse_78": {
+      "env_name": "hopper-medium-expert-v2",
+      "sparse_level": "78%",
+      "threshold": -1015220.9375,
+      "ood_results": {
+        "1.0": {
+          "roc_auc": 0.5715654564681001,
+          "avg_precision": 0.5805244248784427,
+          "train_log_prob_mean": -318656.0625,
+          "ood_log_prob_mean": -366385.375,
+          "log_prob_gap": 47729.3125
+        },
+        "1.2": {
+          "roc_auc": 0.5862895800316957,
+          "avg_precision": 0.5655150810475775,
+          "train_log_prob_mean": -316331.0,
+          "ood_log_prob_mean": -376200.71875,
+          "log_prob_gap": 59869.71875
+        },
+        "1.4": {
+          "roc_auc": 0.6196867767244197,
+          "avg_precision": 0.6424921644961907,
+          "train_log_prob_mean": -319093.1875,
+          "ood_log_prob_mean": -410949.78125,
+          "log_prob_gap": 91856.59375
+        },
+        "1.6": {
+          "roc_auc": 0.6286819404069768,
+          "avg_precision": 0.6295441209669161,
+          "train_log_prob_mean": -318509.0625,
+          "ood_log_prob_mean": -422256.6875,
+          "log_prob_gap": 103747.625
+        },
+        "1.8": {
+          "roc_auc": 0.6540980549966465,
+          "avg_precision": 0.6786289979239899,
+          "train_log_prob_mean": -316811.6875,
+          "ood_log_prob_mean": -453443.78125,
+          "log_prob_gap": 136632.09375
+        }
+      }
+    },
+    "walker2d_sparse_73": {
+      "env_name": "walker2d-medium-expert-v2",
+      "sparse_level": "73%",
+      "threshold": -1838596.125,
+      "ood_results": {
+        "0.4": {
+          "roc_auc": 0.5106849931787176,
+          "avg_precision": 0.6430184757348271,
+          "train_log_prob_mean": -708867.0,
+          "ood_log_prob_mean": -719307.875,
+          "log_prob_gap": 10440.875
+        },
+        "0.6": {
+          "roc_auc": 0.4622531501831502,
+          "avg_precision": 0.6193823896594401,
+          "train_log_prob_mean": -708324.125,
+          "ood_log_prob_mean": -677831.625,
+          "log_prob_gap": -30492.5
+        },
+        "0.8": {
+          "roc_auc": 0.49311851405622487,
+          "avg_precision": 0.6633851446678628,
+          "train_log_prob_mean": -708067.9375,
+          "ood_log_prob_mean": -699248.875,
+          "log_prob_gap": -8819.0625
+        },
+        "1.0": {
+          "roc_auc": 0.5250012900000001,
+          "avg_precision": 0.6844667435815636,
+          "train_log_prob_mean": -708097.5625,
+          "ood_log_prob_mean": -742304.75,
+          "log_prob_gap": 34207.1875
+        }
+      }
+    }
+  }
+}

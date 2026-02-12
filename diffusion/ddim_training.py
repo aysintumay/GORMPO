@@ -74,6 +74,18 @@ class NPZCondTargetDataset(Dataset):
                 except Exception:
                     return []
 
+        def get_key(key):
+            try:
+                if key in data:
+                    return data[key]
+            except Exception:
+                try:
+                    if hasattr(data, "files") and key in data.files:
+                        return data[key]
+                except Exception:
+                    pass
+            return None
+
         def pick(keys):
             for k in keys:
                 try:
@@ -88,11 +100,20 @@ class NPZCondTargetDataset(Dataset):
                         pass
             raise KeyError(
                 f"Could not find any of keys {keys} in {available_keys(data)}. "
-                "Please rename your arrays or pass a small shim."
+                "For D4RL/RL use 'observations' (cond) and 'next_observations'+'actions' (target). "
+                "Otherwise rename your arrays or pass a small shim."
             )
 
-        self.cond_np = pick(possible_cond_keys)
-        self.target_np = pick(possible_target_keys)
+        # Prefer D4RL/RL format: cond = observations, target = next_observations + actions
+        obs = get_key("observations")
+        next_obs = get_key("next_observations")
+        actions = get_key("actions")
+        if obs is not None and next_obs is not None and actions is not None:
+            self.cond_np = obs
+            self.target_np = np.concatenate([next_obs, actions], axis=1)
+        else:
+            self.cond_np = pick(possible_cond_keys)
+            self.target_np = pick(possible_target_keys)
 
         if self.cond_np.shape[0] != self.target_np.shape[0]:
             raise ValueError(

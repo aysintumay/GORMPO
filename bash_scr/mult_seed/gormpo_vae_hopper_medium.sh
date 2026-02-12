@@ -6,7 +6,8 @@ source venv/bin/activate
 
 set -e  # Exit on error
 
-echo "============================================"echo "Multi-Seed GORMPO-VAE Training: Hopper-Medium"
+echo "============================================"
+echo "Multi-Seed GORMPO-VAE Training: Hopper-Medium"
 echo "============================================"
 echo ""
 
@@ -37,9 +38,9 @@ for seed in "${seeds[@]}"; do
     python mopo.py \
         --config configs/vae/mbpo_hopper.yaml \
         --seed $seed \
-        --classifier_model_name /public/gormpo/models/hopper_medium/vae \
+        --classifier_model_name /public/gormpo/models/hopper_medium/vae_$seed \
         --epoch 1000 \
-        --devid 2 \
+        --devid 4 \
         --results_output $RESULTS_FILE
     echo "GORMPO-VAE training complete for seed $seed"
     echo ""

@@ -34,8 +34,8 @@ class TransitionModel:
                  type = "linear",
                  holdout_ratio=0.1,
                  reward_penalty_coef = 1,
-                 inc_var_loss=False,
-                 use_weight_decay=False,
+                 inc_var_loss=True,
+                 use_weight_decay=True,
                  **kwargs):
 
         obs_dim = obs_space.shape[0]
@@ -160,13 +160,14 @@ class TransitionModel:
         train_mse_loss = torch.sum(train_mse_losses)
         train_var_loss = torch.sum(train_var_losses)
         train_transition_loss = train_mse_loss + train_var_loss
-        train_transition_loss += 0.01 * torch.sum(self.model.max_logvar) - 0.01 * torch.sum(
-            self.model.min_logvar)  # why
         if self.use_weight_decay:
             decay_loss = self.model.get_decay_loss()
             train_transition_loss += decay_loss
         else:
             decay_loss = None
+        train_transition_loss += 0.01 * torch.sum(self.model.max_logvar) - 0.01 * torch.sum(
+            self.model.min_logvar)  # why
+        
         # update transition model
         self.model_optimizer.zero_grad()
         train_transition_loss.backward()
@@ -301,19 +302,19 @@ class TransitionModel:
             torch.save(network.state_dict(), save_path)
 
         # Save normalizers
-        normalizer_path = os.path.join(model_save_dir, "normalizers.pt")
-        torch.save({
-            'obs_normalizer': {
-                'mean': self.obs_normalizer.mean,
-                'var': self.obs_normalizer.var,
-                'tot_count': self.obs_normalizer.tot_count
-            },
-            'act_normalizer': {
-                'mean': self.act_normalizer.mean,
-                'var': self.act_normalizer.var,
-                'tot_count': self.act_normalizer.tot_count
-            }
-        }, normalizer_path)
+        # normalizer_path = os.path.join(model_save_dir, "normalizers.pt")
+        # torch.save({
+        #     'obs_normalizer': {
+        #         'mean': self.obs_normalizer.mean,
+        #         'var': self.obs_normalizer.var,
+        #         'tot_count': self.obs_normalizer.tot_count
+        #     },
+        #     'act_normalizer': {
+        #         'mean': self.act_normalizer.mean,
+        #         'var': self.act_normalizer.var,
+        #         'tot_count': self.act_normalizer.tot_count
+        #     }
+        # }, normalizer_path)
 
 
     def load_model(self, info):

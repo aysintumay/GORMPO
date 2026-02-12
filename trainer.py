@@ -5,6 +5,7 @@ import numpy as np
 import torch
 from matplotlib import pyplot as plt
 import copy 
+from typing import Optional, Dict, List, Tuple
 
 from tqdm import tqdm
 from common import util
@@ -68,9 +69,9 @@ class Trainer:
         run_id,
         env_name = '',
         eval_episodes=100,
-        terminal_counter=1
-        
-    ):
+        terminal_counter=1,
+        lr_scheduler: Optional[torch.optim.lr_scheduler._LRScheduler] = None
+    ) -> None:
         self.algo = algo
         self.eval_env = eval_env
 
@@ -86,6 +87,7 @@ class Trainer:
 
         self._eval_episodes = eval_episodes
         self.terminal_counter = terminal_counter
+        self.lr_scheduler = lr_scheduler
 
         if self.run_id !=0 :
 
@@ -108,6 +110,7 @@ class Trainer:
         critic_loss1,critic_loss2,  actor_loss, entropy,alpha_loss = [], [],[], [], []
         reward_l, acc_l, off_acc = [], [], []
         reward_std_l, acc_std_l, off_acc_std = [], [], []
+        last_10_performance = []
         for e in range(1, self._epoch + 1):
             self.algo.policy.train()
             with tqdm(total=self._step_per_epoch, desc=f"Epoch #{e}/{self._epoch}") as t:
@@ -131,6 +134,9 @@ class Trainer:
                             self.logger.record(k, v, num_timesteps, printed=False)
                     num_timesteps += 1
                     t.update(1)
+
+            if self.lr_scheduler is not None:
+                self.lr_scheduler.step()
             # evaluate current policy
             if e % 10 == 0:
                
@@ -147,6 +153,7 @@ class Trainer:
                 self.logger.print(f"Epoch #{e}: episode_reward: {ep_reward_mean:.3f} ± {ep_reward_std:.3f},\
                                 episode_length: {ep_length_mean:.3f} ± {ep_length_std:.3f}"
                                 )
+                last_10_performance.append(ep_reward_mean)
         
             # save policy
             model_save_dir = util.logger_model.log_path
@@ -156,7 +163,7 @@ class Trainer:
             policy_copy = {k: v.cpu().clone() for k, v in self.algo.policy.state_dict().items()}
             # policy_copy = copy.deepcopy(self.algo.policy.to('cpu').state_dict())
             torch.save(policy_copy, os.path.join(model_save_dir, f"policy_{self.env_name}.pth")) 
-        
+
         if self.run_id != 0:
             #plot q_values for each epoch
             plot_q_value(np.array(q1_l).reshape(-1,1), 'Q1')
@@ -175,6 +182,7 @@ class Trainer:
             self.algo.plot_penalty_evolution()
 
         self.logger.print("total time: {:.3f}s".format(time.time() - start_time))
+        return {"last_10_performance": np.mean(last_10_performance)}
 
 
     def _evaluate(self):
