@@ -81,10 +81,32 @@ OOD_DISTANCES_PER_ENV = {
 
 # Training config YAMLs to build eval config from (out -> model_dir, npz -> train_data)
 TRAINING_CONFIG_MAP = {
-    "halfcheetah_sparse_57.5": {
-        "yaml": "halfcheetah_mlp_expert_sparse_57.5.yaml",
+    "halfcheetah_sparse_72.5": {
+        "yaml": "halfcheetah_mlp_expert_sparse_72.5.yaml",
         "env_name": "halfcheetah-medium-expert-v2",
-        "sparse_level": "57.5%",
+        "sparse_level": "72.5%",
+        "ood_base_dir": "/public/d4rl/ood_test/halfcheetah-medium-expert-v2",
+    },
+    "hopper_sparse_78": {
+        "yaml": "hopper_mlp_expert_sparse_78.yaml",
+        "env_name": "hopper-medium-expert-v2",
+        "sparse_level": "78%",
+        "ood_base_dir": "/public/d4rl/ood_test/hopper-medium-expert-v2",
+    },
+    "walker2d_sparse_73": {
+        "yaml": "walker2d_mlp_expert_sparse_73.yaml",
+        "env_name": "walker2d-medium-expert-v2",
+        "sparse_level": "73%",
+        "ood_base_dir": "/public/d4rl/ood_test/walker2d-medium-expert-v2",
+    },
+}
+
+# Neural ODE configs (same three models; model_dir from neuralODE/configs out)
+NEURALODE_CONFIG_MAP = {
+    "halfcheetah_sparse_72.5": {
+        "yaml": "halfcheetah_mlp_expert_sparse_72.5.yaml",
+        "env_name": "halfcheetah-medium-expert-v2",
+        "sparse_level": "72.5%",
         "ood_base_dir": "/public/d4rl/ood_test/halfcheetah-medium-expert-v2",
     },
     "hopper_sparse_78": {
@@ -129,6 +151,133 @@ def load_models_from_training_configs(config_dir: str) -> Dict[str, Dict]:
             "sparse_level": meta["sparse_level"],
         }
     return models
+
+
+def load_models_from_neuralode_configs(config_dir: str) -> Dict[str, Dict]:
+    """Load Neural ODE model config from neuralODE/configs (out -> model_dir, npz -> train_data)."""
+    try:
+        import yaml
+    except ImportError:
+        raise ImportError("PyYAML required for Neural ODE configs. pip install pyyaml")
+    models = {}
+    for model_name, meta in NEURALODE_CONFIG_MAP.items():
+        yaml_path = os.path.join(config_dir, meta["yaml"])
+        if not os.path.isfile(yaml_path):
+            print(f"Warning: {yaml_path} not found, skipping {model_name}")
+            continue
+        with open(yaml_path, "r") as f:
+            cfg = yaml.safe_load(f)
+        model_dir = cfg.get("out")
+        train_data = cfg.get("npz")
+        if not model_dir or not train_data:
+            print(f"Warning: {yaml_path} missing 'out' or 'npz', skipping {model_name}")
+            continue
+        models[model_name] = {
+            "model_dir": model_dir,
+            "train_data": train_data,
+            "ood_base_dir": meta["ood_base_dir"],
+            "env_name": meta["env_name"],
+            "sparse_level": meta["sparse_level"],
+        }
+    return models
+
+
+def load_neuralode_model(model_dir: str, device: str = "cuda"):
+    """Load Neural ODE OOD model. Uses model.pt or latest checkpoint_epoch_*.pt. Builds metadata from checkpoint if metadata.pkl missing."""
+    import glob
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from neuralODE.neural_ode_ood import NeuralODEOOD
+    from neuralODE.neural_ode_density import ContinuousNormalizingFlow, ODEFunc
+
+    model_path = os.path.join(model_dir, "model.pt")
+    if not os.path.exists(model_path):
+        ckpt_pattern = os.path.join(model_dir, "checkpoint_epoch_*.pt")
+        ckpts = glob.glob(ckpt_pattern)
+        if ckpts:
+            ckpts.sort(key=lambda x: int(x.split("_epoch_")[-1].replace(".pt", "")))
+            model_path = ckpts[-1]
+            print(f"  Using latest checkpoint: {os.path.basename(model_path)}")
+        else:
+            raise FileNotFoundError(f"No model.pt or checkpoint_epoch_*.pt in {model_dir}")
+
+    metadata_path = os.path.join(model_dir, "metadata.pkl")
+    if os.path.exists(metadata_path):
+        with open(metadata_path, "rb") as f:
+            metadata = pickle.load(f)
+    else:
+        # Build metadata from checkpoint (training saves target_dim and cfg in ckpt)
+        ckpt = torch.load(model_path, map_location=device, weights_only=False)
+        cfg = ckpt.get("cfg") or {}
+        if isinstance(cfg, dict):
+            metadata = {
+                "target_dim": ckpt.get("target_dim") or cfg.get("target_dim", 17),
+                "hidden_dims": tuple(cfg.get("hidden_dims", [512, 512])),
+                "activation": cfg.get("activation", "silu"),
+                "time_dependent": cfg.get("time_dependent", True),
+                "solver": cfg.get("solver", "dopri5"),
+                "t0": cfg.get("t0", 0.0),
+                "t1": cfg.get("t1", 1.0),
+                "rtol": cfg.get("rtol", 1e-5),
+                "atol": cfg.get("atol", 1e-5),
+                "threshold": ckpt.get("threshold"),
+            }
+        else:
+            metadata = {
+                "target_dim": ckpt.get("target_dim", 17),
+                "hidden_dims": (512, 512),
+                "activation": "silu",
+                "time_dependent": True,
+                "solver": "dopri5",
+                "t0": 0.0,
+                "t1": 1.0,
+                "rtol": 1e-5,
+                "atol": 1e-5,
+                "threshold": ckpt.get("threshold"),
+            }
+        print(f"  No metadata.pkl; using config from checkpoint")
+
+    target_dim = metadata.get("target_dim", 17)
+    hidden_dims = tuple(metadata.get("hidden_dims", [512, 512]))
+    activation = metadata.get("activation", "silu")
+    time_dependent = metadata.get("time_dependent", True)
+    solver = metadata.get("solver", "dopri5")
+    t0 = metadata.get("t0", 0.0)
+    t1 = metadata.get("t1", 1.0)
+    rtol = metadata.get("rtol", 1e-5)
+    atol = metadata.get("atol", 1e-5)
+
+    odefunc = ODEFunc(
+        dim=target_dim,
+        hidden_dims=hidden_dims,
+        activation=activation,
+        time_dependent=time_dependent,
+    ).to(device)
+    flow = ContinuousNormalizingFlow(
+        func=odefunc, t0=t0, t1=t1, solver=solver, rtol=rtol, atol=atol,
+    ).to(device)
+
+    ckpt = torch.load(model_path, map_location=device, weights_only=False)
+    if isinstance(ckpt, dict) and "model_state_dict" in ckpt:
+        flow.load_state_dict(ckpt["model_state_dict"])
+    else:
+        flow.load_state_dict(ckpt)
+    flow.eval()
+
+    ood_model = NeuralODEOOD(flow, device=device)
+    ood_model.threshold = metadata.get("threshold")
+    return ood_model
+
+
+def score_samples_batched(ood_model, data: torch.Tensor, batch_size: int) -> np.ndarray:
+    """Score samples in batches (Neural ODE has no batch_size arg)."""
+    all_scores = []
+    for i in range(0, len(data), batch_size):
+        batch = data[i : i + batch_size]
+        scores = ood_model.score_samples(batch)
+        if isinstance(scores, torch.Tensor):
+            scores = scores.cpu().numpy()
+        all_scores.append(scores)
+    return np.concatenate(all_scores)
 
 
 def load_ood_data(ood_path: str, device: str = "cuda") -> torch.Tensor:
@@ -206,15 +355,23 @@ def load_diffusion_model(model_dir: str, device: str = "cuda") -> Tuple[Diffusio
 
 
 def evaluate_single_ood(
-    ood_model: DiffusionOOD,
+    ood_model,
     train_data: torch.Tensor,
     ood_data: torch.Tensor,
     batch_size: int = 256,
 ) -> Dict:
-    """Evaluate OOD detection for a single OOD dataset (same metrics as run_sparse_ood_eval)."""
-    # Score both datasets
-    train_scores = ood_model.score_samples(train_data, batch_size=batch_size).cpu().numpy()
-    ood_scores = ood_model.score_samples(ood_data, batch_size=batch_size).cpu().numpy()
+    """Evaluate OOD detection for a single OOD dataset (same metrics as run_sparse_ood_eval). Works for Diffusion and Neural ODE."""
+    # Score both datasets (Neural ODE has no batch_size arg, so use batched loop)
+    try:
+        train_scores = ood_model.score_samples(train_data, batch_size=batch_size)
+    except TypeError:
+        train_scores = score_samples_batched(ood_model, train_data, batch_size)
+    train_scores = train_scores if isinstance(train_scores, np.ndarray) else train_scores.cpu().numpy()
+    try:
+        ood_scores = ood_model.score_samples(ood_data, batch_size=batch_size)
+    except TypeError:
+        ood_scores = score_samples_batched(ood_model, ood_data, batch_size)
+    ood_scores = ood_scores if isinstance(ood_scores, np.ndarray) else ood_scores.cpu().numpy()
 
     # Create labels (0 = in-distribution, 1 = OOD)
     y_true = np.concatenate([
@@ -375,6 +532,87 @@ def evaluate_model(
     return results
 
 
+def evaluate_model_neuralode(
+    model_name: str,
+    config: Dict,
+    ood_distances: List[float],
+    device: str = "cuda",
+    batch_size: int = 256,
+    max_train_samples: int = 5000,
+) -> Dict:
+    """Evaluate a single Neural ODE model across all OOD distances. Uses model.pt or latest checkpoint."""
+    print(f"\n{'='*60}")
+    print(f"Evaluating Neural ODE: {model_name}")
+    print(f"Model dir: {config['model_dir']}")
+    print(f"{'='*60}")
+
+    if not os.path.exists(config["model_dir"]):
+        print(f"  [SKIP] Model directory not found: {config['model_dir']}")
+        return {"error": "model_not_found", "model_dir": config["model_dir"], "density_type": "neuralode"}
+
+    try:
+        ood_model = load_neuralode_model(config["model_dir"], device)
+        print(f"  Loaded Neural ODE model")
+    except Exception as e:
+        print(f"  [ERROR] Failed to load model: {e}")
+        return {"error": str(e), "density_type": "neuralode"}
+
+    try:
+        train_data = load_train_data(config["train_data"], device, max_train_samples)
+        print(f"  Loaded {len(train_data)} training samples")
+    except Exception as e:
+        print(f"  [ERROR] Failed to load training data: {e}")
+        return {"error": str(e), "density_type": "neuralode"}
+
+    # Set threshold from train scores (1% anomaly fraction)
+    train_scores = score_samples_batched(ood_model, train_data, batch_size)
+    ood_model.threshold = float(np.percentile(train_scores, 1.0))
+    print(f"  Threshold set to {ood_model.threshold:.4f} (1% percentile)")
+
+    results = {
+        "model_name": model_name,
+        "density_type": "neuralode",
+        "env_name": config["env_name"],
+        "sparse_level": config["sparse_level"],
+        "model_dir": config["model_dir"],
+        "train_data_path": config["train_data"],
+        "n_train_samples": len(train_data),
+        "threshold": ood_model.threshold,
+        "ood_distances": ood_distances,
+        "ood_results": {},
+    }
+
+    for dist in ood_distances:
+        ood_files = [
+            f"ood-distance-{dist}.pkl",
+            f"ood-distance-{int(dist)}.pkl" if dist == int(dist) else None,
+            f"ood-distance-{dist}-uniform.pkl",
+        ]
+        ood_files = [f for f in ood_files if f is not None]
+        ood_path = None
+        for fname in ood_files:
+            candidate = os.path.join(config["ood_base_dir"], fname)
+            if os.path.exists(candidate):
+                ood_path = candidate
+                break
+        if ood_path is None:
+            print(f"  [SKIP] OOD distance {dist}: file not found")
+            results["ood_results"][str(dist)] = {"error": "file_not_found"}
+            continue
+        try:
+            ood_data = load_ood_data(ood_path, device)
+            print(f"  Evaluating OOD distance {dist}: {len(ood_data)} samples")
+            ood_result = evaluate_single_ood(ood_model, train_data, ood_data, batch_size)
+            ood_result["ood_path"] = ood_path
+            results["ood_results"][str(dist)] = ood_result
+            print(f"    ROC AUC: {ood_result['roc_auc']:.4f}, Log prob gap: {ood_result['log_prob_gap']:.2f}")
+        except Exception as e:
+            print(f"  [ERROR] OOD distance {dist}: {e}")
+            results["ood_results"][str(dist)] = {"error": str(e)}
+
+    return results
+
+
 def _get_model_results(model_data: Dict) -> Dict:
     """Get diffusion results from either nested models[name]['diffusion'] or flat models[name]."""
     return model_data.get("diffusion", model_data)
@@ -403,30 +641,55 @@ def save_results(results: Dict, output_dir: str, sparse_ood_format: bool = True)
         json.dump(results, f, indent=2)
     print(f"Latest copy saved to: {latest_full}")
 
-    # Summary (without raw scores)
+    # Summary (without raw scores); support both single density and multiple (diffusion + neuralode)
     summary = {}
     for model_name, model_data in results["models"].items():
-        model_results = _get_model_results(model_data)
-        if "error" in model_results:
-            summary[model_name] = model_results
-            continue
-        summary[model_name] = {
-            "env_name": model_results.get("env_name"),
-            "sparse_level": model_results.get("sparse_level"),
-            "threshold": model_results.get("threshold"),
-            "ood_results": {},
-        }
-        for dist, ood_res in model_results.get("ood_results", {}).items():
-            if "error" in ood_res:
-                summary[model_name]["ood_results"][dist] = ood_res
-            else:
-                summary[model_name]["ood_results"][dist] = {
-                    "roc_auc": ood_res["roc_auc"],
-                    "avg_precision": ood_res["avg_precision"],
-                    "train_log_prob_mean": ood_res["train_log_prob_mean"],
-                    "ood_log_prob_mean": ood_res["ood_log_prob_mean"],
-                    "log_prob_gap": ood_res["log_prob_gap"],
+        if isinstance(model_data, dict) and set(model_data.keys()) <= {"diffusion", "neuralode"}:
+            # Nested: model_data = {"diffusion": {...}, "neuralode": {...}}
+            summary[model_name] = {}
+            for density_type, model_results in model_data.items():
+                if not isinstance(model_results, dict) or "error" in model_results:
+                    summary[model_name][density_type] = model_results
+                    continue
+                summary[model_name][density_type] = {
+                    "env_name": model_results.get("env_name"),
+                    "sparse_level": model_results.get("sparse_level"),
+                    "threshold": model_results.get("threshold"),
+                    "ood_results": {},
                 }
+                for dist, ood_res in model_results.get("ood_results", {}).items():
+                    if "error" in ood_res:
+                        summary[model_name][density_type]["ood_results"][dist] = ood_res
+                    else:
+                        summary[model_name][density_type]["ood_results"][dist] = {
+                            "roc_auc": ood_res["roc_auc"],
+                            "avg_precision": ood_res["avg_precision"],
+                            "train_log_prob_mean": ood_res["train_log_prob_mean"],
+                            "ood_log_prob_mean": ood_res["ood_log_prob_mean"],
+                            "log_prob_gap": ood_res["log_prob_gap"],
+                        }
+        else:
+            model_results = _get_model_results(model_data)
+            if "error" in model_results:
+                summary[model_name] = model_results
+                continue
+            summary[model_name] = {
+                "env_name": model_results.get("env_name"),
+                "sparse_level": model_results.get("sparse_level"),
+                "threshold": model_results.get("threshold"),
+                "ood_results": {},
+            }
+            for dist, ood_res in model_results.get("ood_results", {}).items():
+                if "error" in ood_res:
+                    summary[model_name]["ood_results"][dist] = ood_res
+                else:
+                    summary[model_name]["ood_results"][dist] = {
+                        "roc_auc": ood_res["roc_auc"],
+                        "avg_precision": ood_res["avg_precision"],
+                        "train_log_prob_mean": ood_res["train_log_prob_mean"],
+                        "ood_log_prob_mean": ood_res["ood_log_prob_mean"],
+                        "log_prob_gap": ood_res["log_prob_gap"],
+                    }
 
     summary_path = os.path.join(output_dir, f"ood_results_summary_{timestamp}.json")
     with open(summary_path, "w") as f:
@@ -446,29 +709,33 @@ def plot_results(results: Dict, output_dir: str):
     colors = plt.cm.tab10.colors
     markers = ['o', 's', '^', 'D']
 
-    for idx, (model_name, model_data) in enumerate(results["models"].items()):
-        model_results = _get_model_results(model_data)
-        if "error" in model_results:
-            continue
-
-        distances = []
-        aucs = []
-        for dist_str, ood_res in model_results.get("ood_results", {}).items():
-            if "error" not in ood_res:
-                distances.append(float(dist_str))
-                aucs.append(ood_res["roc_auc"])
-
-        if distances:
-            sorted_pairs = sorted(zip(distances, aucs))
-            distances, aucs = zip(*sorted_pairs)
-
-            label = f"{model_results['env_name']} ({model_results['sparse_level']})"
-            ax.plot(distances, aucs, marker=markers[idx % len(markers)],
-                   color=colors[idx % len(colors)], label=label, linewidth=2, markersize=8)
+    plot_idx = 0
+    for model_name, model_data in results["models"].items():
+        # Support both single (legacy) and nested {diffusion: ..., neuralode: ...}
+        if isinstance(model_data, dict) and set(model_data.keys()) <= {"diffusion", "neuralode"}:
+            items = list(model_data.items())
+        else:
+            items = [("diffusion", _get_model_results(model_data))]
+        for density_type, model_results in items:
+            if "error" in model_results:
+                continue
+            distances = []
+            aucs = []
+            for dist_str, ood_res in model_results.get("ood_results", {}).items():
+                if "error" not in ood_res:
+                    distances.append(float(dist_str))
+                    aucs.append(ood_res["roc_auc"])
+            if distances:
+                sorted_pairs = sorted(zip(distances, aucs))
+                distances, aucs = zip(*sorted_pairs)
+                label = f"{model_results.get('env_name', model_name)} ({model_results.get('sparse_level', '')}) [{density_type}]"
+                ax.plot(distances, aucs, marker=markers[plot_idx % len(markers)],
+                       color=colors[plot_idx % len(colors)], label=label, linewidth=2, markersize=8)
+                plot_idx += 1
 
     ax.set_xlabel("OOD Distance", fontsize=12)
     ax.set_ylabel("ROC AUC", fontsize=12)
-    ax.set_title("OOD Detection Performance: Sparse Diffusion Models", fontsize=14, fontweight='bold')
+    ax.set_title("OOD Detection: Diffusion & Neural ODE", fontsize=14, fontweight='bold')
     ax.legend(fontsize=10)
     ax.grid(True, alpha=0.3)
     ax.set_ylim([0.5, 1.0])
@@ -478,15 +745,28 @@ def plot_results(results: Dict, output_dir: str):
     plt.close()
     print(f"Plot saved to: {plot_path}")
 
-    # Plot 2: Log probability distributions for each model (at distance 1.0)
-    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-    axes = axes.flatten()
+    # Plot 2: Log probability distributions (each model + density type)
+    flat_results = []
+    for model_name, model_data in results["models"].items():
+        if isinstance(model_data, dict) and set(model_data.keys()) <= {"diffusion", "neuralode"}:
+            for dtype, mr in model_data.items():
+                if isinstance(mr, dict) and "error" not in mr:
+                    flat_results.append((f"{model_name}_{dtype}", mr))
+        else:
+            mr = _get_model_results(model_data)
+            if "error" not in mr:
+                flat_results.append((model_name, mr))
+    n_plot = min(len(flat_results), 6)
+    if n_plot == 0:
+        n_plot = 1
+    ncol = 2 if n_plot > 1 else 1
+    nrow = (n_plot + ncol - 1) // ncol
+    fig, axes = plt.subplots(nrow, ncol, figsize=(7 * ncol, 5 * nrow))
+    axes = np.atleast_1d(axes).flatten()
 
-    for idx, (model_name, model_data) in enumerate(results["models"].items()):
-        model_results = _get_model_results(model_data)
-        if "error" in model_results or idx >= 4:
-            continue
-
+    for idx, (label, model_results) in enumerate(flat_results):
+        if idx >= len(axes):
+            break
         ax = axes[idx]
 
         # Use distance 1.0 for comparison
@@ -512,10 +792,12 @@ def plot_results(results: Dict, output_dir: str):
 
             ax.set_xlabel("Log Probability (ELBO)", fontsize=10)
             ax.set_ylabel("Density", fontsize=10)
-            ax.set_title(f"{model_results['env_name']}\n({model_results['sparse_level']} sparse)", fontsize=11)
+            title = f"{model_results.get('env_name', label)}\n({model_results.get('sparse_level', '')})"
+            ax.set_title(title, fontsize=11)
             ax.legend(fontsize=9)
             ax.grid(True, alpha=0.3)
-
+    for j in range(len(flat_results), len(axes)):
+        axes[j].set_visible(False)
     plt.tight_layout()
     plot_path = os.path.join(output_dir, "log_prob_distributions.png")
     plt.savefig(plot_path, dpi=300, bbox_inches='tight')
@@ -541,7 +823,8 @@ def plot_results(results: Dict, output_dir: str):
             tpr = ood_res["tpr"]
             roc_auc = ood_res["roc_auc"]
 
-            label = f"{model_results['env_name']} ({model_results['sparse_level']}) - AUC={roc_auc:.3f}"
+            dtype_suffix = " [" + list(model_data.keys())[0] + "]" if isinstance(model_data, dict) and set(model_data.keys()) <= {"diffusion", "neuralode"} else ""
+            label = f"{model_results['env_name']} ({model_results['sparse_level']}){dtype_suffix} - AUC={roc_auc:.3f}"
             ax.plot(fpr, tpr, label=label, linewidth=2)
 
     ax.plot([0, 1], [0, 1], 'k--', label='Random', linewidth=1)
@@ -576,6 +859,9 @@ def main():
     parser.add_argument("--batch-size", type=int, default=256)
     parser.add_argument("--max-train-samples", type=int, default=5000)
     parser.add_argument("--no-plot", action="store_true", help="Skip plotting")
+    parser.add_argument("--density-types", nargs="+", default=["diffusion"],
+                        choices=["diffusion", "neuralode"],
+                        help="Density model types to evaluate (default: diffusion)")
 
     args = parser.parse_args()
 
@@ -609,13 +895,20 @@ def main():
         print(f"OOD distances: {args.distances if args.distances else OOD_DISTANCES_DEFAULT}")
     print(f"Device: {args.device}")
     print(f"Output dir: {args.output_dir}")
+    print(f"Density types: {getattr(args, 'density_types', ['diffusion'])}")
 
-    # Run evaluation
+    neuralode_config_dir = None
+    neuralode_models = {}
+    if getattr(args, "density_types", ["diffusion"]) and "neuralode" in getattr(args, "density_types", []):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        repo_root = os.path.dirname(script_dir)
+        neuralode_config_dir = os.path.join(repo_root, "neuralODE", "configs")
+        neuralode_models = load_models_from_neuralode_configs(neuralode_config_dir)
+
     all_results = {
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": datetime.now().strftime("%Y%m%d_%H%M%S"),
         "config": {
-            "ood_distances": "per-environment" if use_env_distances else (args.distances or OOD_DISTANCES_DEFAULT),
-            "ood_distances_per_env": OOD_DISTANCES_PER_ENV if use_env_distances else None,
+            "ood_distances": OOD_DISTANCES_PER_ENV,
             "device": args.device,
             "batch_size": args.batch_size,
             "max_train_samples": args.max_train_samples,
@@ -635,13 +928,26 @@ def main():
         else:
             distances = args.distances if args.distances else OOD_DISTANCES_DEFAULT
 
-        model_results = evaluate_model(
-            model_name, config, distances,
-            device=args.device,
-            batch_size=args.batch_size,
-            max_train_samples=args.max_train_samples,
-        )
-        all_results["models"][model_name] = {"diffusion": model_results}
+        all_results["models"][model_name] = {}
+        if "diffusion" in args.density_types:
+            model_results = evaluate_model(
+                model_name, config, distances,
+                device=args.device,
+                batch_size=args.batch_size,
+                max_train_samples=args.max_train_samples,
+            )
+            all_results["models"][model_name]["diffusion"] = model_results
+        if "neuralode" in getattr(args, "density_types", []) and model_name in neuralode_models:
+            neo_config = neuralode_models[model_name]
+            neo_results = evaluate_model_neuralode(
+                model_name, neo_config, distances,
+                device=args.device,
+                batch_size=args.batch_size,
+                max_train_samples=args.max_train_samples,
+            )
+            all_results["models"][model_name]["neuralode"] = neo_results
+        elif "neuralode" in getattr(args, "density_types", []) and model_name not in neuralode_models:
+            print(f"  [SKIP] No Neural ODE config for {model_name}")
 
     sparse_ood_format = "sparse_ood_eval" in args.output_dir
     full_path, summary_path = save_results(all_results, args.output_dir, sparse_ood_format=sparse_ood_format)
@@ -649,6 +955,15 @@ def main():
     # Generate plots
     if not args.no_plot:
         plot_results(all_results, args.output_dir)
+
+    print("\n" + "="*60)
+    print("Evaluation complete!")
+    print("="*60)
+
+
+if __name__ == "__main__":
+    main()
+
 
     print("\n" + "="*60)
     print("Evaluation complete!")
