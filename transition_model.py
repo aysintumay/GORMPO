@@ -96,7 +96,8 @@ class TransitionModel:
                 0.0
             )
         elif type == "tanh":
-            weight = (np.tanh(0.1*(-log_probs + self.classifier_thr)))
+            log_weight = (np.tanh(0.1*(-log_probs + self.classifier_thr)))
+            weight = np.clip(log_weight, a_min=0, a_max=None)
             # print(weight.mean(), weight.std())
         elif type == "softplus": #smooth and stable
             weight = np.log(1 + np.exp(-log_probs)).numpy()
@@ -302,19 +303,19 @@ class TransitionModel:
             torch.save(network.state_dict(), save_path)
 
         # Save normalizers
-        # normalizer_path = os.path.join(model_save_dir, "normalizers.pt")
-        # torch.save({
-        #     'obs_normalizer': {
-        #         'mean': self.obs_normalizer.mean,
-        #         'var': self.obs_normalizer.var,
-        #         'tot_count': self.obs_normalizer.tot_count
-        #     },
-        #     'act_normalizer': {
-        #         'mean': self.act_normalizer.mean,
-        #         'var': self.act_normalizer.var,
-        #         'tot_count': self.act_normalizer.tot_count
-        #     }
-        # }, normalizer_path)
+        normalizer_path = os.path.join(model_save_dir, "normalizers.pt")
+        torch.save({
+            'obs_normalizer': {
+                'mean': self.obs_normalizer.mean,
+                'var': self.obs_normalizer.var,
+                'tot_count': self.obs_normalizer.tot_count
+            },
+            'act_normalizer': {
+                'mean': self.act_normalizer.mean,
+                'var': self.act_normalizer.var,
+                'tot_count': self.act_normalizer.tot_count
+            }
+        }, normalizer_path)
 
 
     def load_model(self, info):
@@ -368,7 +369,7 @@ class TransitionModel:
                 print('loaded walker2d model from ', model_save_dir)
 
             elif "walker2d_medium_expert_sparse_73.pkl" in info[1]:
-                model_save_dir = '/public/gormpo/models/rl/walker2d-medium-expert-v2/kde/seed_1_0110_012418_walker2d_medium_expert_v2_gormpo_sparse_73/dynamics_model'
+                model_save_dir = '/public/gormpo/models/rl/walker2d-medium-expert-v2/kde/seed_42_0212_213740_walker2d_medium_expert_v2_gormpo_sparse_73/dynamics_model'
                 print('loaded walker2d sparse 3 model from ', model_save_dir)
 
         elif  info[0].lower()=="halfcheetah-medium-replay-v2":
