@@ -42,3 +42,4 @@ wandb==0.19.8
 
 # Hyperparameter Tuning
 ray==2.10.0
+pyarrow==17.0.0
