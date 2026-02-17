@@ -1,6 +1,8 @@
 # Requirements for GORMPO: Generative OOD-regularized Model-based Policy Optimization
 # See README.md for further details and caveats
 
+--extra-index-url https://download.pytorch.org/whl/cu118
+
 # Deep Learning Framework
 torch==2.4.1+cu118
 torchdiffeq==0.2.5
