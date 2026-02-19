@@ -38,10 +38,10 @@ for seed in "${seeds[@]}"; do
     python mopo.py \
         --config configs/neuralODE/gormpo_walker2d_medium_expert_sparse_3.yaml \
         --seed $seed \
-        --epoch 1000 \
+        --epoch 3000 \
         --dynamics-model-dir 'true' \
         --rollout-length 5 \
-        --devid 1 \
+        --devid 4 \
         --dynamics-model-dir 'true' \
         --results_output $RESULTS_FILE
     echo "✓ GORMPO-NeuralODE training complete for seed $seed"

@@ -29,12 +29,6 @@ from diffusion.monte_carlo_sampling_unconditional import build_model_from_ckpt
 from diffusion.ddim_training_unconditional import log_prob_elbo
 from diffusers.schedulers.scheduling_ddim import DDIMScheduler
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
-from neuralODE.neural_ode_density import ContinuousNormalizingFlow, ODEFunc
-from neuralODE.neural_ode_ood import NeuralODEOOD
-from diffusion.monte_carlo_sampling_unconditional import build_model_from_ckpt
-from diffusion.ddim_training_unconditional import log_prob_elbo
-from diffusers.schedulers.scheduling_ddim import DDIMScheduler
-from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 import d4rl
 from typing import Tuple
 import torch
@@ -153,6 +147,7 @@ def train(env, run, logger, seed, args):
     actor_optim = torch.optim.Adam(actor.parameters(), lr=args.actor_lr)
     critic1_optim = torch.optim.Adam(critic1.parameters(), lr=args.critic_lr)
     critic2_optim = torch.optim.Adam(critic2.parameters(), lr=args.critic_lr)
+    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(actor_optim, args.epoch)
 
     if args.auto_alpha:
         # target_entropy = args.target_entropy if args.target _entropy \
@@ -313,7 +308,7 @@ def train(env, run, logger, seed, args):
         env_name = args.task,
         eval_episodes=args.eval_episodes,
         terminal_counter= args.terminal_counter if args.task == "Abiomed-v0" else None,
-        
+        lr_scheduler=lr_scheduler 
     )
 
     if args.dynamics_model_dir != None:

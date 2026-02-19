@@ -22,13 +22,14 @@ for seed in "${seeds[@]}"; do
     python mopo.py \
         --config configs/kde/gormpo_walker2d_medium_expert_sparse_3.yaml \
         --algo-name mbpo \
-        --dynamics-model-dir 'true' \
         --rollout-length 5 \
         --reward-penalty-coef 0.0 \
         --seed $seed \
-        --epoch 1000 \
-        --devid 3 \
-        --results_output $RESULTS_FILE
+        --epoch 3000 \
+        --devid 2 \
+        --results_output $RESULTS_FILE \
+        --dynamics-model-dir 'true' \
+
     echo "✓ MBPO training complete for seed $seed"
     echo ""
 done

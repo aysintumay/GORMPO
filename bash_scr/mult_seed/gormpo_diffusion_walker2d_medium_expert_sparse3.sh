@@ -42,7 +42,7 @@ for seed in "${seeds[@]}"; do
         --dynamics-model-dir 'true' \
         --rollout-length 5 \
         --classifier_model_name /public/gormpo/models/walker2d_medium_expert_sparse_3/diffusion_$seed/checkpoint.pt \
-        --epoch 1000 \
+        --epoch 3000 \
         --devid 2 \
         --results_output $RESULTS_FILE
     echo "✓ GORMPO-Diffusion training complete for seed $seed"

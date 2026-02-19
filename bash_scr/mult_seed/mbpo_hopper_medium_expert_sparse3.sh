@@ -23,12 +23,13 @@ for seed in "${seeds[@]}"; do
         --config configs/kde/gormpo_hopper_medium_expert_sparse_3.yaml \
         --algo-name mbpo \
         --reward-penalty-coef 0.0 \
-        --dynamics-model-dir 'true' \
         --rollout-length 5 \
         --seed $seed \
-        --epoch 1000 \
+        --epoch 3000 \
         --devid 6 \
         --results_output $RESULTS_FILE
+            # --dynamics-model-dir 'true' \
+
     echo "✓ MBPO training complete for seed $seed"
     echo ""
 done

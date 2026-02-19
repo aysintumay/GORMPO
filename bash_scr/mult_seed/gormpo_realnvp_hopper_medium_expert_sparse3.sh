@@ -34,12 +34,13 @@ for seed in "${seeds[@]}"; do
     python mopo.py \
         --config configs/realnvp/gormpo_hopper_medium_expert_sparse_3.yaml \
         --seed $seed \
-        --dynamics-model-dir 'true' \
         --rollout-length 5 \
         --classifier_model_name /public/gormpo/models/hopper_medium_expert_sparse_3/realnvp_$seed \
-        --epoch 1000 \
-        --devid 2 \
+        --epoch 3000 \
+        --devid 6 \
         --results_output $RESULTS_FILE
+                # --dynamics-model-dir 'true' \
+
     echo "✓ GORMPO-RealNVP training complete for seed $seed"
     echo ""
 done
