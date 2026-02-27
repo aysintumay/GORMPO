@@ -6,9 +6,10 @@ algo-name: gormpo
 reward-penalty-coef: 0.3
 seed: 1
 data_path: /public/d4rl/sparse_datasets/hopper_medium_expert_sparse_78.pkl
-epoch: 1000
+epoch: 3000
 rollout-length: 3
 penalty_type: tanh
+dynamics-model-dir: true
 classifier_model_name: /public/gormpo/models/hopper_medium_expert_sparse_3/vae
 density_model: vae
 target_dim: 14  # 11 (obs) + 3 (action) for Hopper

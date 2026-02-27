@@ -8,7 +8,7 @@ echo "============================================"
 echo ""
 
 # Array of random seeds to test
-seeds=(2 3 4 )
+seeds=(42 123 456)
 
 # Shared results file for all seeds
 RESULTS_FILE="results/halfcheetah-medium-expert-v2_sparse_72.5/kde/gormpo_kde_multiseed_results.csv"
@@ -20,14 +20,14 @@ for seed in "${seeds[@]}"; do
     echo "=========================================="
 
     # Step 1: Train KDE density estimator for this seed
-    echo "Step 1/2: Training KDE density estimator (seed $seed)..."
-    python kde_module/kde.py \
-        --config configs/kde/halfcheetah_medium_expert_sparse_3.yaml \
-        --seed $seed \
-        --save_path /public/gormpo/models/halfcheetah_medium_expert_sparse_3/kde_$seed \
-        --devid 0
-    echo "✓ KDE training complete for seed $seed"
-    echo ""
+    # echo "Step 1/2: Training KDE density estimator (seed $seed)..."
+    # python kde_module/kde.py \
+    #     --config configs/kde/halfcheetah_medium_expert_sparse_3.yaml \
+    #     --seed $seed \
+    #     --save_path /public/gormpo/models/halfcheetah_medium_expert_sparse_3/kde_$seed \
+    #     --devid 0
+    # echo "✓ KDE training complete for seed $seed"
+    # echo ""
 
     # Step 2: Train GORMPO policy using the trained KDE model
     echo "Step 2/2: Training GORMPO-KDE policy (seed $seed)..."
@@ -35,8 +35,8 @@ for seed in "${seeds[@]}"; do
         --config configs/kde/gormpo_halfcheetah_medium_expert_sparse_3.yaml \
         --seed $seed \
         --classifier_model_name /public/gormpo/models/halfcheetah_medium_expert_sparse_3/kde_$seed \
-        --epoch 1000 \
-        --devid 0 \
+        --epoch 3000 \
+        --devid 7 \
         --dynamics-model-dir 'true'\
         --results_output $RESULTS_FILE
     echo "✓ GORMPO-KDE training complete for seed $seed"

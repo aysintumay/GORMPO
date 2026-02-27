@@ -24,14 +24,14 @@ for seed in "${seeds[@]}"; do
     echo "=========================================="
 
     # Step 1: Train Diffusion model for this seed
-    echo "Step 1/2: Training Diffusion model (seed $seed)..."
-    python diffusion/ddim_training_unconditional.py \
-        --config diffusion/configs/unconditional_training/halfcheetah_mlp_expert_sparse_72.5.yaml \
-        --seed $seed \
-        --epochs 100 \
-        --out /public/gormpo/models/halfcheetah_medium_expert_sparse_3/diffusion_$seed
-    echo "✓ Diffusion model training complete for seed $seed"
-    echo ""
+    # echo "Step 1/2: Training Diffusion model (seed $seed)..."
+    # python diffusion/ddim_training_unconditional.py \
+    #     --config diffusion/configs/unconditional_training/halfcheetah_mlp_expert_sparse_72.5.yaml \
+    #     --seed $seed \
+    #     --epochs 100 \
+    #     --out /public/gormpo/models/halfcheetah_medium_expert_sparse_3/diffusion_$seed
+    # echo "✓ Diffusion model training complete for seed $seed"
+    # echo ""
 
     # Step 2: Train GORMPO policy using the trained Diffusion model
     echo "Step 2/2: Training GORMPO-Diffusion policy (seed $seed)..."
@@ -39,9 +39,11 @@ for seed in "${seeds[@]}"; do
         --config configs/diffusion/gormpo_halfcheetah_medium_expert_sparse_3.yaml \
         --seed $seed \
         --classifier_model_name /public/gormpo/models/halfcheetah_medium_expert_sparse_3/diffusion_$seed/checkpoint.pt \
-        --epoch 1000 \
+        --epoch 3000 \
         --devid 6 \
-        --results_output $RESULTS_FILE
+        --results_output $RESULTS_FILE \
+        --dynamics-model-dir 'true'
+
     echo "✓ GORMPO-Diffusion training complete for seed $seed"
     echo ""
 done
