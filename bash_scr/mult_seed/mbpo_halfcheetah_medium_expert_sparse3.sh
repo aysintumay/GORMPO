@@ -24,9 +24,10 @@ for seed in "${seeds[@]}"; do
         --algo-name mbpo \
         --reward-penalty-coef 0.0 \
         --seed $seed \
-        --epoch 1000 \
-        --devid 7 \
-        --results_output $RESULTS_FILE
+        --epoch 3000 \
+        --devid 0 \
+        --results_output $RESULTS_FILE \
+         --dynamics-model-dir 'true' 
     echo "✓ MBPO training complete for seed $seed"
     echo ""
 done

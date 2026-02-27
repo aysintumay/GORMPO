@@ -98,6 +98,8 @@ class TransitionModel:
         elif type == "tanh":
             log_weight = (np.tanh(0.1*(-log_probs + self.classifier_thr)))
             weight = np.clip(log_weight, a_min=0, a_max=None)
+        elif type == "tanh_reg":
+            weight = (np.tanh(0.1*(-log_probs + self.classifier_thr)))
             # print(weight.mean(), weight.std())
         elif type == "softplus": #smooth and stable
             weight = np.log(1 + np.exp(-log_probs)).numpy()
