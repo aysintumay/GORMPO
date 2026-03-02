@@ -362,7 +362,7 @@ if __name__ == "__main__":
     # load default args
     args = get_args()
     # args.device = util.device
-    os.environ["CUDA_VISIBLE_DEVICES"] = f"{args.devid},{args.devid+1}" # Let Ray handle GPU assignment, but ensure we have 2 GPUs available
+    os.environ["CUDA_VISIBLE_DEVICES"] = f"{args.devid},{args.devid+5}" # Let Ray handle GPU assignment, but ensure we have 2 GPUs available
     ray.init(num_gpus=2)
     config = {}
     penalty_coef = [0.1,0.3, 0.5, 0.8]

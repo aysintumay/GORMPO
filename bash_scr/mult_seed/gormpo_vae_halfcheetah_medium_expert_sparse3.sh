@@ -35,9 +35,10 @@ for seed in "${seeds[@]}"; do
         --config configs/vae/gormpo_halfcheetah_medium_expert_sparse_3.yaml \
         --seed $seed \
         --classifier_model_name /public/gormpo/models/halfcheetah_medium_expert_sparse_3/vae_$seed \
-        --epoch 1000 \
-        --devid 2 \
-        --results_output $RESULTS_FILE
+        --epoch 3000 \
+        --devid 7\
+        --results_output $RESULTS_FILE \
+        --dynamics-model-dir 'true' 
     echo "✓ GORMPO-VAE training complete for seed $seed"
     echo ""
 done
