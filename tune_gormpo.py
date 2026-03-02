@@ -198,16 +198,13 @@ def run_exp(tune_config):
     )
 
     if "vae" in args_for_exp.classifier_model_name:
-        classifier = VAE(
-            device=util.device
-        ).to(util.device)
-        classifier_dict = classifier.load_model(args_for_exp.classifier_model_name)
+        classifier_dict = VAE.load_model(
+            args_for_exp.classifier_model_name,
+            device=str(util.device)
+        )
         print("vae loaded")
     elif "realnvp" in args_for_exp.classifier_model_name:
-        classifier = RealNVP(
-        device=util.device
-        ).to(util.device)
-        classifier_dict = classifier.load_model(args_for_exp.classifier_model_name)
+        classifier_dict = RealNVP.load_model(args_for_exp.classifier_model_name, device=args_for_exp.device)
     elif "kde" in args_for_exp.classifier_model_name:
         classifier = PercentileThresholdKDE(
         devid=args_for_exp.devid
@@ -292,22 +289,6 @@ def run_exp(tune_config):
         action_dim=args_for_exp.action_dim,
         action_dtype=np.float32
     )
-
-    # create MOPO algo
-    algo = MOPO(
-        sac_policy,
-        dynamics_model,
-        offline_buffer=offline_buffer,
-        model_buffer=model_buffer,
-        reward_penalty_coef=args_for_exp.reward_penalty_coef,
-        rollout_length=args_for_exp.rollout_length,
-        batch_size=args_for_exp.batch_size,
-        real_ratio=args_for_exp.real_ratio,
-        logger=logger,
-        **env_config["mopo_params"]
-    )
-
-    # log
     record_params = list(tune_config.keys())
     if "seed" in record_params:
         record_params.remove("seed")
@@ -328,6 +309,22 @@ def run_exp(tune_config):
     offlinerlkit_logger = OfflinerlkitLogger(log_dirs, output_config)
     offlinerlkit_logger.log_hyperparameters(vars(args_for_exp))
 
+    # create MOPO algo
+    algo = MOPO(
+        sac_policy,
+        dynamics_model,
+        offline_buffer=offline_buffer,
+        model_buffer=model_buffer,
+        reward_penalty_coef=args_for_exp.reward_penalty_coef,
+        rollout_length=args_for_exp.rollout_length,
+        batch_size=args_for_exp.batch_size,
+        real_ratio=args_for_exp.real_ratio,
+        logger=offlinerlkit_logger,
+        **env_config["mopo_params"]
+    )
+
+    # log
+    
     # create trainer
     trainer = Trainer(
         algo,
@@ -335,7 +332,7 @@ def run_exp(tune_config):
         epoch=args_for_exp.epoch,
         step_per_epoch=args_for_exp.step_per_epoch,
         rollout_freq=args_for_exp.rollout_freq,
-        logger=logger,
+        logger=offlinerlkit_logger,
         log_freq=args_for_exp.log_freq,
         run_id=0,
         env_name=args_for_exp.task,
@@ -368,7 +365,7 @@ if __name__ == "__main__":
     os.environ["CUDA_VISIBLE_DEVICES"] = f"{args.devid},{args.devid+1}" # Let Ray handle GPU assignment, but ensure we have 2 GPUs available
     ray.init(num_gpus=2)
     config = {}
-    penalty_coef = [0.1,0.2,0.3, 0.4, 0.5, 0.6,0.7, 0.8]
+    penalty_coef = [0.1,0.3, 0.5, 0.8]
     # penalty_coef = [0.05]
     seeds = list(range(1))
     config["reward_penalty_coef"] = tune.grid_search(penalty_coef)
@@ -379,6 +376,6 @@ if __name__ == "__main__":
         name="tune_gormpo",
         config=config,
         resources_per_trial={
-            "gpu": 0.25
+            "gpu": 0.5
         }
     )

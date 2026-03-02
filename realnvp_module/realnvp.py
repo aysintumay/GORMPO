@@ -497,13 +497,15 @@ class RealNVP(nn.Module):
         print(f"Metadata saved to: {save_path}_meta_data.pkl")
 
     @classmethod
-    def load_model(cls, save_path: str, hidden_dims: List[int] = [256, 256]):
+    def load_model(cls, save_path: str, hidden_dims: List[int] = [256, 256], device=None):
         """
         Load a saved RealNVP model.
 
         Args:
             save_path: Base path for loading (without extension)
             hidden_dims: Hidden layer dimensions (must match saved model)
+            device: Target device to load the model onto. If None, uses the device
+                    stored in the model metadata (i.e., the device it was saved on).
 
         Returns:
             Loaded RealNVP model
@@ -512,16 +514,19 @@ class RealNVP(nn.Module):
         with open(f"{save_path}_meta_data.pkl", 'rb') as f:
             metadata = pickle.load(f)
 
+        # Use provided device or fall back to the saved device
+        load_device = str(device) if device is not None else metadata['device']
+
         # Create model with saved configuration
         model = cls(
             input_dim=metadata['input_dim'],
             num_layers=metadata['num_layers'],
             hidden_dims=hidden_dims,
-            device=metadata['device']
+            device=load_device
         )
 
         # Load model state dict
-        model.load_state_dict(torch.load(f"{save_path}_model.pth", map_location=metadata['device']))
+        model.load_state_dict(torch.load(f"{save_path}_model.pth", map_location=load_device))
         # model.to(cls.device)
 
         # Restore threshold
