@@ -20,14 +20,14 @@ for seed in "${seeds[@]}"; do
     echo "=========================================="
 
     # Step 1: Train VAE density estimator for this seed
-    echo "Step 1/2: Training VAE density estimator (seed $seed)..."
-    python vae_module/vae.py \
-        --config configs/vae/halfcheetah_medium_expert_sparse_3.yaml \
-        --seed $seed \
-        --model_save_path /public/gormpo/models/halfcheetah_medium_expert_sparse_3/vae_$seed \
-        --device cuda:2 
-    echo "✓ VAE training complete for seed $seed"
-    echo ""
+    # echo "Step 1/2: Training VAE density estimator (seed $seed)..."
+    # python vae_module/vae.py \
+    #     --config configs/vae/halfcheetah_medium_expert_sparse_3.yaml \
+    #     --seed $seed \
+    #     --model_save_path /public/gormpo/models/halfcheetah_medium_expert_sparse_3/vae_$seed \
+    #     --device cuda:2 
+    # echo "✓ VAE training complete for seed $seed"
+    # echo ""
 
     # Step 2: Train GORMPO policy using the trained VAE model
     echo "Step 2/2: Training GORMPO-VAE policy (seed $seed)..."
