@@ -21,7 +21,7 @@ from algo.sac import SACPolicy
 from algo.mopo import MOPO
 from common.buffer import ReplayBuffer
 from common.logger import Logger
-from trainer import Trainer
+from trainer_ray import Trainer
 from common.util import set_device_and_logger
 from common import util
 from realnvp_module.realnvp import RealNVP

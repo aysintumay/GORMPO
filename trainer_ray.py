@@ -131,7 +131,8 @@ class Trainer:
                     # log
                     if num_timesteps % self._log_freq == 0:
                         for k, v in loss.items():
-                            self.logger.record(k, v, num_timesteps, printed=False)
+                            # self.logger.record(k, v, num_timesteps, printed=False)
+                            self.logger.logkv(k, v)
                     num_timesteps += 1
                     t.update(1)
 
@@ -147,13 +148,15 @@ class Trainer:
                 reward_l.append(ep_reward_mean)
                 reward_std_l.append(ep_reward_std)
                
-                self.logger.record("eval/episode_reward", ep_reward_mean, num_timesteps, printed=False)
-                self.logger.record("eval/episode_length", ep_length_mean, num_timesteps, printed=False)
+                self.logger.logkv("eval/episode_reward", ep_reward_mean,)
+                self.logger.logkv("eval/episode_length", ep_length_mean,)
               
-                self.logger.print(f"Epoch #{e}: episode_reward: {ep_reward_mean:.3f} ± {ep_reward_std:.3f},\
+                self.logger.log(f"Epoch #{e}: episode_reward: {ep_reward_mean:.3f} ± {ep_reward_std:.3f},\
                                 episode_length: {ep_length_mean:.3f} ± {ep_length_std:.3f}"
                                 )
                 last_10_performance.append(ep_reward_mean)
+                self.logger.set_timestep(num_timesteps)
+                self.logger.dumpkvs(exclude=["dynamics_training_progress"])
         
             # save policy
             model_save_dir = util.logger_model.log_path
@@ -181,7 +184,7 @@ class Trainer:
             # Plot penalty evolution across rollout iterations
             self.algo.plot_penalty_evolution()
 
-        self.logger.print("total time: {:.3f}s".format(time.time() - start_time))
+        self.logger.log("total time: {:.3f}s".format(time.time() - start_time))
         return {"last_10_performance": np.mean(last_10_performance)}
 
 
