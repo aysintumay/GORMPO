@@ -37,8 +37,8 @@ for seed in "${seeds[@]}"; do
         --dynamics-model-dir 'true' \
         --rollout-length 5 \
         --classifier_model_name /public/gormpo/models/hopper_medium_expert_sparse_3/vae_$seed \
-        --epoch 1000 \
-        --devid 3\
+        --epoch 3000 \
+        --devid 5\
         --results_output $RESULTS_FILE
     echo "✓ GORMPO-VAE training complete for seed $seed"
     echo ""
