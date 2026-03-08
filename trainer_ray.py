@@ -139,7 +139,7 @@ class Trainer:
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()
             # evaluate current policy
-            if e % 10 == 0:
+            if e % 1 == 0:
                
                 eval_info = self._evaluate()
                 ep_reward_mean, ep_reward_std = np.mean(eval_info["eval/episode_reward"]), np.std(eval_info["eval/episode_reward"])
