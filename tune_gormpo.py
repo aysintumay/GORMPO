@@ -21,7 +21,7 @@ from algo.sac import SACPolicy
 from algo.mopo import MOPO
 from common.buffer import ReplayBuffer
 from common.logger import Logger
-from trainer import Trainer
+from trainer_ray import Trainer
 from common.util import set_device_and_logger
 from common import util
 from realnvp_module.realnvp import RealNVP
@@ -198,16 +198,13 @@ def run_exp(tune_config):
     )
 
     if "vae" in args_for_exp.classifier_model_name:
-        classifier = VAE(
-            device=util.device
-        ).to(util.device)
-        classifier_dict = classifier.load_model(args_for_exp.classifier_model_name)
+        classifier_dict = VAE.load_model(
+            args_for_exp.classifier_model_name,
+            device=str(util.device)
+        )
         print("vae loaded")
     elif "realnvp" in args_for_exp.classifier_model_name:
-        classifier = RealNVP(
-        device=util.device
-        ).to(util.device)
-        classifier_dict = classifier.load_model(args_for_exp.classifier_model_name)
+        classifier_dict = RealNVP.load_model(args_for_exp.classifier_model_name, device=args_for_exp.device)
     elif "kde" in args_for_exp.classifier_model_name:
         classifier = PercentileThresholdKDE(
         devid=args_for_exp.devid
@@ -292,22 +289,6 @@ def run_exp(tune_config):
         action_dim=args_for_exp.action_dim,
         action_dtype=np.float32
     )
-
-    # create MOPO algo
-    algo = MOPO(
-        sac_policy,
-        dynamics_model,
-        offline_buffer=offline_buffer,
-        model_buffer=model_buffer,
-        reward_penalty_coef=args_for_exp.reward_penalty_coef,
-        rollout_length=args_for_exp.rollout_length,
-        batch_size=args_for_exp.batch_size,
-        real_ratio=args_for_exp.real_ratio,
-        logger=logger,
-        **env_config["mopo_params"]
-    )
-
-    # log
     record_params = list(tune_config.keys())
     if "seed" in record_params:
         record_params.remove("seed")
@@ -328,6 +309,22 @@ def run_exp(tune_config):
     offlinerlkit_logger = OfflinerlkitLogger(log_dirs, output_config)
     offlinerlkit_logger.log_hyperparameters(vars(args_for_exp))
 
+    # create MOPO algo
+    algo = MOPO(
+        sac_policy,
+        dynamics_model,
+        offline_buffer=offline_buffer,
+        model_buffer=model_buffer,
+        reward_penalty_coef=args_for_exp.reward_penalty_coef,
+        rollout_length=args_for_exp.rollout_length,
+        batch_size=args_for_exp.batch_size,
+        real_ratio=args_for_exp.real_ratio,
+        logger=offlinerlkit_logger,
+        **env_config["mopo_params"]
+    )
+
+    # log
+    
     # create trainer
     trainer = Trainer(
         algo,
@@ -335,7 +332,7 @@ def run_exp(tune_config):
         epoch=args_for_exp.epoch,
         step_per_epoch=args_for_exp.step_per_epoch,
         rollout_freq=args_for_exp.rollout_freq,
-        logger=logger,
+        logger=offlinerlkit_logger,
         log_freq=args_for_exp.log_freq,
         run_id=0,
         env_name=args_for_exp.task,
@@ -365,12 +362,12 @@ if __name__ == "__main__":
     # load default args
     args = get_args()
     # args.device = util.device
-    os.environ["CUDA_VISIBLE_DEVICES"] = f"{args.devid},{args.devid+5}" # Let Ray handle GPU assignment, but ensure we have 2 GPUs available
+    os.environ["CUDA_VISIBLE_DEVICES"] = f"{args.devid},{args.devid+1},{args.devid+2},{args.devid+3}" # Let Ray handle GPU assignment, but ensure we have 2 GPUs available
     ray.init(num_gpus=2)
     config = {}
-    penalty_coef = [0.1,0.2,0.3, 0.4, 0.5, 0.6,0.7, 0.8]
+    penalty_coef = [0.1,0.3, 0.5, 0.7]
     # penalty_coef = [0.05]
-    seeds = list(range(1))
+    seeds = list(range(2))
     config["reward_penalty_coef"] = tune.grid_search(penalty_coef)
     config["seed"] = tune.grid_search(seeds)
 
@@ -379,6 +376,58 @@ if __name__ == "__main__":
         name="tune_gormpo",
         config=config,
         resources_per_trial={
-            "gpu": 0.25
+            "gpu": 1
         }
     )
+    print("\n===== Tune Results =====")
+    df = analysis.results_df
+    cols = [c for c in df.columns if "config/" in c or c == "episode_reward" or c == "episode_reward_std"]
+    print(df[cols].to_string())
+    print(f"\nBest config (by episode_reward): {analysis.get_best_config(metric='episode_reward', mode='max')}")
+    best_trial = analysis.get_best_trial('episode_reward', 'max')
+    if best_trial is not None:
+        print(f"Best episode_reward: {best_trial.last_result}")
+    else:
+        print("No best trial found (all results may be NaN).")
+
+    # Save per-trial results and aggregate across seeds with 95% CI
+    import pandas as pd
+    from scipy import stats
+
+    df = analysis.results_df
+    coef_col = "config/reward_penalty_coef"
+    seed_col = "config/seed"
+
+    os.makedirs("results/hyperparameter", exist_ok=True)
+
+    # Save individual trial results
+    trial_cols = [c for c in [coef_col, seed_col, "last_10_performance"] if c in df.columns]
+    trials_csv = f"results/hyperparameter/{args.algo_name}_trials.csv"
+    df[trial_cols].rename(columns={
+        coef_col: "reward_penalty_coef",
+        seed_col: "seed",
+    }).to_csv(trials_csv, index=False)
+    print(f"Per-trial results saved to {trials_csv}")
+
+    # Aggregate across seeds: mean + 95% CI per penalty coef
+    records = []
+    for coef, group in df.groupby(coef_col):
+        values = group["last_10_performance"].dropna().values
+        n = len(values)
+        mean = np.mean(values)
+        std = np.std(values, ddof=1) if n > 1 else 0.0
+        sem = std / np.sqrt(n) if n > 0 else 0.0
+        ci95 = stats.t.ppf(0.975, df=max(n - 1, 1)) * sem if n > 1 else 0.0
+        records.append({
+            "reward_penalty_coef": coef,
+            "mean_reward": mean,
+            "std_reward": std,
+            "ci95_reward": ci95,
+            "n_seeds": n,
+            "model": args.algo_name,
+        })
+
+    summary = pd.DataFrame(records).sort_values("reward_penalty_coef").reset_index(drop=True)
+    csv_path = f"results/hyperparameter/{args.algo_name}_sensitivity.csv"
+    summary.to_csv(csv_path, index=False)
+    print(f"Sensitivity stats saved to {csv_path}")

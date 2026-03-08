@@ -504,8 +504,8 @@ class RealNVP(nn.Module):
         Args:
             save_path: Base path for loading (without extension)
             hidden_dims: Hidden layer dimensions (must match saved model)
-            device: Device to load the model onto. If None, uses the device
-                    stored in metadata (from training time).
+            device: Target device to load the model onto. If None, uses the device
+                    stored in the model metadata (i.e., the device it was saved on).
 
         Returns:
             Loaded RealNVP model
@@ -514,8 +514,8 @@ class RealNVP(nn.Module):
         with open(f"{save_path}_meta_data.pkl", 'rb') as f:
             metadata = pickle.load(f)
 
-        # Use caller-specified device if provided, otherwise fall back to metadata device
-        load_device = device if device is not None else metadata['device']
+        # Use provided device or fall back to the saved device
+        load_device = str(device) if device is not None else metadata['device']
 
         # Create model with saved configuration
         model = cls(

@@ -37,7 +37,7 @@ for seed in "${seeds[@]}"; do
         --rollout-length 5 \
         --classifier_model_name /public/gormpo/models/walker2d_medium_expert_sparse_3/kde_$seed \
         --epoch 3000 \
-        --devid 1 \
+        --devid 0 \
         --results_output $RESULTS_FILE \
         --dynamics-model-dir 'true' \
 

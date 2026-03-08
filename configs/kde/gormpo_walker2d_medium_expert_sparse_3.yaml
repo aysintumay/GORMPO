@@ -6,9 +6,10 @@ algo-name: gormpo
 reward-penalty-coef: 0.5
 seed: 1
 data_path: /public/d4rl/sparse_datasets/walker2d_medium_expert_sparse_73.pkl
-epoch: 1000
-rollout-length: 3
+epoch: 3000
+rollout-length: 5
 penalty_type: tanh
 classifier_model_name: /public/gormpo/models/walker2d_medium_expert_sparse_3/kde
 density_model: kde
+dynamics-model-dir: true
 target_dim: 23  # 17 (obs) + 6 (action) for Walker2d
