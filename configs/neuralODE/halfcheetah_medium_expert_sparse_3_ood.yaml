@@ -1,0 +1,35 @@
+# Neural ODE OOD Detection Configuration
+# HalfCheetah-Medium-Expert (Sparse 72.5%) dataset
+
+# Data configuration
+data_path: /public/d4rl/sparse_datasets/halfcheetah_medium_expert_sparse_72.5.pkl
+task: halfcheetah-medium-expert-v2
+
+# RL data parameters
+obs_dim: [17]
+action_dim: 6
+
+# Data splitting
+val_ratio: 0.2
+test_ratio: 0.2
+
+# OOD detection parameters
+anomaly_fraction: 0.01
+batch_size: 512
+
+# Model architecture (must match the trained model)
+hidden_dims: [512, 512]
+activation: silu
+time_dependent: true
+solver: dopri5
+t0: 0.0
+t1: 1.0
+rtol: 1.0e-5
+atol: 1.0e-5
+
+# Hardware
+device: cuda
+
+# Output and visualization
+plot_results: false
+save_dir: figures/neuralODE_ood/halfcheetah_medium_expert_sparse_3

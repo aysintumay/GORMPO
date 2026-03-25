@@ -247,7 +247,27 @@ def train(env, run, logger, seed, args):
             print(f"Warning: Threshold file not found at {thr_path}, using default threshold 0.0")
             thr = 0.0
 
-        classifier_dict = {'model': diffusion_wrapper, 'thr': thr}
+        # Load sidecar threshold_candidates if available
+        sidecar_path = os.path.join(os.path.dirname(ckpt_path), "checkpoint_metadata.pkl")
+        threshold_candidates = {}
+        if os.path.exists(sidecar_path):
+            with open(sidecar_path, 'rb') as f:
+                sidecar = pickle.load(f)
+            threshold_candidates = sidecar.get('threshold_candidates', {})
+            print(f"Loaded diffusion threshold_candidates: {list(threshold_candidates.keys())}")
+
+        classifier_dict = {'model': diffusion_wrapper, 'thr': thr, 'threshold_candidates': threshold_candidates}
+
+    # Override thr with pre-computed candidate if threshold_percentile is specified
+    if getattr(args, 'threshold_percentile', None) is not None:
+        candidates = classifier_dict.get('threshold_candidates', {})
+        if args.threshold_percentile in candidates:
+            classifier_dict['thr'] = candidates[args.threshold_percentile]
+            print(f"Using threshold_candidates[{args.threshold_percentile}] = {classifier_dict['thr']:.4f}")
+        else:
+            print(f"Warning: percentile {args.threshold_percentile} not in threshold_candidates "
+                  f"{list(candidates.keys())}, keeping default thr")
+
     # create dynamics model
     dynamics_model = TransitionModel(obs_space=env.observation_space,
                                      action_space=env.action_space,

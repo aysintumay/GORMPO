@@ -365,9 +365,10 @@ if __name__ == "__main__":
     os.environ["CUDA_VISIBLE_DEVICES"] = f"{args.devid},{args.devid+1},{args.devid+2},{args.devid+3}" # Let Ray handle GPU assignment, but ensure we have 2 GPUs available
     ray.init(num_gpus=2)
     config = {}
-    penalty_coef = [0.1,0.3, 0.5, 0.7]
+    penalty_coef = [ 0.5, 0.7]
     # penalty_coef = [0.05]
-    seeds = list(range(2))
+    # seeds = list(range(2))
+    seeds = [1]
     config["reward_penalty_coef"] = tune.grid_search(penalty_coef)
     config["seed"] = tune.grid_search(seeds)
 

@@ -788,17 +788,27 @@ def parse_args() -> TrainConfig:
     parser.add_argument("--log-every", type=int, default=dget("log_every", 100))
     parser.add_argument("--samples-every", type=int, default=dget("samples_every", 0))
     parser.add_argument("--ckpt-every-epochs", type=int, default=dget("checkpoint_every_epochs", 1))
+    parser.add_argument("--compute-thresholds-only", action="store_true",
+                        help="Skip training: load checkpoint from --out, score val set, save threshold_candidates")
+    parser.add_argument("--task", type=str, default=dget("task", ""),
+                        help="D4RL task name for data loading (used with --compute-thresholds-only)")
+    parser.add_argument("--data-path", type=str, default=dget("data_path", None),
+                        help="Path to dataset pickle/npz (used with --compute-thresholds-only)")
+    parser.add_argument("--obs-dim", type=int, nargs="+", default=dget("obs_dim", None),
+                        help="Observation dimension (used with --compute-thresholds-only)")
+    parser.add_argument("--action-dim", type=int, default=dget("action_dim", None),
+                        help="Action dimension (used with --compute-thresholds-only)")
 
     args = parser.parse_args()
-    
+
     # Print all parsed configs (arguments)
     print("Parsed configuration:")
     for k, v in vars(args).items():
         print(f"  {k}: {v}")
 
-    return TrainConfig(
-        npz_path=args.npz,
-        out_dir=args.out,
+    cfg = TrainConfig(
+        npz_path=args.npz if args.npz else "",
+        out_dir=args.out if args.out else "",
         num_epochs=args.epochs,
         batch_size=args.batch,
         lr=args.lr,
@@ -824,9 +834,110 @@ def parse_args() -> TrainConfig:
         config_path=getattr(args, "config", ""),
         checkpoint_every_epochs=args.ckpt_every_epochs,
     )
+    cfg.compute_thresholds_only = args.compute_thresholds_only
+    cfg.task = args.task
+    cfg.data_path = args.data_path
+    cfg.obs_dim = tuple(args.obs_dim) if args.obs_dim else None
+    cfg.action_dim = args.action_dim
+    return cfg
 
 
 if __name__ == "__main__":
+    import sys
+    import pickle as _pickle
+
     config = parse_args()
+
+    if getattr(config, 'compute_thresholds_only', False):
+        out_dir = config.out_dir
+        if not out_dir:
+            raise ValueError("--compute-thresholds-only requires --out (model output directory)")
+
+        ckpt_path = os.path.join(out_dir, "checkpoint.pt")
+        print(f"\nLoading diffusion checkpoint from: {ckpt_path}")
+        ckpt = torch.load(ckpt_path, map_location=config.device)
+
+        # Rebuild model from checkpoint config
+        saved_cfg = ckpt.get("cfg", {})
+        target_dim = ckpt.get("target_dim")
+        model_type = saved_cfg.get("model_type", "mlp")
+
+        if model_type == "mlp":
+            diff_model = UnconditionalEpsilonMLP(
+                target_dim=target_dim,
+                hidden_dim=saved_cfg.get("hidden_dim", 512),
+                time_embed_dim=saved_cfg.get("time_embed_dim", 128),
+                num_hidden_layers=saved_cfg.get("num_hidden_layers", 3),
+                dropout=saved_cfg.get("dropout", 0.0),
+            ).to(config.device)
+        else:
+            diff_model = UnconditionalEpsilonTransformer(
+                target_dim=target_dim,
+                d_model=saved_cfg.get("d_model", 256),
+                nhead=saved_cfg.get("nhead", 8),
+                num_layers=saved_cfg.get("tf_layers", 4),
+                ff_dim=saved_cfg.get("ff_dim", 512),
+                time_embed_dim=saved_cfg.get("time_embed_dim", 128),
+                dropout=saved_cfg.get("dropout", 0.0),
+            ).to(config.device)
+
+        diff_model.load_state_dict(ckpt["model_state_dict"])
+        diff_model.eval()
+
+        # Load scheduler
+        try:
+            from diffusers.schedulers.scheduling_ddim import DDIMScheduler
+            from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
+            sched_dir = os.path.join(out_dir, "scheduler")
+            try:
+                scheduler = DDIMScheduler.from_pretrained(sched_dir)
+            except Exception:
+                scheduler = DDPMScheduler.from_pretrained(sched_dir)
+        except Exception as e:
+            print(f"Warning: could not load scheduler: {e}. Using default DDIMScheduler.")
+            scheduler = DDIMScheduler(num_train_timesteps=1000, beta_schedule="linear",
+                                      prediction_type="epsilon")
+
+        # Load validation data from npz (same split as training)
+        dataset = NPZTargetDataset(config.npz_path)
+        all_data = dataset.target  # (N, D) tensor
+
+        n_total = len(all_data)
+        val_size = int(0.2 * n_total)
+        val_data = all_data[n_total - val_size:].to(config.device)
+        print(f"Val data shape: {val_data.shape}")
+
+        # Score val data using ELBO
+        print("Scoring validation set with diffusion ELBO (this may take a while)...")
+        batch_size = 64
+        all_scores = []
+        with torch.no_grad():
+            for i in range(0, len(val_data), batch_size):
+                batch = val_data[i:i + batch_size]
+                scores = log_prob_elbo(
+                    model=diff_model,
+                    scheduler=scheduler,
+                    x0=batch,
+                    num_inference_steps=100,
+                    device=config.device,
+                )
+                all_scores.append(scores.cpu().numpy())
+        val_scores = np.concatenate(all_scores)
+
+        percentiles = [1, 5, 10, 15, 20]
+        threshold_candidates = {p: float(np.percentile(val_scores, p)) for p in percentiles}
+        print(f"Threshold candidates: {threshold_candidates}")
+
+        sidecar_path = os.path.join(out_dir, "checkpoint_metadata.pkl")
+        sidecar = {}
+        if os.path.exists(sidecar_path):
+            with open(sidecar_path, 'rb') as f:
+                sidecar = _pickle.load(f)
+        sidecar['threshold_candidates'] = threshold_candidates
+        with open(sidecar_path, 'wb') as f:
+            _pickle.dump(sidecar, f)
+        print(f"Saved threshold_candidates to {sidecar_path}")
+        sys.exit(0)
+
     train(config)
 
