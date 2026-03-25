@@ -8,7 +8,7 @@ echo "============================================"
 echo ""
 
 # Array of random seeds to test
-seeds=(42 123 456)
+seeds=(42 123)
 
 # Shared results file for all seeds
 RESULTS_FILE="results/halfcheetah-medium-expert-v2_sparse_72.5/realnvp/gormpo_realnvp_multiseed_results.csv"
@@ -36,7 +36,7 @@ for seed in "${seeds[@]}"; do
         --seed $seed \
         --classifier_model_name /public/gormpo/models/halfcheetah_medium_expert_sparse_3/realnvp_$seed \
         --epoch 3000 \
-        --devid 6 \
+        --devid 5 \
         --results_output $RESULTS_FILE \
         --dynamics-model-dir 'true'
     echo "✓ GORMPO-RealNVP training complete for seed $seed"

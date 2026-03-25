@@ -37,9 +37,9 @@ for seed in "${seeds[@]}"; do
         --rollout-length 5 \
         --classifier_model_name /public/gormpo/models/hopper_medium_expert_sparse_3/realnvp_$seed \
         --epoch 3000 \
-        --devid 6 \
-        --results_output $RESULTS_FILE
-                # --dynamics-model-dir 'true' \
+        --devid 7 \
+        --results_output $RESULTS_FILE \
+        --dynamics-model-dir 'true' \
 
     echo "✓ GORMPO-RealNVP training complete for seed $seed"
     echo ""

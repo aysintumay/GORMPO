@@ -186,7 +186,7 @@ def train(env, run, logger, seed, args):
         classifier = RealNVP(
         device=util.device
         ).to(util.device)
-        classifier_dict = classifier.load_model(args.classifier_model_name)
+        classifier_dict = classifier.load_model(args.classifier_model_name, device=util.device)
     elif "kde" in args.classifier_model_name:
         classifier = PercentileThresholdKDE(
         devid=args.devid
