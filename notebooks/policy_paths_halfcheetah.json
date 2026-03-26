@@ -1,0 +1,27 @@
+[
+  {
+    "label": "MBPO",
+    "path": "/public/gormpo/models/rl/halfcheetah-medium-expert-v2/kde/seed_456_0224_005407_halfcheetah_medium_expert_v2_mbpo_sparse_72.5/policy_halfcheetah-medium-expert-v2.pth"
+  },
+  {
+    "label": "GORMPO-KDE",
+    "path": "/public/gormpo/models/rl/halfcheetah-medium-expert-v2/kde/seed_42_0325_133406_halfcheetah_medium_expert_v2_gormpo_sparse_72.5/policy_halfcheetah-medium-expert-v2.pth"
+  },
+  {
+    "label": "GORMPO-VAE",
+    "path": "/public/gormpo/models/rl/halfcheetah-medium-expert-v2/vae/seed_42_0325_173656_halfcheetah_medium_expert_v2_gormpo_sparse_72.5/policy_halfcheetah-medium-expert-v2.pth"
+  },
+  {
+    "label": "GORMPO-RealNVP",
+    "path": "/public/gormpo/models/rl/halfcheetah-medium-expert-v2/realnvp/seed_42_0325_134544_halfcheetah_medium_expert_v2_gormpo_sparse_72.5/policy_halfcheetah-medium-expert-v2.pth"
+  },
+  {
+    "label": "GORMPO-DDPM",
+    "path": "/public/gormpo/models/rl/halfcheetah-medium-expert-v2/diffusion/seed_42_0325_120801_halfcheetah_medium_expert_v2_gormpo_sparse_72.5/policy_halfcheetah-medium-expert-v2.pth"
+  },
+  {
+    "label": "GORMPO-NeuralODE",
+    "path": "/public/gormpo/models/rl/halfcheetah-medium-expert-v2/neuralODE/seed_42_0325_070157_halfcheetah_medium_expert_v2_gormpo_sparse_72.5/policy_halfcheetah-medium-expert-v2.pth"
+  }
+]
+
