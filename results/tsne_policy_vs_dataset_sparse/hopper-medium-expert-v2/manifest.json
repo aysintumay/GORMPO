@@ -1,0 +1,26 @@
+{
+  "task": "hopper-medium-expert-v2",
+  "output_dir": "results/tsne_policy_vs_dataset_sparse/hopper-medium-expert-v2",
+  "num_models": 6,
+  "models": [
+    {
+      "label": "MBPO"
+    },
+    {
+      "label": "GORMPO-KDE"
+    },
+    {
+      "label": "GORMPO-VAE"
+    },
+    {
+      "label": "GORMPO-RealNVP"
+    },
+    {
+      "label": "GORMPO-DDPM"
+    },
+    {
+      "label": "GORMPO-NeuralODE"
+    }
+  ],
+  "combined_panel": "results/tsne_policy_vs_dataset_sparse/hopper-medium-expert-v2/combined_panel.png"
+}
