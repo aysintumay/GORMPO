@@ -1,0 +1,27 @@
+[
+  {
+    "label": "MBPO",
+    "path": "/public/gormpo/models/rl/hopper-medium-expert-v2/kde/seed_456_0114_144839_hopper_medium_expert_v2_mbpo_sparse_78/policy_hopper-medium-expert-v2.pth"
+  },
+  {
+    "label": "GORMPO-KDE",
+    "path": "/public/gormpo/models/rl/hopper-medium-expert-v2/kde/seed_42_0325_010659_hopper_medium_expert_v2_gormpo_sparse_78/policy_hopper-medium-expert-v2.pth"
+  },
+  {
+    "label": "GORMPO-VAE",
+    "path": "/public/gormpo/models/rl/hopper-medium-expert-v2/vae/seed_42_0325_222352_hopper_medium_expert_v2_gormpo_sparse_78/policy_hopper-medium-expert-v2.pth"
+  },
+  {
+    "label": "GORMPO-RealNVP",
+    "path": "/public/gormpo/models/rl/hopper-medium-expert-v2/realnvp/seed_42_0325_222336_hopper_medium_expert_v2_gormpo_sparse_78/policy_hopper-medium-expert-v2.pth"
+  },
+  {
+    "label": "GORMPO-DDPM",
+    "path": "/public/gormpo/models/rl/hopper-medium-expert-v2/diffusion/seed_42_0325_222147_hopper_medium_expert_v2_gormpo_sparse_78/policy_hopper-medium-expert-v2.pth"
+  },
+  {
+    "label": "GORMPO-NeuralODE",
+    "path": "/public/gormpo/models/rl/hopper-medium-expert-v2/neuralODE/seed_42_0325_222255_hopper_medium_expert_v2_gormpo_sparse_78/policy_hopper-medium-expert-v2.pth"
+  }
+]
+

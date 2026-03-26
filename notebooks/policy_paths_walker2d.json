@@ -1,0 +1,27 @@
+[
+  {
+    "label": "MBPO",
+    "path": "/public/gormpo/models/rl/walker2d-medium-expert-v2/kde/seed_42_0214_222526_walker2d_medium_expert_v2_mbpo_sparse_73/policy_walker2d-medium-expert-v2.pth"
+  },
+  {
+    "label": "GORMPO-KDE",
+    "path": "/public/gormpo/models/rl/walker2d-medium-expert-v2/kde/seed_42_0325_223430_walker2d_medium_expert_v2_gormpo_sparse_73/policy_walker2d-medium-expert-v2.pth"
+  },
+  {
+    "label": "GORMPO-VAE",
+    "path": "/public/gormpo/models/rl/walker2d-medium-expert-v2/vae/seed_42_0325_223725_walker2d_medium_expert_v2_gormpo_sparse_73/policy_walker2d-medium-expert-v2.pth"
+  },
+  {
+    "label": "GORMPO-RealNVP",
+    "path": "/public/gormpo/models/rl/walker2d-medium-expert-v2/realnvp/seed_42_0325_223656_walker2d_medium_expert_v2_gormpo_sparse_73/policy_walker2d-medium-expert-v2.pth"
+  },
+  {
+    "label": "GORMPO-DDPM",
+    "path": "/public/gormpo/models/rl/walker2d-medium-expert-v2/diffusion/seed_42_0325_223509_walker2d_medium_expert_v2_gormpo_sparse_73/policy_walker2d-medium-expert-v2.pth"
+  },
+  {
+    "label": "GORMPO-NeuralODE",
+    "path": "/public/gormpo/models/rl/walker2d-medium-expert-v2/neuralODE/seed_42_0325_223541_walker2d_medium_expert_v2_gormpo_sparse_73/policy_walker2d-medium-expert-v2.pth"
+  }
+]
+

@@ -1,0 +1,47 @@
+[
+  {
+    "label": "MBPO",
+    "path": "/public/gormpo/models/rl/abiomed/realnvp/seed_42_0302_234230-abiomed_mbpo/policy_abiomed.pth"
+  },
+  {
+    "label": "Reg-MBPO-KDE",
+    "path": "/public/gormpo/models/rl/abiomed/kde/seed_42_0302_234240-abiomed_mbpo_kde/policy_abiomed.pth"
+  },
+  {
+    "label": "Reg-MBPO-VAE",
+    "path": "/public/gormpo/models/rl/abiomed/vae/seed_42_0303_000341-abiomed_mbpo_vae/policy_abiomed.pth"
+  },
+  {
+    "label": "Reg-MBPO-RealNVP",
+    "path": "/public/gormpo/models/rl/abiomed/realnvp/seed_42_0302_234510-abiomed_mbpo_realnvp/policy_abiomed.pth"
+  },
+  {
+    "label": "Reg-MBPO-Diffusion",
+    "path": "/public/gormpo/models/rl/abiomed/seed_42_0303_000226-abiomed_mbpo_diffusion/policy_abiomed.pth"
+  },
+  {
+    "label": "Reg-MBPO-NeuralODE",
+    "path": "/public/gormpo/models/rl/abiomed/seed_42_0302_234847-abiomed_mbpo_neuralode/policy_abiomed.pth"
+  },
+  {
+    "label": "Pen-MBPO-KDE",
+    "path": "/public/gormpo/models/rl/abiomed/kde/seed_42_0303_000216-abiomed_mbpo_kde/policy_abiomed.pth"
+  },
+  {
+    "label": "Pen-MBPO-VAE",
+    "path": "/public/gormpo/models/rl/abiomed/vae/seed_42_0302_234248-abiomed_mbpo_vae/policy_abiomed.pth"
+  },
+  {
+    "label": "Pen-MBPO-RealNVP",
+    "path": "/public/gormpo/models/rl/abiomed/realnvp/seed_42_0303_000316-abiomed_mbpo_realnvp/policy_abiomed.pth"
+  },
+  {
+    "label": "Pen-MBPO-Diffusion",
+    "path": "/public/gormpo/models/rl/abiomed/seed_42_0304_205748-abiomed_mbpo_diffusion/policy_abiomed.pth"
+  },
+  {
+    "label": "Pen-MBPO-NeuralODE",
+    "path": "/public/gormpo/models/rl/abiomed/seed_42_0303_000252-abiomed_mbpo_neuralode/policy_abiomed.pth"
+  }
+]
+
