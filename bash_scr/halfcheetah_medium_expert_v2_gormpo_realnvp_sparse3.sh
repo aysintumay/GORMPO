@@ -2,30 +2,40 @@
 
 set -e  # Exit on error
 echo "============================================"
-echo "Training GORMPO with RealNVP on HalfCheetah-Medium-Expert-v2"
+echo "Training GORMPO with RealNVP on HalfCheetah-Medium-Expert-v2 (Sparse 72.5%)"
 echo "Testing multiple reward penalty coefficients"
 echo "============================================"
 echo ""
+RESULTS_FILE="results/hyperparameter/halfcheetah-medium-expert-sparse/gormpo_realnvp_multilambda_results.csv"
 
 # Array of penalty coefficients to test
-penalty_coeffs=( 0.3 0.5 0.8)
-
-# Loop through each penalty coefficient
+penalty_coeffs=(0.1 0.3 0.5 0.7)
+seeds=(0 1)
 for coef in "${penalty_coeffs[@]}"; do
-    echo "=========================================="
-    echo ">>> Training with reward-penalty-coef = $coef"
-    echo "=========================================="
+    # Loop through each seed
+    for seed in "${seeds[@]}"; do
+        echo "=========================================="
+        echo ">>> Training with reward-penalty-coef = $coef"
+        echo "=========================================="
 
-    python mopo.py \
-        --config configs/realnvp/gormpo_halfcheetah_medium_expert_sparse_3.yaml \
-        --reward-penalty-coef $coef \
-        --epoch 1000 \
-        --devid 6
+        python mopo.py \
+            --config configs/realnvp/gormpo_halfcheetah_medium_expert_sparse_3.yaml \
+            --seed $seed \
+            --classifier_model_name /public/gormpo/models/halfcheetah_medium_expert_sparse_3/realnvp_$seed \
+            --reward-penalty-coef $coef \
+            --epoch 2500 \
+            --devid 6 \
+            --results_output $RESULTS_FILE \
+            --dynamics-model-dir 'true'
 
-    echo "✓ Training complete for penalty coefficient $coef"
-    echo ""
+        echo "✓ Training complete for penalty coefficient $coef"
+        echo ""
+    done
 done
 
 echo "============================================"
 echo "All GORMPO-RealNVP experiments completed!"
 echo "============================================"
+# Compute normalized scores across all seeds
+echo "Computing normalized scores..."
+python helpers/normalizer.py $RESULTS_FILE halfcheetah-medium-expert-v2

@@ -458,7 +458,8 @@ class NeuralODEOOD:
             'model': ood_model,
             'threshold': threshold,
             'mean': mean_val,
-            'std': std_val
+            'std': std_val,
+            'threshold_candidates': metadata.get('threshold_candidates', {}),
         }
 
         return model_dict
@@ -670,7 +671,7 @@ def parse_ood_args() -> OODConfig:
     )
 
     parser.add_argument('--model-path', type=str,
-                        required=('model_path' not in yaml_defaults),
+                        required=False,
                         default=dget('model_path', None),
                         help='Path to trained Neural ODE model')
     parser.add_argument('--npz-path', type=str, default=dget('npz_path', ''),
@@ -701,13 +702,20 @@ def parse_ood_args() -> OODConfig:
                         help='Path to save OOD model')
     parser.add_argument('--plot-results', action='store_true', default=dget('plot_results', True))
     parser.add_argument('--save-dir', type=str, default=dget('save_dir', 'figures'))
+    parser.add_argument('--out', type=str, default=dget('out', ''),
+                        help='Path to trained Neural ODE model directory (used with --compute-thresholds-only)')
+    parser.add_argument('--compute-thresholds-only', action='store_true',
+                        help='Skip evaluation: load model from --out, score val set, save threshold_candidates')
 
     args = parser.parse_args(remaining_argv)
+
+    if not args.compute_thresholds_only and args.model_path is None and 'model_path' not in yaml_defaults:
+        parser.error("the following arguments are required: --model-path")
 
     hidden_dims = tuple(args.hidden_dims) if isinstance(args.hidden_dims, list) else tuple([args.hidden_dims])
     obs_dim = tuple(args.obs_dim) if isinstance(args.obs_dim, list) else tuple([args.obs_dim])
 
-    return OODConfig(
+    cfg = OODConfig(
         model_path=args.model_path,
         npz_path=args.npz_path,
         data_path=args.data_path,
@@ -726,6 +734,9 @@ def parse_ood_args() -> OODConfig:
         plot_results=args.plot_results,
         save_dir=args.save_dir
     )
+    cfg.out = args.out
+    cfg.compute_thresholds_only = args.compute_thresholds_only
+    return cfg
 
 
 if __name__ == "__main__":
@@ -791,6 +802,38 @@ if __name__ == "__main__":
     train_data = train_data.to(cfg.device)
     val_data = val_data.to(cfg.device)
     test_data = test_data.to(cfg.device)
+
+    # --compute-thresholds-only: load existing model, score val set, save threshold_candidates
+    if getattr(cfg, 'compute_thresholds_only', False):
+        out_path = getattr(cfg, 'out', '') or cfg.model_path
+        if not out_path:
+            raise ValueError("--compute-thresholds-only requires --out (model directory path)")
+
+        print(f"\nLoading existing NeuralODE model from: {out_path}")
+        model_dict = NeuralODEOOD.load_model(save_path=out_path, device=cfg.device)
+        ode_model = model_dict['model']
+
+        print("Scoring validation set...")
+        val_scores = ode_model.score_samples(val_data)
+        if hasattr(val_scores, 'cpu'):
+            val_scores = val_scores.cpu().numpy()
+
+        percentiles = [1, 5, 10, 15, 20]
+        threshold_candidates = {p: float(np.percentile(val_scores, p)) for p in percentiles}
+        print(f"Threshold candidates: {threshold_candidates}")
+
+        # Determine metadata path (mirrors NeuralODEOOD.load_model logic)
+        meta_path_new = os.path.join(out_path, "metadata.pkl")
+        meta_path_old = f"{out_path}_metadata.pkl"
+        meta_path = meta_path_new if os.path.exists(meta_path_new) else meta_path_old
+        with open(meta_path, 'rb') as f:
+            metadata = pickle.load(f)
+        metadata['threshold_candidates'] = threshold_candidates
+        with open(meta_path, 'wb') as f:
+            pickle.dump(metadata, f)
+        print(f"Saved threshold_candidates to {meta_path}")
+        import sys
+        sys.exit(0)
 
     # Load Neural ODE model
     odefunc = ODEFunc(

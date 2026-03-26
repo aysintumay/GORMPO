@@ -131,6 +131,9 @@ def get_args():
     
     parser.add_argument("--density_model", type=str, default="realnvp")
     parser.add_argument("--classifier_model_name", type=str, default="neuralode")
+    parser.add_argument("--threshold_percentile", type=int, default=None,
+        choices=[1, 5, 10, 15, 20],
+        help="Threshold percentile to use from pre-computed threshold_candidates in density model")
     #============ noisy mujoco arguments ============
     parser.add_argument("--noise_rate_action", type=float, help="Portion of action to be noisy with probability", default=0.01)
     parser.add_argument("--noise_rate_transition", type=float, help="Portion of transitions to be noisy with probability", default=0.01)
@@ -217,7 +220,9 @@ def main(args):
         trainer.algo.save_dynamics_model(f"dynamics_model")
 
         eval_res = evaluate_d4rl(policy, env, args.eval_episodes, args=args, plot=True)
-        eval_res['seed']= seed
+        eval_res['seed'] = seed
+        eval_res['threshold_percentile'] = args.threshold_percentile
+        eval_res['density_model'] = args.density_model
         results.append(eval_res)
         
 

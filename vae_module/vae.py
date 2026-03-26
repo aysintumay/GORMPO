@@ -528,13 +528,14 @@ class VAE(nn.Module):
         print(f"Metadata saved to: {save_path}_meta_data.pkl")
 
     @classmethod
-    def load_model(cls, save_path: str, hidden_dims: List[int] = [256, 128]):
+    def load_model(cls, save_path: str, hidden_dims: List[int] = [256, 128], device: str = None):
         """
         Load a saved VAE model.
 
         Args:
             save_path: Base path for loading (without extension)
             hidden_dims: Hidden layer dimensions (must match saved model)
+            device: Device to load model onto (overrides saved device)
 
         Returns:
             Dictionary with loaded VAE model and metadata
@@ -543,16 +544,19 @@ class VAE(nn.Module):
         with open(f"{save_path}_meta_data.pkl", 'rb') as f:
             metadata = pickle.load(f)
 
+        # Use provided device or fall back to saved device
+        load_device = device if device is not None else metadata['device']
+
         # Create model with saved configuration
         model = cls(
             input_dim=metadata['input_dim'],
             latent_dim=metadata['latent_dim'],
-            hidden_dims=hidden_dims,
-            device=metadata['device']
+            hidden_dims=metadata.get('hidden_dims', hidden_dims),
+            device=load_device
         )
 
         # Load model state dict
-        model.load_state_dict(torch.load(f"{save_path}_model.pth", map_location=metadata['device']))
+        model.load_state_dict(torch.load(f"{save_path}_model.pth", map_location=load_device))
 
         # Restore threshold
         model.threshold = metadata['threshold']
@@ -562,10 +566,11 @@ class VAE(nn.Module):
         print(f"Threshold: {model.threshold}")
 
         model_dict = {
-            'model': model.to(metadata['device']),
+            'model': model.to(load_device),
             'thr': model.threshold,
             'mean': metadata["mean"],
-            'std': metadata["std"]
+            'std': metadata["std"],
+            'threshold_candidates': metadata.get('threshold_candidates', {}),
         }
 
         return model_dict
@@ -671,6 +676,11 @@ def parse_args():
     parser.add_argument('--fig_save_path', type=str, default=None,
                         help='Path to save figures')
     parser.add_argument('--seed', type=int, default=42,)
+    parser.add_argument(
+        '--compute_thresholds_only',
+        action='store_true',
+        help='Skip training: load existing model, score val set, save threshold_candidates to metadata pkl',
+    )
     parser.set_defaults(**config)
     args = parser.parse_args(remaining_argv)
     args.config = config
@@ -763,6 +773,37 @@ if __name__ == "__main__":
 
     if config.get('verbose', True):
         print(f"Data shapes - Train: {train_data.shape}, Val: {val_data.shape}, Test: {test_data.shape}")
+
+    # --compute_thresholds_only: load existing model, score val set, save threshold_candidates
+    if getattr(args, 'compute_thresholds_only', False):
+        save_path = args.model_save_path if hasattr(args, 'model_save_path') and args.model_save_path else \
+            config.get('model_save_path')
+        if not save_path:
+            raise ValueError("--compute_thresholds_only requires --model_save_path or model_save_path in config")
+
+        print(f"\nLoading existing VAE model from: {save_path}")
+        model_dict = VAE.load_model(save_path, device=device)
+        vae_model = model_dict['model']
+
+        print("Scoring validation set...")
+        with torch.no_grad():
+            val_scores = vae_model.score_samples(val_data.to(device))
+            if hasattr(val_scores, 'cpu'):
+                val_scores = val_scores.cpu().numpy()
+
+        percentiles = [1, 5, 10, 15, 20]
+        threshold_candidates = {p: float(np.percentile(val_scores, p)) for p in percentiles}
+        print(f"Threshold candidates: {threshold_candidates}")
+
+        meta_path = f"{save_path}_meta_data.pkl"
+        with open(meta_path, 'rb') as f:
+            metadata = pickle.load(f)
+        metadata['threshold_candidates'] = threshold_candidates
+        with open(meta_path, 'wb') as f:
+            pickle.dump(metadata, f)
+        print(f"Saved threshold_candidates to {meta_path}")
+        import sys
+        sys.exit(0)
 
     # Create and train model
     print("Creating VAE model...")

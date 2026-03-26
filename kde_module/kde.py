@@ -458,6 +458,7 @@ class PercentileThresholdKDE:
             "model_index": model.index,
             "thr": model.threshold,
             "scaler": metadata["scaler"],
+            "threshold_candidates": metadata.get("threshold_candidates", {}),
         }
         print(f"Model loaded from {load_path}")
         return model_dict
@@ -757,6 +758,11 @@ def main():
     parser.add_argument("--env", type=str, default="")
 
     parser.add_argument("--fig_save_path", type=str, default="figures", help="Path to save figures")
+    parser.add_argument(
+        "--compute_thresholds_only",
+        action="store_true",
+        help="Skip training: load existing model, score val set, save threshold_candidates to metadata pkl",
+    )
 
     parser.set_defaults(**config)
     args = parser.parse_args(remaining_argv)
@@ -785,6 +791,36 @@ def main():
     print(f"  Training: {X_train.shape}")
     print(f"  Validation: {X_val.shape if X_val is not None else 'None'}")
     print(f"  Test: {X_test.shape}")
+
+    # --compute_thresholds_only: load existing model, score val set, save threshold_candidates
+    if args.compute_thresholds_only:
+        load_path = None
+        if hasattr(args, 'save_path') and args.save_path != '/abiomed/models/kde':
+            load_path = args.save_path
+        elif config.get('model_save_path', False):
+            load_path = config.get('model_save_path')
+        if load_path is None:
+            raise ValueError("--compute_thresholds_only requires --save_path or model_save_path in config")
+
+        print(f"\nLoading existing KDE model from: {load_path}")
+        model_dict = PercentileThresholdKDE.load_model(load_path, use_gpu=not args.no_gpu, devid=args.devid)
+        kde_model = model_dict["model"]
+
+        print("Scoring validation set...")
+        val_scores = kde_model.score_samples(X_val)
+
+        percentiles = [1, 5, 10, 15, 20]
+        threshold_candidates = {p: float(np.percentile(val_scores, p)) for p in percentiles}
+        print(f"Threshold candidates: {threshold_candidates}")
+
+        meta_path = f"{load_path}_metadata.pkl"
+        with open(meta_path, 'rb') as f:
+            metadata = pickle.load(f)
+        metadata['threshold_candidates'] = threshold_candidates
+        with open(meta_path, 'wb') as f:
+            pickle.dump(metadata, f)
+        print(f"Saved threshold_candidates to {meta_path}")
+        sys.exit(0)
 
     # Find optimal percentile if requested
     if args.optimize_percentile:

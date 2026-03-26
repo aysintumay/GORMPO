@@ -98,6 +98,8 @@ class TransitionModel:
         elif type == "tanh":
             log_weight = (np.tanh(0.1*(-log_probs + self.classifier_thr)))
             weight = np.clip(log_weight, a_min=0, a_max=None)
+        elif type == "tanh_reg":
+            weight = (np.tanh(0.1*(-log_probs + self.classifier_thr)))
             # print(weight.mean(), weight.std())
         elif type == "softplus": #smooth and stable
             weight = np.log(1 + np.exp(-log_probs)).numpy()
@@ -339,17 +341,9 @@ class TransitionModel:
             if info[1] is None:
                 model_save_dir = '/public/gormpo/models/rl/halfcheetah-medium-expert-v2/kde/seed_456_0122_170405_halfcheetah_medium_expert_v2_mbpo/dynamics_model'
                 print('loaded halfcheetah model from ', model_save_dir)
-            elif "halfcheetah_medium_expert_sparse_57.5.pkl" in info[1]:
-                # model_save_dir = "/public/gormpo/models/rl/halfcheetah-medium-expert-v2/realnvp/seed_1_1226_150439_halfcheetah_medium_expert_v2_gormpo/dynamics_model"
-                model_save_dir = "/public/gormpo/models/rl/halfcheetah-medium-expert-v2/kde/seed_1_0107_232744_halfcheetah_medium_expert_v2_mbpo/dynamics_model"
-                print('loaded sparse 2 halfcheetah model from ', model_save_dir)
 
-            elif "halfcheetah_medium_expert_sparse.pkl" in info[1]:
-                # model_save_dir = "/public/gormpo/models/rl/halfcheetah-medium-expert-v2/diffusion/seed_1_1228_214015_halfcheetah_medium_expert_v2_gormpo/dynamics_model"
-                model_save_dir = "/public/gormpo/models/rl/halfcheetah-medium-expert-v2/kde/seed_1_0108_120946_halfcheetah_medium_expert_v2_mbpo/dynamics_model"
-                print('loaded sparse halfcheetah model from ', model_save_dir)
             elif "halfcheetah_medium_expert_sparse_72.5.pkl" in info[1]:
-                model_save_dir = "/public/gormpo/models/rl/halfcheetah-medium-expert-v2/kde/seed_42_0114_001448_halfcheetah_medium_expert_v2_gormpo_sparse_72.5/dynamics_model"
+                model_save_dir = "/public/gormpo/models/rl/halfcheetah-medium-expert-v2/kde/seed_1_0218_004939_halfcheetah_medium_expert_v2_gormpo_sparse_72.5/dynamics_model"
                 print('loaded sparse 3 halfcheetah model from ', model_save_dir)
            
         elif  info[0].lower()=="hopper-medium-expert-v2":
@@ -359,7 +353,7 @@ class TransitionModel:
                 print('loaded hopper model from ', model_save_dir)
 
             elif "hopper_medium_expert_sparse_78.pkl" in info[1]:
-                model_save_dir = "/public/gormpo/models/rl/hopper-medium-expert-v2/kde/seed_1_0110_053717_hopper_medium_expert_v2_mbpo_sparse_78/dynamics_model"
+                model_save_dir = "/public/gormpo/models/rl/hopper-medium-expert-v2/kde/seed_1_0218_005114_hopper_medium_expert_v2_gormpo_sparse_78/dynamics_model"
                 print('loaded hopper sparse 3 model from ', model_save_dir)
 
         elif  info[0].lower()=="walker2d-medium-expert-v2":        
