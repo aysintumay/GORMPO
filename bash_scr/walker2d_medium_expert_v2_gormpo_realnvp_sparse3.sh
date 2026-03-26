@@ -9,7 +9,7 @@ echo ""
 RESULTS_FILE="results/hyperparameter/walker2d-medium-expert-sparse/gormpo_realnvp_multilambda_results.csv"
 
 # Array of penalty coefficients to test
-penalty_coeffs=(0.1 0.3 0.5 0.7)
+penalty_coeffs=( 0.5 0.7)
 seeds=(42 123)
 for coef in "${penalty_coeffs[@]}"; do
     # Loop through each seed

@@ -11,7 +11,7 @@ echo ""
 RESULTS_FILE="results/hyperparameter/walker2d-medium-expert-sparse/gormpo_diffusion_multilambda_results.csv"
 
 # Array of penalty coefficients to test
-penalty_coeffs=(0.1 0.3 0.5 0.7)
+penalty_coeffs=( 0.5 0.7)
 seeds=(42 123)
 for coef in "${penalty_coeffs[@]}"; do
     # Loop through each seed
@@ -26,7 +26,7 @@ for coef in "${penalty_coeffs[@]}"; do
             --classifier_model_name /public/gormpo/models/walker2d_medium_expert_sparse_3/diffusion_$seed/checkpoint.pt \
             --reward-penalty-coef $coef \
             --epoch 2500 \
-            --devid 5 \
+            --devid 7 \
             --results_output $RESULTS_FILE \
             --dynamics-model-dir 'true'
 
