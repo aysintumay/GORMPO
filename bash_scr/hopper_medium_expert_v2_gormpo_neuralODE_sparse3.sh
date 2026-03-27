@@ -9,7 +9,7 @@ echo ""
 RESULTS_FILE="results/hyperparameter/hopper-medium-expert-sparse/gormpo_neuralODE_multilambda_results.csv"
 
 # Array of penalty coefficients to test
-penalty_coeffs=(0.1 0.3 0.5 0.7)
+penalty_coeffs=( 0.5 0.7)
 seeds=(42 123)
 for coef in "${penalty_coeffs[@]}"; do
     # Loop through each seed
@@ -23,7 +23,7 @@ for coef in "${penalty_coeffs[@]}"; do
             --seed $seed \
             --reward-penalty-coef $coef \
             --epoch 2500 \
-            --devid 3\
+            --devid 1\
             --results_output $RESULTS_FILE \
             --dynamics-model-dir 'true'
 

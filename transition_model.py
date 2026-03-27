@@ -380,13 +380,13 @@ class TransitionModel:
             print('loaded walker2d model from ', model_save_dir)
         for network_name, network in self.networks.items():
             load_path = os.path.join(model_save_dir, network_name + ".pt")
-            state_dict = torch.load(load_path, map_location='cuda')
+            state_dict = torch.load(load_path, map_location=util.device)
             network.load_state_dict(state_dict)
 
         # Load normalizers
         normalizer_path = os.path.join(model_save_dir, "normalizers.pt")
         if os.path.exists(normalizer_path):
-            normalizer_data = torch.load(normalizer_path, map_location='cuda')
+            normalizer_data = torch.load(normalizer_path, map_location=util.device)
 
             # Load obs_normalizer
             self.obs_normalizer.mean = normalizer_data['obs_normalizer']['mean']
