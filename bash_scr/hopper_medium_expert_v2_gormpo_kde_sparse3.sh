@@ -10,7 +10,7 @@ RESULTS_FILE="results/hyperparameter/hopper-medium-expert-sparse/gormpo_kde_mult
 
 # Array of penalty coefficients to test
 penalty_coeffs=(0.5 0.7)
-seeds=(42 123)
+seeds=( 123)
 for coef in "${penalty_coeffs[@]}"; do
     # Loop through each seed
     for seed in "${seeds[@]}"; do
@@ -24,7 +24,7 @@ for coef in "${penalty_coeffs[@]}"; do
             --classifier_model_name /public/gormpo/models/hopper_medium_expert_sparse_3/kde_$seed \
             --reward-penalty-coef $coef \
             --epoch 2500 \
-            --devid 1 \
+            --devid 6 \
             --results_output $RESULTS_FILE \
             --dynamics-model-dir 'true'
 

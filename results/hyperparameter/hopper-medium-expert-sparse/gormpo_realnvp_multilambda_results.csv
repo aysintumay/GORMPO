@@ -1,0 +1,2 @@
+mean_return,std_return,mean_length,std_length,seed,threshold_percentile,density_model
+38.78890818933116,0.9465127232861918,22.09,0.5673623181001712,42,,realnvp
