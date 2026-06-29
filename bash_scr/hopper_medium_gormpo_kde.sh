@@ -17,7 +17,7 @@ for coef in "${penalty_coeffs[@]}"; do
     echo "=========================================="
 
     python mopo.py \
-        --config configs/kde/mbpo_hopper.yaml \
+        --config configs/kde/gormpo_hopper.yaml \
         --reward-penalty-coef $coef \
         --epoch 500 \
         --devid 6

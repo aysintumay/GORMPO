@@ -36,7 +36,7 @@ for seed in "${seeds[@]}"; do
     # Step 2: Train GORMPO policy using the trained Neural ODE model
     echo "Step 2/2: Training GORMPO-NeuralODE policy (seed $seed)..."
     python mopo.py \
-        --config configs/neuralODE/walker2d_normal.yaml \
+        --config configs/neuralODE/gormpo_walker2d_normal.yaml \
         --seed $seed \
         --epoch 1000 \
         --devid 4 \

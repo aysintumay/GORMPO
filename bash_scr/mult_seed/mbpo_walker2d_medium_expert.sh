@@ -24,7 +24,7 @@ for seed in "${seeds[@]}"; do
     python mopo.py \
         --task walker2d-medium-expert-v2 \
         --algo-name mbpo \
-        --config configs/kde/mbpo_walker2d_medium_expert.yaml \
+        --config configs/kde/gormpo_walker2d_medium_expert.yaml \
         --dynamics-model-dir 'true' \
         --reward-penalty-coef 0.0 \
         --seed $seed \

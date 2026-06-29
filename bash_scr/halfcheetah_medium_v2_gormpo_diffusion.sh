@@ -17,7 +17,7 @@ for coef in "${penalty_coeffs[@]}"; do
     echo "=========================================="
 
     python mopo.py \
-        --config configs/diffusion/halfcheetah_normal.yaml \
+        --config configs/diffusion/gormpo_halfcheetah_normal.yaml \
         --reward-penalty-coef $coef \
         --epoch 500 \
         --devid 7

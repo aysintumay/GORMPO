@@ -36,7 +36,7 @@ for seed in "${seeds[@]}"; do
     # Step 2: Train GORMPO policy using the trained RealNVP model
     echo "Step 2/2: Training GORMPO-RealNVP policy (seed $seed)..."
     python mopo.py \
-        --config configs/realnvp/halfcheetah_linear_normal.yaml \
+        --config configs/realnvp/gormpo_halfcheetah_linear_normal.yaml \
         --seed $seed \
         --classifier_model_name /public/gormpo/models/halfcheetah_medium/realnvp_$seed \
         --epoch 1000 \

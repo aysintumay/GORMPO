@@ -36,7 +36,7 @@ for seed in "${seeds[@]}"; do
     # Step 2: Train GORMPO policy using the trained Diffusion model
     echo "Step 2/2: Training GORMPO-Diffusion policy (seed $seed)..."
     python mopo.py \
-        --config configs/diffusion/halfcheetah_medium_replay.yaml \
+        --config configs/diffusion/gormpo_halfcheetah_medium_replay.yaml \
         --seed $seed \
         --classifier_model_name /public/gormpo/models/halfcheetah_medium_replay/diffusion_$seed/checkpoint.pt \
         --epoch 1000 \

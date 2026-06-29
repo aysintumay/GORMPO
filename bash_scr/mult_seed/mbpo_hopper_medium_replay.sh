@@ -24,7 +24,7 @@ for seed in "${seeds[@]}"; do
     python mopo.py \
         --task hopper-medium-replay-v2 \
         --algo-name mbpo \
-        --config configs/kde/mbpo_hopper_medium_replay.yaml \
+        --config configs/kde/gormpo_hopper_medium_replay.yaml \
         --dynamics-model-dir 'true' \
         --reward-penalty-coef 0.0 \
         --seed $seed \

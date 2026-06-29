@@ -365,7 +365,7 @@ if __name__ == "__main__":
     os.environ["CUDA_VISIBLE_DEVICES"] = f"{args.devid},{args.devid+1}" # Let Ray handle GPU assignment, but ensure we have 2 GPUs available
     ray.init(num_gpus=2)
     config = {}
-    penalty_coef = [ 0.5, 0.7]
+    penalty_coef = [ 0.5]
     # penalty_coef = [0.05]
     # seeds = list(range(2))
     seeds = [1]
@@ -377,7 +377,7 @@ if __name__ == "__main__":
         name="tune_gormpo",
         config=config,
         resources_per_trial={
-            "gpu": 0.5
+            "gpu": 1
         }
     )
     print("\n===== Tune Results =====")

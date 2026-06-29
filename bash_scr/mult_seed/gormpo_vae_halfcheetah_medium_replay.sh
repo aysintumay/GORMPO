@@ -36,7 +36,7 @@ for seed in "${seeds[@]}"; do
     # Step 2: Train GORMPO policy using the trained VAE model
     echo "Step 2/2: Training GORMPO-VAE policy (seed $seed)..."
     python mopo.py \
-        --config configs/vae/mbpo_halfcheetah_medium_replay.yaml \
+        --config configs/vae/gormpo_halfcheetah_medium_replay.yaml \
         --seed $seed \
         --classifier_model_name /public/gormpo/models/halfcheetah_medium_replay/vae_$seed \
         --epoch 1000 \

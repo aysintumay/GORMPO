@@ -24,7 +24,7 @@ for seed in "${seeds[@]}"; do
     python mopo.py \
         --task halfcheetah-medium-expert-v2 \
         --algo-name mbpo \
-        --config configs/kde/mbpo_halfcheetah_medium_expert.yaml \
+        --config configs/kde/gormpo_halfcheetah_medium_expert.yaml \
         --reward-penalty-coef 0.0 \
         --seed $seed \
         --epoch 1000 \

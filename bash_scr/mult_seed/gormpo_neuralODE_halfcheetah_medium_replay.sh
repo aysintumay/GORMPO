@@ -36,7 +36,7 @@ for seed in "${seeds[@]}"; do
     # Step 2: Train GORMPO policy using the trained Neural ODE model
     echo "Step 2/2: Training GORMPO-NeuralODE policy (seed $seed)..."
     python mopo.py \
-        --config configs/neuralODE/halfcheetah_medium_replay.yaml \
+        --config configs/neuralODE/gormpo_halfcheetah_medium_replay.yaml \
         --dynamics-model-dir "true" \
         --seed $seed \
         --epoch 1000 \

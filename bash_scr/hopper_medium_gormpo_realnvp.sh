@@ -17,7 +17,7 @@ for coef in "${penalty_coeffs[@]}"; do
     echo "=========================================="
 
     python mopo.py \
-        --config configs/realnvp/hopper_linear_normal.yaml \
+        --config configs/realnvp/gormpo_hopper_linear_normal.yaml \
         --reward-penalty-coef $coef \
         --epoch 500 \
         --devid 7

@@ -36,7 +36,7 @@ for seed in "${seeds[@]}"; do
     # Step 2: Train GORMPO policy using the trained VAE model
     echo "Step 2/2: Training GORMPO-VAE policy (seed $seed)..."
     python mopo.py \
-        --config configs/vae/mbpo_walker2d.yaml \
+        --config configs/vae/gormpo_walker2d.yaml \
         --seed $seed \
         --classifier_model_name /public/gormpo/models/walker2d_medium/vae_$seed \
         --epoch 1000 \

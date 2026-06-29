@@ -23,7 +23,7 @@ for seed in "${seeds[@]}"; do
 
     python mopo.py \
         --task hopper-medium-expert-v2 \
-        --config configs/kde/mbpo_hopper_medium_expert.yaml \
+        --config configs/kde/gormpo_hopper_medium_expert.yaml \
         --dynamics-model-dir 'true' \
         --algo-name mbpo \
         --reward-penalty-coef 0.0 \

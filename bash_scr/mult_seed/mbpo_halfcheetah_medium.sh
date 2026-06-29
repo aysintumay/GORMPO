@@ -25,7 +25,7 @@ for seed in "${seeds[@]}"; do
         --task halfcheetah-medium-v2 \
         --algo-name mbpo \
         --dynamics-model-dir 'true' \
-        --config configs/kde/mbpo_halfcheetah.yaml \
+        --config configs/kde/gormpo_halfcheetah.yaml \
         --reward-penalty-coef 0.0 \
         --seed $seed \
         --epoch 1000 \

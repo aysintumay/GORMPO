@@ -36,7 +36,7 @@ for seed in "${seeds[@]}"; do
     # Step 2: Train GORMPO policy using the trained KDE model
     echo "Step 2/2: Training GORMPO-KDE policy (seed $seed)..."
     python mopo.py \
-        --config configs/kde/mbpo_halfcheetah.yaml \
+        --config configs/kde/gormpo_halfcheetah.yaml \
         --seed $seed \
         --classifier_model_name /public/gormpo/models/halfcheetah_medium/kde_$seed \
         --epoch 1000 \
