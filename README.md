@@ -75,6 +75,38 @@ python test_kde_ood_levels.py \
 
 Available scripts: `test_kde_ood_levels.py`, `test_vae_ood_levels.py`, `test_realnvp_ood_levels.py`, `test_diffusion_ood_levels.py`, `test_neuralode_ood_levels.py`
 
+## t-SNE Policy vs Dataset Plots
+
+Generate t-SNE overlap plots comparing policy support against the offline dataset for all 3 environments (HalfCheetah, Hopper, Walker2d):
+
+```bash
+bash notebooks/run_tsne_policy_vs_dataset_all.sh
+```
+
+Outputs are saved to `results/tsne_policy_vs_dataset_sparse/{task}/`, including per-policy PNGs and a `combined_panel.png`.
+
+To run a single environment:
+
+```bash
+python notebooks/tsne_policy_vs_dataset.py \
+  --task hopper-medium-expert-v2 \
+  --dataset-path /public/d4rl/sparse_datasets/hopper_medium_expert_sparse_78.pkl \
+  --policy-json notebooks/policy_paths_hopper.json \
+  --support-source rollout \
+  --deterministic \
+  --output-dir results/tsne_policy_vs_dataset_sparse
+```
+
+Policy paths for each environment are defined in `notebooks/policy_paths_{hopper,halfcheetah,walker2d}.json`. Key parameters can be overridden via environment variables:
+
+| Variable | Default | Description |
+|---|---|---|
+| `MAX_SAMPLES` | 100000 | Cap on offline and rollout points fed to t-SNE |
+| `SUPPORT_SOURCE` | `rollout` | `rollout` (real env) or `offline_policy` (infer from dataset states) |
+| `DETERMINISTIC` | 1 | Use deterministic policy actions |
+| `DEVICE` | auto | `cpu` or `cuda` |
+| `OUT_DIR` | `results/tsne_policy_vs_dataset_sparse` | Output directory |
+
 ## Results Merging
 
 Combine OOD test results across density estimators using `notebooks/merge_results.ipynb`:
