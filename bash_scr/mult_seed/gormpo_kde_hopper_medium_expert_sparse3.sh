@@ -20,14 +20,14 @@ for seed in "${seeds[@]}"; do
     echo "=========================================="
 
     # Step 1: Train KDE density estimator for this seed
-    echo "Step 1/2: Training KDE density estimator (seed $seed)..."
-    python kde_module/kde.py \
-        --config configs/kde/hopper_medium_expert_sparse_3.yaml \
-        --seed $seed \
-        --save_path /public/gormpo/models/hopper_medium_expert_sparse_3/kde_$seed \
-        --devid 0
-    echo "✓ KDE training complete for seed $seed"
-    echo ""
+    # echo "Step 1/2: Training KDE density estimator (seed $seed)..."
+    # python kde_module/kde.py \
+    #     --config configs/kde/hopper_medium_expert_sparse_3.yaml \
+    #     --seed $seed \
+    #     --save_path /public/gormpo/models/hopper_medium_expert_sparse_3/kde_$seed \
+    #     --devid 0
+    # echo "✓ KDE training complete for seed $seed"
+    # echo ""
 
     # Step 2: Train GORMPO policy using the trained KDE model
     echo "Step 2/2: Training GORMPO-KDE policy (seed $seed)..."
