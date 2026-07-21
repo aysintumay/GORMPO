@@ -56,6 +56,14 @@ for seed in "${SEEDS[@]}"; do
     echo ">>> seed = $seed"
     echo "=========================================="
 
+    # Resume: skip the whole seed if LEQ already finished (final checkpoint present).
+    LEQ_DONE="$LEQ2_DIR/tmp/EP/models/$TASK/$seed/0.5/${seed}_${LEQ_MAX_STEPS:-1000000}.pkl"
+    if [ -f "$LEQ_DONE" ]; then
+        echo "  ✓ LEQ already trained ($LEQ_DONE) — skipping seed."
+        echo ""
+        continue
+    fi
+
     echo "Step 1/3: KDE guardian → $GUARDIAN_PATH"
     if [ -f "${GUARDIAN_PATH}_metadata.pkl" ] && [ -f "${GUARDIAN_PATH}.faiss" ]; then
         echo "  Guardian already exists, skipping."

@@ -79,6 +79,19 @@ for seed in "${SEEDS[@]}"; do
     echo ">>> seed = $seed"
     echo "=========================================="
 
+    # Resume: skip the whole seed if its policy is already trained.
+    policy_done=""
+    for md in "$OFFLINERLKIT_DIR/log/$TASK/combo/seed_${seed}&timestamp_"*/model; do
+        [ -d "$md" ] || continue
+        case "$md" in *_sparse/model) continue;; esac
+        [ -f "$md/policy.pth" ] && policy_done="$md"
+    done
+    if [ -n "$policy_done" ]; then
+        echo "  ✓ policy already trained ($policy_done) — skipping seed."
+        echo ""
+        continue
+    fi
+
     # --- Step 1: KDE density guardian ---
     echo "Step 1/3: KDE guardian → $GUARDIAN_PATH"
     if [ -f "${GUARDIAN_PATH}_metadata.pkl" ] && [ -f "${GUARDIAN_PATH}.faiss" ]; then

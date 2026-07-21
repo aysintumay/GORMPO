@@ -52,11 +52,34 @@ for seed in "${SEEDS[@]}"; do
     echo "=========================================="
     echo ">>> seed = $seed"
     echo "=========================================="
+
+    # Resume: skip finished work. *_sparse dirs are sparse-dataset runs, not ours.
+    policy_done=""; dyn_dir=""
+    for md in "$OFFLINERLKIT_DIR/log/$TASK/combo/seed_${seed}&timestamp_"*/model; do
+        [ -d "$md" ] || continue
+        case "$md" in *_sparse/model) continue;; esac
+        if [ -f "$md/policy.pth" ]; then policy_done="$md"
+        elif [ -f "$md/dynamics.pth" ]; then dyn_dir="$md"; fi
+    done
+
+    if [ -n "$policy_done" ]; then
+        echo "  ✓ policy already trained ($policy_done) — skipping seed."
+        echo ""
+        continue
+    fi
+
+    DYN_ARGS=()
+    if [ -n "$dyn_dir" ]; then
+        echo "  ↻ dynamics already trained ($dyn_dir) — skipping dynamics, policy only."
+        DYN_ARGS=(--load-dynamics-path "$dyn_dir")
+    fi
+
     (
         cd "$OFFLINERLKIT_DIR"
         python run_example/run_combo.py \
             --task "$TASK" \
             --seed "$seed" \
+            "${DYN_ARGS[@]}" \
             --rollout-length "$ROLLOUT_LENGTH" \
             --cql-weight "$CQL_WEIGHT" \
             --real-ratio "$REAL_RATIO" \
